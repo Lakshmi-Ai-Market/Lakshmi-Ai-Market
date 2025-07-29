@@ -179,7 +179,7 @@ def chat():
         if not user_msg:
             return jsonify({"reply": "❌ No message received."})
 # Detect if the user is asking for candle prediction
-if "predict the candle" in user_msg.lower():
+        if "predict the candle" in user_msg.lower():
     try:
         # Extract 4 numbers from the message
         numbers = re.findall(r"(\d+\.?\d*)", user_msg)
