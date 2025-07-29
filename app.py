@@ -576,11 +576,15 @@ def analyze_with_neuron(price):
 def strategy_switcher_page():
     return render_template("strategy_switcher.html")
 
-
 @app.route("/select-strategy", methods=["POST"])
 def api_select_strategy():
     try:
         market_data = request.get_json(force=True)
+
+        required_keys = ["vix", "trend", "volatility", "is_expiry"]
+        if not all(k in market_data for k in required_keys):
+            return jsonify({"error": "Missing one or more required fields."}), 400
+
         strategy = select_strategy(market_data)
         return jsonify(strategy), 200
     except Exception as e:
