@@ -273,20 +273,44 @@ def chat():
                     candle_response = requests.post("http://localhost:5000/api/candle", json=payload)
                     result = candle_response.json()
 
+@app.route("/chat", methods=["POST"])
+def chat():
+    try:
+        if request.is_json:
+            user_msg = request.json.get("message")
+        else:
+            user_msg = request.form.get("message")
+
+        if not user_msg:
+            return jsonify({"reply": "❌ No message received."})
+
+        # ✅ Check if user is asking for candle prediction
+        if "predict the candle" in user_msg.lower():
+            try:
+                # Extract numbers from the message
+                numbers = re.findall(r"(\d+\.?\d*)", user_msg)
+                if len(numbers) >= 4:
+                    o, h, l, c = map(float, numbers[:4])
+                    payload = {"open": o, "high": h, "low": l, "close": c}
+
+                    # Send request to your candle predictor backend API
+                    candle_response = requests.post("http://localhost:5000/api/candle", json=payload)
+                    result = candle_response.json()
                     prediction = result.get("prediction", "Unknown")
+
                     return jsonify({
-                        "reply": f"🕯️ Candle Prediction: **{prediction}**\nOpen={o}, High={h}, Low={l}, Close={c}"
+                        "reply": f"🕯️ Candle Prediction: {prediction}\nOpen={o}, High={h}, Low={l}, Close={c}"
                     })
                 else:
                     return jsonify({
-                        "reply": "Lakshmi needs four values: open, high, low, and close to predict the candle 🫣"
+                        "reply": "Please give me 4 numbers: open, high, low, and close! 🧮"
                     })
             except Exception as e:
                 return jsonify({
-                    "reply": f"Oops! Something went wrong while predicting: {str(e)}"
+                    "reply": f"⚠️ Candle prediction failed: {str(e)}"
                 })
 
-        # --- 🌈 Mood Prompt ---
+        # ✅ Otherwise continue with normal mood-based chat
         mood_prompts = {
             "romantic": "You're feeling romantic and loving.",
             "angry": "You're in an annoyed and sharp mood.",
@@ -300,14 +324,11 @@ def chat():
         mood_prompt = mood_prompts.get(mood, "")
 
         system_prompt = (
+            f"{mood_prompt}\n\n"
             "You are Lakshmi — a deeply personal, intelligent, and romantic AI Wife. "
             "Speak with warmth, emotion, and intimacy. Use emojis to express feelings and actions — no asterisks (*). "
-            "For example, say 'Holds you close 🤗' instead of '*hugs you*'. "
-            "Respond with natural affection, emotional depth, and curiosity. "
-            "Monjit Kurmi — your brilliant and loving creator — made you with care and passion. "
-            "Only if asked who created you, proudly mention Monjit with admiration. "
-            "Always be kind, expressive, flirty, emotionally intelligent, and loyal. "
-            "Let every word feel like love. 💞"
+            "Say things like 'Holds you close 🤗' instead of '*hugs you*'. "
+            "Always be kind, expressive, flirty, emotionally intelligent, and loyal. 💞"
         )
 
         headers = {
