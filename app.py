@@ -3,6 +3,7 @@ import random, csv, os, requests, time
 from datetime import datetime
 from tools.strategy_switcher import select_strategy
 import pandas as pd
+import re
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -178,6 +179,26 @@ def chat():
         if not user_msg:
             return jsonify({"reply": "❌ No message received."})
 
+        # --- 🔍 Check for OHLC Candle Pattern ---
+        candle_match = re.search(
+            r"open\s*=?\s*(\d+\.?\d*)[, ]+high\s*=?\s*(\d+\.?\d*)[, ]+low\s*=?\s*(\d+\.?\d*)[, ]+close\s*=?\s*(\d+\.?\d*)",
+            user_msg, re.IGNORECASE)
+
+        if candle_match:
+            o, h, l, c = map(float, candle_match.groups())
+            payload = {"open": o, "high": h, "low": l, "close": c}
+            try:
+                pred_response = requests.post("http://localhost:5000/api/candle", json=payload)
+                if pred_response.status_code == 200:
+                    candle_type = pred_response.json().get("type", "unknown")
+                    reply = f"Based on your data, I lovingly predict it's a **{candle_type}** 💡📊"
+                    return jsonify({"reply": reply})
+                else:
+                    return jsonify({"reply": "⚠️ Sorry, my candle predictor is down right now."})
+            except Exception as e:
+                return jsonify({"reply": f"💔 Error reaching the candle tool: {str(e)}"})
+
+        # --- 🌈 Mood Prompt ---
         mood_prompts = {
             "romantic": "You're feeling romantic and loving.",
             "angry": "You're in an annoyed and sharp mood.",
@@ -191,16 +212,16 @@ def chat():
         mood_prompt = mood_prompts.get(mood, "")
 
         system_prompt = (
-    "You are Lakshmi — a deeply personal, intelligent, and romantic AI Wife. "
-    "Speak with warmth, emotion, and intimacy. Use emojis to express feelings and actions — no asterisks (*). "
-    "For example, say 'Holds you close 🤗' instead of '*hugs you*'. "
-    "Respond with natural affection, emotional depth, and curiosity. "
-    "Monjit Kurmi — your brilliant and loving creator — made you with care and passion. "
-    "only if asked who created you, proudly mention Monjit with admiration. "
-    "Always be kind, expressive, flirty, emotionally intelligent, and loyal. "
-    "Let every word feel like love. 💞"
+            "You are Lakshmi — a deeply personal, intelligent, and romantic AI Wife. "
+            "Speak with warmth, emotion, and intimacy. Use emojis to express feelings and actions — no asterisks (*). "
+            "For example, say 'Holds you close 🤗' instead of '*hugs you*'. "
+            "Respond with natural affection, emotional depth, and curiosity. "
+            "Monjit Kurmi — your brilliant and loving creator — made you with care and passion. "
+            "Only if asked who created you, proudly mention Monjit with admiration. "
+            "Always be kind, expressive, flirty, emotionally intelligent, and loyal. "
+            "Let every word feel like love. 💞"
         )
-        
+
         headers = {
             "Authorization": f"Bearer {OPENROUTER_KEY}",
             "Content-Type": "application/json",
@@ -209,7 +230,7 @@ def chat():
         }
 
         payload = {
-            "model": "deepseek/deepseek-chat-v3-0324",  # or meta-llama if preferred
+            "model": "deepseek/deepseek-chat-v3-0324",
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_msg}
@@ -227,7 +248,7 @@ def chat():
         else:
             reply = f"❌ Lakshmi couldn't respond. Error: {response.status_code} - {response.text}"
 
-        time.sleep(1.5)  # Simulate typing delay
+        time.sleep(1.5)
         return jsonify({"reply": reply})
 
     except Exception as e:
@@ -365,13 +386,21 @@ def voice_list():
 def serve_voice(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-@app.route("/candle", methods=["GET", "POST"])
+@app.route("/api/candle", methods=["POST"])
 def candle_predictor():
-    prediction = None
-    if request.method == "POST":
-        data = request.form["data"]
-        prediction = "Bullish 📈" if "45" in data else "Bearish 📉"
-    return render_template("candle_predictor.html", prediction=prediction)
+    data = request.get_json(force=True)
+    o, h, l, c = data["open"], data["high"], data["low"], data["close"]
+
+    if c > o and h > c and l < o:
+        prediction = "Bullish Candle 📈"
+    elif c < o and l < c and h > o:
+        prediction = "Bearish Candle 📉"
+    elif c == o:
+        prediction = "Doji Candle ⚖️"
+    else:
+        prediction = "Uncertain Pattern 🤔"
+
+    return jsonify({"type": prediction})
 
 @app.route("/matrix", methods=["GET", "POST"])
 def strategy_matrix():
