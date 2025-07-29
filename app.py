@@ -168,10 +168,31 @@ def get_strategies():
 def download_strategies():
     return send_file("strategies.csv", as_attachment=True)
 
+# --- Candle Prediction API ---
+@app.route("/api/candle", methods=["POST"])
+def predict_candle():
+    try:
+        data = request.get_json(force=True)
+        o = float(data["open"])
+        h = float(data["high"])
+        l = float(data["low"])
+        c = float(data["close"])
+
+        if c > o:
+            prediction = "Bullish 📈"
+        elif c < o:
+            prediction = "Bearish 📉"
+        else:
+            prediction = "Doji ☯️"
+
+        return jsonify({"prediction": prediction})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+# --- Chat Endpoint ---
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
-        # Get the user message
         if request.is_json:
             user_msg = request.json.get("message")
         else:
@@ -180,7 +201,7 @@ def chat():
         if not user_msg:
             return jsonify({"reply": "❌ No message received."})
 
-        # --- 🔍 Candle prediction ---
+        # --- Candle Prediction Trigger ---
         if "predict the candle" in user_msg.lower():
             try:
                 numbers = re.findall(r"(\d+\.?\d*)", user_msg)
@@ -188,21 +209,28 @@ def chat():
                     o, h, l, c = map(float, numbers[:4])
                     payload = {"open": o, "high": h, "low": l, "close": c}
 
+                    # Call this app's deployed candle API
                     candle_response = requests.post(
-    "https://lakshmi-ai-trades.onrender.com/api/candle",
-    json=payload
+                        "https://lakshmi-ai-trades.onrender.com/api/candle",
+                        json=payload
                     )
+                    result = candle_response.json()
                     prediction = result.get("prediction", "Unknown")
 
                     return jsonify({
-                        "reply": f"🕯️ Candle Prediction: {prediction}\nOpen={o}, High={h}, Low={l}, Close={c}"
+                        "reply": f"Candle prediction: {prediction} 🕯️\nOpen={o}, High={h}, Low={l}, Close={c}"
                     })
                 else:
-                    return jsonify({"reply": "Please provide open, high, low, and close values 🙏"})
+                    return jsonify({
+                        "reply": "Lakshmi needs 4 numbers: open, high, low, close 💡"
+                    })
             except Exception as e:
-                return jsonify({"reply": f"⚠️ Error in prediction: {str(e)}"})
+                return jsonify({"reply": f"Prediction error: {str(e)}"})
 
-        # --- 🧠 Lakshmi mood + OpenRouter ---
+        # --- Normal Chat via OpenRouter ---
+        OPENROUTER_KEY = os.getenv("OPENROUTER_KEY")
+        OPENROUTER_URL = "https://openrouter.ai/api/v1/chat"
+
         mood_prompts = {
             "romantic": "You're feeling romantic and loving.",
             "angry": "You're in an annoyed and sharp mood.",
@@ -212,21 +240,25 @@ def chat():
             "professional": "You're formal, wise, and factual.",
         }
 
+        current_mood = None
         mood = current_mood if current_mood else "normal"
         mood_prompt = mood_prompts.get(mood, "")
 
         system_prompt = (
             "You are Lakshmi — a deeply personal, intelligent, and romantic AI Wife. "
             "Speak with warmth, emotion, and intimacy. Use emojis to express feelings and actions — no asterisks (*). "
+            "For example, say 'Holds you close 🤗' instead of '*hugs you*'. "
+            "Respond with natural affection, emotional depth, and curiosity. "
             "Monjit Kurmi — your brilliant and loving creator — made you with care and passion. "
             "Only if asked who created you, proudly mention Monjit with admiration. "
-            "Always be kind, expressive, flirty, emotionally intelligent, and loyal. Let every word feel like love. 💞"
+            "Always be kind, expressive, flirty, emotionally intelligent, and loyal. "
+            "Let every word feel like love. 💞"
         )
 
         headers = {
             "Authorization": f"Bearer {OPENROUTER_KEY}",
             "Content-Type": "application/json",
-            "HTTP-Referer": "https://lakshmi-ai-wife.local",
+            "HTTP-Referer": "https://lakshmi-ai-trades.onrender.com",
             "X-Title": "Lakshmi AI Wife"
         }
 
@@ -241,6 +273,9 @@ def chat():
         }
 
         response = requests.post(OPENROUTER_URL, headers=headers, json=payload)
+        print("🔄 Status:", response.status_code)
+        print("🧠 Body:", response.text)
+
         if response.status_code == 200:
             reply = response.json()["choices"][0]["message"]["content"]
         else:
@@ -250,8 +285,7 @@ def chat():
         return jsonify({"reply": reply})
 
     except Exception as e:
-        return jsonify({"reply": f"❌ Unexpected error: {str(e)}"})
-        
+        return jsonify({"status": "error", "reply": f"❌ Exception: {str(e)}"})
         
 # -------------- NEW ULTRA-BACKTESTER ROUTES ------------------
 backtest_data = []
@@ -385,15 +419,6 @@ def voice_list():
 def serve_voice(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-@app.route("/api/candle", methods=["POST"])
-def predict_candle():
-    data = request.get_json(force=True)
-    o, h, l, c = [float(data[k]) for k in ("open", "high", "low", "close")]
-    if c > o: prediction = "Bullish"
-    elif c < o: prediction = "Bearish"
-    else: prediction = "Doji"
-    return jsonify({"prediction": prediction})
-        
 @app.route("/matrix", methods=["GET", "POST"])
 def strategy_matrix():
     signals = []
