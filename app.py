@@ -112,12 +112,14 @@ def logout():
     session.pop('username', None)
     return redirect("/login")
 
-@app.route("/dashboard")
-def dashboard():
-    if 'username' not in session:
-        return redirect("/login")
-    return render_template("index.html", mood=current_mood)
-    
+@app.route("/dashboard/candle")
+def candle_dashboard():
+    return """
+    <h1>🔮 Candle Predictor Endpoint</h1>
+    <p>This is a backend-only API. Please use the Lakshmi chat to make predictions.</p>
+    <p>Try: <code>Predict the candle for open 100, high 110, low 95, close 105</code></p>
+    """
+
 @app.route("/strategy")
 def strategy_page():
     if 'username' not in session:
