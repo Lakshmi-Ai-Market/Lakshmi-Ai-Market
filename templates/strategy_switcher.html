@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Strategy Switcher</title>
+</head>
+<body>
+  <h2>🧭 Strategy Switcher</h2>
+
+  <form id="strategy-form">
+    <label>VIX:</label>
+    <input type="number" name="vix" required><br>
+
+    <label>Trend:</label>
+    <select name="trend">
+      <option value="sideways">Sideways</option>
+      <option value="up">Up</option>
+      <option value="down">Down</option>
+    </select><br>
+
+    <label>Volatility:</label>
+    <select name="volatility">
+      <option value="low">Low</option>
+      <option value="high">High</option>
+    </select><br>
+
+    <label>Is Expiry Day:</label>
+    <input type="checkbox" name="is_expiry"><br>
+
+    <button type="submit">Find Strategy</button>
+  </form>
+
+  <pre id="output"></pre>
+
+  <script>
+    document.getElementById("strategy-form").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const form = new FormData(e.target);
+      const data = {
+        vix: parseFloat(form.get("vix")),
+        trend: form.get("trend"),
+        volatility: form.get("volatility"),
+        is_expiry: form.get("is_expiry") === "on"
+      };
+
+      const res = await fetch("/select-strategy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+
+      const result = await res.json();
+      document.getElementById("output").textContent = JSON.stringify(result, null, 2);
+    });
+  </script>
+</body>
+</html
