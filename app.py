@@ -188,8 +188,10 @@ def chat():
                     o, h, l, c = map(float, numbers[:4])
                     payload = {"open": o, "high": h, "low": l, "close": c}
 
-                    candle_response = requests.post("http://lakshmi-ai-trades.onrender.com/api/candle", json=payload)
-                    result = candle_response.json()
+                    candle_response = requests.post(
+    "https://lakshmi-ai-trades.onrender.com/api/candle",
+    json=payload
+                    )
                     prediction = result.get("prediction", "Unknown")
 
                     return jsonify({
@@ -385,24 +387,12 @@ def serve_voice(filename):
 
 @app.route("/api/candle", methods=["POST"])
 def predict_candle():
-    try:
-        data = request.get_json()
-        o = float(data["open"])
-        h = float(data["high"])
-        l = float(data["low"])
-        c = float(data["close"])
-
-        # Simple logic or ML model here
-        if c > o:
-            prediction = "Bullish"
-        elif c < o:
-            prediction = "Bearish"
-        else:
-            prediction = "Doji"
-
-        return jsonify({"prediction": prediction})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
+    data = request.get_json(force=True)
+    o, h, l, c = [float(data[k]) for k in ("open", "high", "low", "close")]
+    if c > o: prediction = "Bullish"
+    elif c < o: prediction = "Bearish"
+    else: prediction = "Doji"
+    return jsonify({"prediction": prediction})
         
 @app.route("/matrix", methods=["GET", "POST"])
 def strategy_matrix():
