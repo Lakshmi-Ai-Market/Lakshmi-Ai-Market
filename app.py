@@ -179,24 +179,19 @@ def chat():
         if not user_msg:
             return jsonify({"reply": "❌ No message received."})
 
-        # --- 🔍 Check for OHLC Candle Pattern ---
-        candle_match = re.search(
-            r"open\s*=?\s*(\d+\.?\d*)[, ]+high\s*=?\s*(\d+\.?\d*)[, ]+low\s*=?\s*(\d+\.?\d*)[, ]+close\s*=?\s*(\d+\.?\d*)",
-            user_msg, re.IGNORECASE)
-
-        if candle_match:
-            o, h, l, c = map(float, candle_match.groups())
+if "predict the candle" in user_msg.lower():
+    try:
+        numbers = re.findall(r"(\d+\.?\d*)", user_msg)
+        if len(numbers) >= 4:
+            o, h, l, c = map(float, numbers[:4])
             payload = {"open": o, "high": h, "low": l, "close": c}
-            try:
-                pred_response = requests.post("http://localhost:5000/api/candle", json=payload)
-                if pred_response.status_code == 200:
-                    candle_type = pred_response.json().get("type", "unknown")
-                    reply = f"Based on your data, I lovingly predict it's a **{candle_type}** 💡📊"
-                    return jsonify({"reply": reply})
-                else:
-                    return jsonify({"reply": "⚠️ Sorry, my candle predictor is down right now."})
-            except Exception as e:
-                return jsonify({"reply": f"💔 Error reaching the candle tool: {str(e)}"})
+            result = requests.post("http://localhost:5000/api/candle", json=payload).json()
+            prediction = result.get("prediction", "Unknown")
+            return jsonify({"reply": f"Candle prediction: {prediction} 🕯️\n\nOpen={o}, High={h}, Low={l}, Close={c}"})
+        else:
+            return jsonify({"reply": "Please give four numbers for open, high, low, and close."})
+    except Exception as e:
+        return jsonify({"reply": f"Something went wrong: {str(e)}"})
 
         # --- 🌈 Mood Prompt ---
         mood_prompts = {
