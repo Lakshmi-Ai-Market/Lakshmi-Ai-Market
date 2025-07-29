@@ -180,31 +180,27 @@ def chat():
             return jsonify({"reply": "❌ No message received."})
 # Detect if the user is asking for candle prediction
         if "predict the candle" in user_msg.lower():
-    try:
-        # Extract 4 numbers from the message
-        numbers = re.findall(r"(\d+\.?\d*)", user_msg)
-        if len(numbers) >= 4:
-            o, h, l, c = map(float, numbers[:4])
-            payload = {"open": o, "high": h, "low": l, "close": c}
+            try:
+                numbers = re.findall(r"(\d+\.?\d*)", user_msg)
+                if len(numbers) >= 4:
+                    o, h, l, c = map(float, numbers[:4])
+                    payload = {"open": o, "high": h, "low": l, "close": c}
 
-            # Call your real backend API
-            candle_response = requests.post("http://localhost:5000/api/candle", json=payload)
-            result = candle_response.json()
+                    candle_response = requests.post("http://localhost:5000/api/candle", json=payload)
+                    result = candle_response.json()
+                    prediction = result.get("prediction", "Unknown")
 
-            # Get the prediction from the API response
-            prediction = result.get("prediction", "Unknown")
-            return jsonify({
-                "reply": f"Candle prediction: {prediction} 🕯️\nOpen={o}, High={h}, Low={l}, Close={c}"
-            })
-        else:
-            return jsonify({
-                "reply": "Lakshmi needs four values: open, high, low, and close to predict the candle 🫣"
-            })
-    except Exception as e:
-        return jsonify({
-            "reply": f"Oops! Something went wrong while predicting: {str(e)}"
-        })
-
+                    return jsonify({
+                        "reply": f"🕯️ Candle Prediction: {prediction}\nOpen={o}, High={h}, Low={l}, Close={c}"
+                    })
+                else:
+                    return jsonify({
+                        "reply": "Please give me 4 numbers: open, high, low, and close! 🧮"
+                    })
+            except Exception as e:
+                return jsonify({
+                    "reply": f"⚠️ Candle prediction failed: {str(e)}"
+                })
         # --- 🌈 Mood Prompt ---
         mood_prompts = {
             "romantic": "You're feeling romantic and loving.",
