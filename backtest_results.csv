@@ -1,0 +1,4 @@
+if not os.path.exists("backtest_results.csv"):
+    with open("backtest_results.csv", "w", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow(["timestamp", "entry", "exit", "qty", "pnl", "note"]
