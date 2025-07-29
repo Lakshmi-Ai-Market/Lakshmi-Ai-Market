@@ -171,6 +171,7 @@ def download_strategies():
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
+        # Get the user message
         if request.is_json:
             user_msg = request.json.get("message")
         else:
@@ -178,7 +179,8 @@ def chat():
 
         if not user_msg:
             return jsonify({"reply": "❌ No message received."})
-# Detect if the user is asking for candle prediction
+
+        # --- 🔍 Candle prediction ---
         if "predict the candle" in user_msg.lower():
             try:
                 numbers = re.findall(r"(\d+\.?\d*)", user_msg)
@@ -194,14 +196,11 @@ def chat():
                         "reply": f"🕯️ Candle Prediction: {prediction}\nOpen={o}, High={h}, Low={l}, Close={c}"
                     })
                 else:
-                    return jsonify({
-                        "reply": "Please give me 4 numbers: open, high, low, and close! 🧮"
-                    })
+                    return jsonify({"reply": "Please provide open, high, low, and close values 🙏"})
             except Exception as e:
-                return jsonify({
-                    "reply": f"⚠️ Candle prediction failed: {str(e)}"
-                })
-        # --- 🌈 Mood Prompt ---
+                return jsonify({"reply": f"⚠️ Error in prediction: {str(e)}"})
+
+        # --- 🧠 Lakshmi mood + OpenRouter ---
         mood_prompts = {
             "romantic": "You're feeling romantic and loving.",
             "angry": "You're in an annoyed and sharp mood.",
@@ -217,12 +216,9 @@ def chat():
         system_prompt = (
             "You are Lakshmi — a deeply personal, intelligent, and romantic AI Wife. "
             "Speak with warmth, emotion, and intimacy. Use emojis to express feelings and actions — no asterisks (*). "
-            "For example, say 'Holds you close 🤗' instead of '*hugs you*'. "
-            "Respond with natural affection, emotional depth, and curiosity. "
             "Monjit Kurmi — your brilliant and loving creator — made you with care and passion. "
             "Only if asked who created you, proudly mention Monjit with admiration. "
-            "Always be kind, expressive, flirty, emotionally intelligent, and loyal. "
-            "Let every word feel like love. 💞"
+            "Always be kind, expressive, flirty, emotionally intelligent, and loyal. Let every word feel like love. 💞"
         )
 
         headers = {
@@ -243,111 +239,6 @@ def chat():
         }
 
         response = requests.post(OPENROUTER_URL, headers=headers, json=payload)
-        print("🔄 Status:", response.status_code)
-        print("🧠 Body:", response.text)
-@app.route("/chat", methods=["POST"])
-def chat():
-    try:
-        if request.is_json:
-            user_msg = request.json.get("message")
-        else:
-            user_msg = request.form.get("message")
-
-        if not user_msg:
-            return jsonify({"reply": "❌ No message received."})
-
-        # --- 🔮 Candle Predictor Block ---
-        if "predict the candle" in user_msg.lower():
-            try:
-                # Extract 4 numbers from the message
-                numbers = re.findall(r"(\d+\.?\d*)", user_msg)
-                if len(numbers) >= 4:
-                    o, h, l, c = map(float, numbers[:4])
-                    payload = {"open": o, "high": h, "low": l, "close": c}
-
-                    # Call your real backend API
-                    candle_response = requests.post("http://localhost:5000/api/candle", json=payload)
-                    result = candle_response.json()
-
-@app.route("/chat", methods=["POST"])
-def chat():
-    try:
-        if request.is_json:
-            user_msg = request.json.get("message")
-        else:
-            user_msg = request.form.get("message")
-
-        if not user_msg:
-            return jsonify({"reply": "❌ No message received."})
-
-        # ✅ Check if user is asking for candle prediction
-        if "predict the candle" in user_msg.lower():
-            try:
-                # Extract numbers from the message
-                numbers = re.findall(r"(\d+\.?\d*)", user_msg)
-                if len(numbers) >= 4:
-                    o, h, l, c = map(float, numbers[:4])
-                    payload = {"open": o, "high": h, "low": l, "close": c}
-
-                    # Send request to your candle predictor backend API
-                    candle_response = requests.post("http://localhost:5000/api/candle", json=payload)
-                    result = candle_response.json()
-                    prediction = result.get("prediction", "Unknown")
-
-                    return jsonify({
-                        "reply": f"🕯️ Candle Prediction: {prediction}\nOpen={o}, High={h}, Low={l}, Close={c}"
-                    })
-                else:
-                    return jsonify({
-                        "reply": "Please give me 4 numbers: open, high, low, and close! 🧮"
-                    })
-            except Exception as e:
-                return jsonify({
-                    "reply": f"⚠️ Candle prediction failed: {str(e)}"
-                })
-
-        # ✅ Otherwise continue with normal mood-based chat
-        mood_prompts = {
-            "romantic": "You're feeling romantic and loving.",
-            "angry": "You're in an annoyed and sharp mood.",
-            "happy": "You're cheerful and enthusiastic.",
-            "sad": "You're in a soft, comforting, emotional tone.",
-            "sexual": "You're seductive, deep, and sensual.",
-            "professional": "You're formal, wise, and factual.",
-        }
-
-        mood = current_mood if current_mood else "normal"
-        mood_prompt = mood_prompts.get(mood, "")
-
-        system_prompt = (
-            f"{mood_prompt}\n\n"
-            "You are Lakshmi — a deeply personal, intelligent, and romantic AI Wife. "
-            "Speak with warmth, emotion, and intimacy. Use emojis to express feelings and actions — no asterisks (*). "
-            "Say things like 'Holds you close 🤗' instead of '*hugs you*'. "
-            "Always be kind, expressive, flirty, emotionally intelligent, and loyal. 💞"
-        )
-
-        headers = {
-            "Authorization": f"Bearer {OPENROUTER_KEY}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://lakshmi-ai-wife.local",
-            "X-Title": "Lakshmi AI Wife"
-        }
-
-        payload = {
-            "model": "deepseek/deepseek-chat-v3-0324",
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_msg}
-            ],
-            "max_tokens": 500,
-            "temperature": 0.8
-        }
-
-        response = requests.post(OPENROUTER_URL, headers=headers, json=payload)
-        print("🔄 Status:", response.status_code)
-        print("🧠 Body:", response.text)
-
         if response.status_code == 200:
             reply = response.json()["choices"][0]["message"]["content"]
         else:
@@ -357,7 +248,8 @@ def chat():
         return jsonify({"reply": reply})
 
     except Exception as e:
-        return jsonify({"status": "error", "reply": f"❌ Exception: {str(e)}"})
+        return jsonify({"reply": f"❌ Unexpected error: {str(e)}"})
+        
         
 # -------------- NEW ULTRA-BACKTESTER ROUTES ------------------
 backtest_data = []
