@@ -132,12 +132,10 @@
 <div id="candle" class="tool-section">
   <h2>🔮 AI Candle Predictor</h2>
   <form id="candle-form">
-    <input type="number" name="current_price" placeholder="Current LTP" required>
-    <select name="timeframe">
-      <option value="1m">1 Min</option>
-      <option value="5m">5 Min</option>
-      <option value="15m">15 Min</option>
-    </select>
+    <input type="number" name="open" placeholder="Open Price" step="0.01" required>
+    <input type="number" name="high" placeholder="High Price" step="0.01" required>
+    <input type="number" name="low" placeholder="Low Price" step="0.01" required>
+    <input type="number" name="close" placeholder="Close Price" step="0.01" required>
     <button class="submit-btn" type="submit">Predict</button>
   </form>
   <div id="candle-result" style="margin-top:10px;"></div>
