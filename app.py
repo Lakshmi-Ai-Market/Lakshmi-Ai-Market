@@ -168,26 +168,13 @@ def get_strategies():
 def download_strategies():
     return send_file("strategies.csv", as_attachment=True)
 
-# --- Candle Prediction API ---
-@app.route("/api/candle", methods=["POST"])
-def predict_candle():
-    try:
-        data = request.get_json(force=True)
-        o = float(data["open"])
-        h = float(data["high"])
-        l = float(data["low"])
-        c = float(data["close"])
-
-        if c > o:
-            prediction = "Bullish 📈"
-        elif c < o:
-            prediction = "Bearish 📉"
-        else:
-            prediction = "Doji ☯️"
-
-        return jsonify({"prediction": prediction})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
+@app.route("/candle", methods=["GET", "POST"])
+def candle_predictor():
+    prediction = None
+    if request.method == "POST":
+        data = request.form["data"]
+        prediction = "Bullish 📈" if "45" in data else "Bearish 📉"
+    return render_template("candle_predictor.html", prediction=prediction)
 
 # --- Chat Endpoint ---
 @app.route("/chat", methods=["POST"])
