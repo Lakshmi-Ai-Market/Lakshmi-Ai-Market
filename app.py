@@ -200,38 +200,8 @@ def chat():
 
         if not user_msg:
             return jsonify({"reply": "❌ No message received."})
-
-        # --- Candle Prediction Trigger ---
-        if "predict the candle" in user_msg.lower():
-            try:
-                numbers = re.findall(r"(\d+\.?\d*)", user_msg)
-                if len(numbers) >= 4:
-                    o, h, l, c = map(float, numbers[:4])
-                    payload = {"open": o, "high": h, "low": l, "close": c}
-
-                    # Call this app's deployed candle API
-                    candle_response = requests.post(
-                        "https://lakshmi-ai-trades.onrender.com/api/candle",
-                        json=payload
-                    )
-                    result = candle_response.json()
-                    prediction = result.get("prediction", "Unknown")
-
-                    return jsonify({
-                        "reply": f"Candle prediction: {prediction} 🕯️\nOpen={o}, High={h}, Low={l}, Close={c}"
-                    })
-                else:
-                    return jsonify({
-                        "reply": "Lakshmi needs 4 numbers: open, high, low, close 💡"
-                    })
-            except Exception as e:
-                return jsonify({"reply": f"Prediction error: {str(e)}"})
-
-        # --- Normal Chat via OpenRouter ---
-        OPENROUTER_KEY = os.getenv("OPENROUTER_KEY")
-        OPENROUTER_URL = "https://openrouter.ai/api/v1/chat"
-
-        mood_prompts = {
+      
+    mood_prompts = {
             "romantic": "You're feeling romantic and loving.",
             "angry": "You're in an annoyed and sharp mood.",
             "happy": "You're cheerful and enthusiastic.",
