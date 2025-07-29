@@ -525,6 +525,10 @@ def analyze_strategy():
     """
     return jsonify({'message': message})
 
+@app.route("/strategy-switcher", methods=["GET"])
+def strategy_switcher_page():
+    return render_template("strategy_switcher.html")
+
 @app.route("/neuron", methods=["GET", "POST"])
 def neuron():
     if request.method == "POST":
