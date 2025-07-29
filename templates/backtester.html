@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>🔁 Backtester – Lakshmi</title>
-  <link rel="stylesheet" href="/static/style.css" />
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -29,7 +28,7 @@
     label {
       font-weight: bold;
     }
-    input[type="number"], input[type="text"], textarea {
+    input, textarea {
       width: 100%;
       padding: 10px;
       margin: 10px 0 20px;
@@ -48,12 +47,26 @@
     button:hover {
       background-color: #d6006b;
     }
-    .result-box {
+    .result-box, .history-box {
       margin-top: 30px;
       padding: 20px;
       background: #fef6f9;
       border: 2px dashed #ff4d88;
       border-radius: 16px;
+    }
+    table {
+      width: 100%;
+      margin-top: 10px;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+      text-align: center;
+    }
+    .download {
+      margin-top: 20px;
+      text-align: center;
     }
   </style>
 </head>
@@ -85,7 +98,56 @@
       <p><em>✨ Lakshmi’s advice: {{ result.advice }}</em></p>
     </div>
     {% endif %}
+
+    <div class="history-box">
+      <h3>📈 Live Trade History</h3>
+      <table id="history-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Entry</th>
+            <th>Exit</th>
+            <th>Qty</th>
+            <th>P&L</th>
+            <th>Note</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="download">
+      <a href="/download_backtest">
+        <button>⬇️ Download CSV</button>
+      </a>
+    </div>
   </div>
 
+  <script>
+    function loadBacktestHistory() {
+      fetch("/backtester/live")
+        .then(res => res.json())
+        .then(data => {
+          const tbody = document.querySelector("#history-table tbody");
+          tbody.innerHTML = "";
+          data.slice().reverse().forEach(row => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td>${row.timestamp}</td>
+              <td>${row.entry}</td>
+              <td>${row.exit}</td>
+              <td>${row.qty}</td>
+              <td>${row.pnl}</td>
+              <td>${row.note}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        });
+    }
+
+    setInterval(loadBacktestHistory, 3000); // refresh every 3s
+    window.onload = loadBacktestHistory;
+  </script>
+
 </body>
-</html>
+  </html>
