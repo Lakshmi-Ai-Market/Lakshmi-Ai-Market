@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, j
 import random, csv, os, requests, time
 from datetime import datetime
 from tools.strategy_switcher import select_strategy
+import pandas as pd
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -233,95 +234,49 @@ def chat():
         return jsonify({"status": "error", "reply": f"❌ Exception: {str(e)}"})
         
 # -------------- NEW ULTRA-BACKTESTER ROUTES ------------------
-@app.route("/backtester-api", methods=["POST"])
-def backtester_api():
-    import pandas as pd
+backtest_data = []
 
-    file = request.files.get("csv")
-    strategy = request.form.get("strategy", "ema").lower()
+@app.route("/backtester", methods=["GET", "POST"])
+def backtester():
+    result = None
+    if request.method == "POST":
+        try:
+            entry = float(request.form["entry"])
+            exit_price = float(request.form["exit"])
+            qty = int(request.form["qty"])
+            note = request.form.get("note", "").strip()
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    if not file:
-        return jsonify({"error": "No file uploaded."}), 400
+            pnl = round((exit_price - entry) * qty, 2)
+            advice = "Good job! 😘" if pnl >= 0 else "Watch out next time, love 💔"
 
-    df = pd.read_csv(file)
-    if "Close" not in df.columns:
-        return jsonify({"error": "CSV must include 'Close' column."}), 400
+            result = {"pnl": pnl, "note": note, "advice": advice}
 
-    df["Close"] = pd.to_numeric(df["Close"], errors="coerce")
-    df.dropna(inplace=True)
+            # Save to in-memory history
+            backtest_data.append({
+                "timestamp": timestamp,
+                "entry": entry,
+                "exit": exit_price,
+                "qty": qty,
+                "pnl": pnl,
+                "note": note
+            })
 
-    wins = losses = total_return = 0
+            # Also save to CSV
+            with open("backtest_results.csv", "a", newline="") as file:
+                writer = csv.writer(file)
+                writer.writerow([timestamp, entry, exit_price, qty, pnl, note])
 
-    if strategy == "ema":
-        df["EMA20"] = df["Close"].ewm(span=20).mean()
-        df["EMA50"] = df["Close"].ewm(span=50).mean()
-        df["Signal"] = 0
-        df.loc[df["EMA20"] > df["EMA50"], "Signal"] = 1
-        df.loc[df["EMA20"] < df["EMA50"], "Signal"] = -1
-        extra_series = df["EMA20"]
-        extra_label = "EMA20"
+        except Exception as e:
+            result = {"pnl": 0, "note": "Error", "advice": f"Something went wrong: {str(e)}"}
 
-    elif strategy == "rsi":
-        delta = df["Close"].diff()
-        gain = delta.where(delta > 0, 0)
-        loss = -delta.where(delta < 0, 0)
-        avg_gain = gain.rolling(14).mean()
-        avg_loss = loss.rolling(14).mean()
-        rs = avg_gain / avg_loss
-        df["RSI"] = 100 - (100 / (1 + rs))
-        df["Signal"] = 0
-        df.loc[df["RSI"] < 30, "Signal"] = 1
-        df.loc[df["RSI"] > 70, "Signal"] = -1
-        extra_series = df["RSI"]
-        extra_label = "RSI"
+    return render_template("backtester.html", result=result)
 
-    elif strategy == "macd":
-        ema12 = df["Close"].ewm(span=12).mean()
-        ema26 = df["Close"].ewm(span=26).mean()
-        df["MACD"] = ema12 - ema26
-        df["Signal_Line"] = df["MACD"].ewm(span=9).mean()
-        df["Signal"] = 0
-        df.loc[df["MACD"] > df["Signal_Line"], "Signal"] = 1
-        df.loc[df["MACD"] < df["Signal_Line"], "Signal"] = -1
-        extra_series = df["MACD"]
-        extra_label = "MACD"
 
-    else:
-        return jsonify({"error": "Unknown strategy."}), 400
+@app.route("/backtester/live")
+def get_backtest_live():
+    return jsonify(backtest_data)
 
-    df["Position"] = df["Signal"].diff()
-    trades = df[df["Position"] != 0]
-
-    for i in range(1, len(trades)):
-        entry_price = trades.iloc[i - 1]["Close"]
-        exit_price  = trades.iloc[i]["Close"]
-        pnl = (exit_price - entry_price) * trades.iloc[i - 1]["Signal"]
-        wins += int(pnl > 0)
-        losses += int(pnl <= 0)
-        total_return += pnl
-
-    total_trades = wins + losses
-    win_rate = round((wins / total_trades) * 100, 2) if total_trades else 0
-
-    # save file for download
-    df.to_csv("backtest_results.csv", index=False)
-
-    return jsonify({
-        "strategy": strategy.upper(),
-        "results": {
-            "total": total_trades,
-            "wins": wins,
-            "losses": losses,
-            "win_rate": win_rate,
-            "total_return": round(total_return, 2)
-        },
-        "chart": {
-            "dates": df.index.astype(str).tolist(),
-            "close": df["Close"].tolist(),
-            "extra": extra_series.tolist(),
-            "label": extra_label
-        }
-    })
 
 @app.route("/download_backtest")
 def download_backtest():
