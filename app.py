@@ -188,7 +188,7 @@ def chat():
                     o, h, l, c = map(float, numbers[:4])
                     payload = {"open": o, "high": h, "low": l, "close": c}
 
-                    candle_response = requests.post("http://localhost:5000/api/candle", json=payload)
+                    candle_response = requests.post("http://lakshmi-ai-trades.onrender.com/api/candle", json=payload)
                     result = candle_response.json()
                     prediction = result.get("prediction", "Unknown")
 
