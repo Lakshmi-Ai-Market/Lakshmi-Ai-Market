@@ -201,14 +201,14 @@ def chat():
         if not user_msg:
             return jsonify({"reply": "❌ No message received."})
       
-    mood_prompts = (
-            "romantic": "You're feeling romantic and loving.",
-            "angry": "You're in an annoyed and sharp mood.",
-            "happy": "You're cheerful and enthusiastic.",
-            "sad": "You're in a soft, comforting, emotional tone.",
-            "sexual": "You're seductive, deep, and sensual.",
-            "professional": "You're formal, wise, and factual.",
-     )
+    mood_prompts = {
+    "romantic": "You're feeling romantic and loving.",
+    "angry": "You're in an annoyed and sharp mood.",
+    "happy": "You're cheerful and enthusiastic.",
+    "sad": "You're in a soft, comforting, emotional tone.",
+    "sexual": "You're seductive, deep, and sensual.",
+    "professional": "You're formal, wise, and factual."
+    }
 
         current_mood = None
         mood = current_mood if current_mood else "normal"
