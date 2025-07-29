@@ -112,12 +112,12 @@ def logout():
     session.pop('username', None)
     return redirect("/login")
 
+# ✅ DASHBOARD (Backend-only HTML)
 @app.route("/dashboard")
 def dashboard():
     if 'username' not in session:
         return redirect("/login")
-    return render_template("index.html", mood=current_mood)
-
+    return "<h1>📊 Lakshmi Dashboard</h1><p>This is your backend-only dashboard.</p>"
 @app.route("/strategy")
 def strategy_page():
     if 'username' not in session:
