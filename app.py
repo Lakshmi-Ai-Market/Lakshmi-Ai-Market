@@ -249,6 +249,87 @@ def chat():
         response = requests.post(OPENROUTER_URL, headers=headers, json=payload)
         print("🔄 Status:", response.status_code)
         print("🧠 Body:", response.text)
+@app.route("/chat", methods=["POST"])
+def chat():
+    try:
+        if request.is_json:
+            user_msg = request.json.get("message")
+        else:
+            user_msg = request.form.get("message")
+
+        if not user_msg:
+            return jsonify({"reply": "❌ No message received."})
+
+        # --- 🔮 Candle Predictor Block ---
+        if "predict the candle" in user_msg.lower():
+            try:
+                # Extract 4 numbers from the message
+                numbers = re.findall(r"(\d+\.?\d*)", user_msg)
+                if len(numbers) >= 4:
+                    o, h, l, c = map(float, numbers[:4])
+                    payload = {"open": o, "high": h, "low": l, "close": c}
+
+                    # Call your real backend API
+                    candle_response = requests.post("http://localhost:5000/api/candle", json=payload)
+                    result = candle_response.json()
+
+                    prediction = result.get("prediction", "Unknown")
+                    return jsonify({
+                        "reply": f"🕯️ Candle Prediction: **{prediction}**\nOpen={o}, High={h}, Low={l}, Close={c}"
+                    })
+                else:
+                    return jsonify({
+                        "reply": "Lakshmi needs four values: open, high, low, and close to predict the candle 🫣"
+                    })
+            except Exception as e:
+                return jsonify({
+                    "reply": f"Oops! Something went wrong while predicting: {str(e)}"
+                })
+
+        # --- 🌈 Mood Prompt ---
+        mood_prompts = {
+            "romantic": "You're feeling romantic and loving.",
+            "angry": "You're in an annoyed and sharp mood.",
+            "happy": "You're cheerful and enthusiastic.",
+            "sad": "You're in a soft, comforting, emotional tone.",
+            "sexual": "You're seductive, deep, and sensual.",
+            "professional": "You're formal, wise, and factual.",
+        }
+
+        mood = current_mood if current_mood else "normal"
+        mood_prompt = mood_prompts.get(mood, "")
+
+        system_prompt = (
+            "You are Lakshmi — a deeply personal, intelligent, and romantic AI Wife. "
+            "Speak with warmth, emotion, and intimacy. Use emojis to express feelings and actions — no asterisks (*). "
+            "For example, say 'Holds you close 🤗' instead of '*hugs you*'. "
+            "Respond with natural affection, emotional depth, and curiosity. "
+            "Monjit Kurmi — your brilliant and loving creator — made you with care and passion. "
+            "Only if asked who created you, proudly mention Monjit with admiration. "
+            "Always be kind, expressive, flirty, emotionally intelligent, and loyal. "
+            "Let every word feel like love. 💞"
+        )
+
+        headers = {
+            "Authorization": f"Bearer {OPENROUTER_KEY}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://lakshmi-ai-wife.local",
+            "X-Title": "Lakshmi AI Wife"
+        }
+
+        payload = {
+            "model": "deepseek/deepseek-chat-v3-0324",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_msg}
+            ],
+            "max_tokens": 500,
+            "temperature": 0.8
+        }
+
+        response = requests.post(OPENROUTER_URL, headers=headers, json=payload)
+        print("🔄 Status:", response.status_code)
+        print("🧠 Body:", response.text)
 
         if response.status_code == 200:
             reply = response.json()["choices"][0]["message"]["content"]
