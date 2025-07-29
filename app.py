@@ -384,21 +384,26 @@ def serve_voice(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 @app.route("/api/candle", methods=["POST"])
-def candle_predictor():
-    data = request.get_json(force=True)
-    o, h, l, c = data["open"], data["high"], data["low"], data["close"]
+def predict_candle():
+    try:
+        data = request.get_json()
+        o = float(data["open"])
+        h = float(data["high"])
+        l = float(data["low"])
+        c = float(data["close"])
 
-    if c > o and h > c and l < o:
-        prediction = "Bullish Candle 📈"
-    elif c < o and l < c and h > o:
-        prediction = "Bearish Candle 📉"
-    elif c == o:
-        prediction = "Doji Candle ⚖️"
-    else:
-        prediction = "Uncertain Pattern 🤔"
+        # Simple logic or ML model here
+        if c > o:
+            prediction = "Bullish"
+        elif c < o:
+            prediction = "Bearish"
+        else:
+            prediction = "Doji"
 
-    return jsonify({"type": prediction})
-
+        return jsonify({"prediction": prediction})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+        
 @app.route("/matrix", methods=["GET", "POST"])
 def strategy_matrix():
     signals = []
