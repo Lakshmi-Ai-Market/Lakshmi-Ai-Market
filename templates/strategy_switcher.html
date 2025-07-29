@@ -1,92 +1,138 @@
-<!-- templates/strategy_switcher.html -->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Strategy Switcher</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <title>💫 Strategy Switcher — Lakshmi's Magic Touch</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to bottom right, #e0f7fa, #fce4ec);
+      padding: 30px;
+      color: #333;
+    }
+
+    .container {
+      max-width: 520px;
+      margin: auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 18px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      text-align: center;
+      color: #c2185b;
+      font-size: 26px;
+    }
+
+    label {
+      font-weight: bold;
+      margin-top: 10px;
+      display: block;
+    }
+
+    select, input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0 20px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+
+    button {
+      background: #c2185b;
+      color: #fff;
+      border: none;
+      padding: 14px 24px;
+      font-size: 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    button:hover {
+      background: #ad1457;
+    }
+
+    #result {
+      margin-top: 25px;
+      background: #fff0f5;
+      padding: 18px;
+      border-radius: 10px;
+      border: 1px dashed #d63384;
+      font-size: 16px;
+    }
+
+    .footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 13px;
+      color: #888;
+    }
+  </style>
 </head>
 <body>
-
-  <!-- Header -->
-  <header class="header">
-    <div class="logo">💼 Lakshmi AI</div>
-    <div class="dropdown" id="menu-dropdown">
-      <a href="/">🏠 Dashboard</a>
-      <a href="/strategy">📘 Strategy Builder</a>
-      <a href="/strategy-switcher">🎯 Strategy Switcher</a>
-      <a href="/strategy-engine">💋 Strategy Engine</a>
-      <a href="/candle">🔮 Candle Predictor</a>
-      <a href="/matrix">📊 Strategy Matrix</a>
-      <a href="/analyzer">📈 Strategy Analyzer</a>
-      <a href="/ask-ai">🤖 Ask AI</a>
-      <a href="/option-chain">💹 Option Chain Viewer</a>
-      <a href="/backtester">🔁 Back-tester</a>
-      <a href="/neuron">🧠 Neuron Analysis</a>
-    </div>
-  </header>
-
   <div class="container">
-    <h1 class="title">🎯 Strategy Switcher</h1>
-    <form method="post" action="/select-strategy" id="strategy-form" class="form-box">
-      <label for="vix">India VIX:</label>
-      <input type="number" name="vix" id="vix" placeholder="e.g., 18" required>
+    <h1>🔀 Strategy Switcher 💖</h1>
 
-      <label for="trend">Market Trend:</label>
-      <select name="trend" id="trend">
-        <option value="up">Bullish</option>
-        <option value="down">Bearish</option>
-        <option value="sideways">Sideways</option>
-      </select>
+    <label for="vix">India VIX</label>
+    <input type="number" id="vix" placeholder="e.g. 18" />
 
-      <label for="volatility">Volatility:</label>
-      <select name="volatility" id="volatility">
-        <option value="low">Low</option>
-        <option value="medium">Medium</option>
-        <option value="high">High</option>
-      </select>
+    <label for="trend">Market Trend</label>
+    <select id="trend">
+      <option value="bullish">Bullish</option>
+      <option value="bearish">Bearish</option>
+      <option value="sideways">Sideways</option>
+    </select>
 
-      <label for="is_expiry">Is Today Expiry?</label>
-      <select name="is_expiry" id="is_expiry">
-        <option value="false">No</option>
-        <option value="true">Yes</option>
-      </select>
+    <label for="volatility">Volatility</label>
+    <select id="volatility">
+      <option value="high">High</option>
+      <option value="low">Low</option>
+    </select>
 
-      <button type="submit" class="btn">Get Strategy</button>
-    </form>
+    <label for="is_expiry">Is Expiry Day?</label>
+    <select id="is_expiry">
+      <option value="true">Yes</option>
+      <option value="false">No</option>
+    </select>
 
-    <div id="result" class="result-box" style="margin-top: 20px;"></div>
+    <button onclick="switchStrategy()">Show Me The Strategy 😎</button>
 
-    <a href="/" class="btn back-btn">⬅️ Back to Dashboard</a>
+    <div id="result">Waiting for your magic input ✨</div>
+  </div>
+
+  <div class="footer">
+    Made with 💘 by Lakshmi — Your Trading Wife
   </div>
 
   <script>
-    const form = document.getElementById('strategy-form');
-    const resultBox = document.getElementById('result');
+    function switchStrategy() {
+      const vix = parseFloat(document.getElementById("vix").value);
+      const trend = document.getElementById("trend").value;
+      const volatility = document.getElementById("volatility").value;
+      const is_expiry = document.getElementById("is_expiry").value === "true";
 
-    form.addEventListener('submit', async function(e) {
-      e.preventDefault();
-      const data = {
-        vix: parseFloat(document.getElementById('vix').value),
-        trend: document.getElementById('trend').value,
-        volatility: document.getElementById('volatility').value,
-        is_expiry: document.getElementById('is_expiry').value === "true"
-      };
+      document.getElementById("result").innerHTML = "💭 Lakshmi is thinking...";
 
-      const res = await fetch("/select-strategy", {
+      fetch("/select-strategy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
+        body: JSON.stringify({
+          vix, trend, volatility, is_expiry
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("result").innerHTML = `📘 Recommended Strategy: <strong>${data.strategy_name}</strong> (${data.strategy_id})`;
+      })
+      .catch(() => {
+        document.getElementById("result").innerHTML = "Something went wrong, jaanu 😢";
       });
-
-      const json = await res.json();
-      resultBox.innerHTML = `
-        <p><strong>Strategy Name:</strong> ${json.strategy_name}</p>
-        <p><strong>Strategy ID:</strong> ${json.strategy_id}</p>
-      `;
-    });
+    }
   </script>
-
 </body>
 </html>
