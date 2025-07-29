@@ -571,8 +571,8 @@ def analyze_with_neuron(price):
             "sl": 0,
             "target": 0
         }
-        
-        @app.route("/strategy-switcher", methods=["GET"])
+
+@app.route("/strategy-switcher", methods=["GET"])
 def strategy_switcher_page():
     return render_template("strategy_switcher.html")
 
