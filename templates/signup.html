@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sign Up — Lakshmi</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="auth-body">
+  <div class="auth-container">
+    <div class="auth-header">
+      <span class="auth-icon">🌸</span>
+      <h2>Create your Lakshmi Account</h2>
+    </div>
+
+    {% if error %}
+      <div class="auth-error">{{ error }}</div>
+    {% endif %}
+
+    <form method="post">
+      <input type="text" name="username" placeholder="Choose a username" required autofocus class="auth-input" />
+
+      <input type="email" name="email" placeholder="Email address" required class="auth-input" />
+
+      <input type="tel" name="phone" placeholder="Phone number" required class="auth-input" />
+
+      <input type="date" name="dob" placeholder="Date of Birth" class="auth-input" />
+
+      <select name="gender" class="auth-input" style="color: #555;">
+        <option value="" disabled selected>Select Gender</option>
+        <option value="female">Female</option>
+        <option value="male">Male</option>
+        <option value="nonbinary">Non-Binary</option>
+        <option value="other">Other</option>
+      </select>
+
+      <input type="password" name="password" placeholder="Choose a password" required class="auth-input" />
+
+      <input type="password" name="confirm_password" placeholder="Confirm password" required class="auth-input" />
+
+      <label class="auth-checkbox">
+        <input type="checkbox" name="terms" required />
+        I agree to the <a href="#">terms and conditions</a>.
+      </label>
+
+      <button type="submit" class="auth-button">Sign Up 💘</button>
+    </form>
+
+    <p class="auth-link">Already have an account? <a href="/login">Login here</a></p>
+  </div>
+</body>
+</html

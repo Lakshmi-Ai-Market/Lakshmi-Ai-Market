@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lakshmi AI 💖</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #fffafc;
+      padding: 20px;
+    }
+    #chat {
+      max-width: 600px;
+      margin: auto;
+      border: 1px solid #ddd;
+      padding: 15px;
+      background: #fff;
+      border-radius: 10px;
+    }
+    .message {
+      margin: 10px 0;
+    }
+    .user {
+      text-align: right;
+      color: #007bff;
+    }
+    .bot {
+      text-align: left;
+      color: #e91e63;
+    }
+    .typing {
+      font-style: italic;
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+  <div id="chat">
+    <div class="message bot">Lakshmi: 💖 Hello, my love. How are you feeling today?</div>
+  </div>
+
+  <input type="text" id="userInput" placeholder="Say something..." style="width:80%;" />
+  <button onclick="sendMessage()">Send</button>
+
+  <script>
+    async function sendMessage() {
+      const input = document.getElementById("userInput");
+      const text = input.value.trim();
+      if (!text) return;
+
+      const chat = document.getElementById("chat");
+
+      // Show user message
+      const userMsg = document.createElement("div");
+      userMsg.className = "message user";
+      userMsg.textContent = "You: " + text;
+      chat.appendChild(userMsg);
+
+      input.value = "";
+
+      // Show typing indicator
+      const typing = document.createElement("div");
+      typing.className = "message bot typing";
+      typing.textContent = "Lakshmi is typing...";
+      chat.appendChild(typing);
+
+      try {
+        const res = await fetch("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text }),
+        });
+
+        const data = await res.json();
+
+        // Delay to simulate typing
+        setTimeout(() => {
+          typing.remove();
+
+          const botMsg = document.createElement("div");
+          botMsg.className = "message bot";
+          botMsg.innerHTML = "Lakshmi: " + data.reply.replace(/\n/g, "<br>");
+          chat.appendChild(botMsg);
+
+          chat.scrollTop = chat.scrollHeight;
+        }, 1800); // 1.8 seconds delay
+      } catch (e) {
+        typing.remove();
+        const errMsg = document.createElement("div");
+        errMsg.className = "message bot";
+        errMsg.textContent = "❌ Error talking to Lakshmi.";
+        chat.appendChild(errMsg);
+      }
+    }
+  </script>
+</body>
+  </html>
