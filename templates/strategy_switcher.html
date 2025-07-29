@@ -1,44 +1,77 @@
+<!-- templates/strategy_switcher.html -->
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>🧭 Strategy Switcher</title>
+  <meta charset="UTF-8">
+  <title>Strategy Switcher</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <h2>🧭 Strategy Switcher</h2>
-  <form id="strategy-form">
-    <label>VIX:</label>
-    <input type="number" name="vix" required><br>
 
-    <label>Trend:</label>
-    <select name="trend">
-      <option value="sideways">Sideways</option>
-      <option value="up">Up</option>
-      <option value="down">Down</option>
-    </select><br>
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">💼 Lakshmi AI</div>
+    <div class="dropdown" id="menu-dropdown">
+      <a href="/">🏠 Dashboard</a>
+      <a href="/strategy">📘 Strategy Builder</a>
+      <a href="/strategy-switcher">🎯 Strategy Switcher</a>
+      <a href="/strategy-engine">💋 Strategy Engine</a>
+      <a href="/candle">🔮 Candle Predictor</a>
+      <a href="/matrix">📊 Strategy Matrix</a>
+      <a href="/analyzer">📈 Strategy Analyzer</a>
+      <a href="/ask-ai">🤖 Ask AI</a>
+      <a href="/option-chain">💹 Option Chain Viewer</a>
+      <a href="/backtester">🔁 Back-tester</a>
+      <a href="/neuron">🧠 Neuron Analysis</a>
+    </div>
+  </header>
 
-    <label>Volatility:</label>
-    <select name="volatility">
-      <option value="low">Low</option>
-      <option value="high">High</option>
-    </select><br>
+  <div class="container">
+    <h1 class="title">🎯 Strategy Switcher</h1>
+    <form method="post" action="/select-strategy" id="strategy-form" class="form-box">
+      <label for="vix">India VIX:</label>
+      <input type="number" name="vix" id="vix" placeholder="e.g., 18" required>
 
-    <label>Is Expiry Day:</label>
-    <input type="checkbox" name="is_expiry"><br>
+      <label for="trend">Market Trend:</label>
+      <select name="trend" id="trend">
+        <option value="up">Bullish</option>
+        <option value="down">Bearish</option>
+        <option value="sideways">Sideways</option>
+      </select>
 
-    <button type="submit">Find Strategy</button>
-  </form>
+      <label for="volatility">Volatility:</label>
+      <select name="volatility" id="volatility">
+        <option value="low">Low</option>
+        <option value="medium">Medium</option>
+        <option value="high">High</option>
+      </select>
 
-  <pre id="output"></pre>
+      <label for="is_expiry">Is Today Expiry?</label>
+      <select name="is_expiry" id="is_expiry">
+        <option value="false">No</option>
+        <option value="true">Yes</option>
+      </select>
+
+      <button type="submit" class="btn">Get Strategy</button>
+    </form>
+
+    <div id="result" class="result-box" style="margin-top: 20px;"></div>
+
+    <a href="/" class="btn back-btn">⬅️ Back to Dashboard</a>
+  </div>
 
   <script>
-    document.getElementById("strategy-form").addEventListener("submit", async function (e) {
+    const form = document.getElementById('strategy-form');
+    const resultBox = document.getElementById('result');
+
+    form.addEventListener('submit', async function(e) {
       e.preventDefault();
-      const form = new FormData(e.target);
       const data = {
-        vix: parseFloat(form.get("vix")),
-        trend: form.get("trend"),
-        volatility: form.get("volatility"),
-        is_expiry: form.get("is_expiry") === "on"
+        vix: parseFloat(document.getElementById('vix').value),
+        trend: document.getElementById('trend').value,
+        volatility: document.getElementById('volatility').value,
+        is_expiry: document.getElementById('is_expiry').value === "true"
       };
 
       const res = await fetch("/select-strategy", {
@@ -47,9 +80,13 @@
         body: JSON.stringify(data)
       });
 
-      const result = await res.json();
-      document.getElementById("output").textContent = JSON.stringify(result, null, 2);
+      const json = await res.json();
+      resultBox.innerHTML = `
+        <p><strong>Strategy Name:</strong> ${json.strategy_name}</p>
+        <p><strong>Strategy ID:</strong> ${json.strategy_id}</p>
+      `;
     });
   </script>
+
 </body>
 </html>
