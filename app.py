@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 import random, csv, os, requests, time
 from datetime import datetime
+from tools.strategy_switcher import select_strategy
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -525,10 +526,6 @@ def analyze_strategy():
     """
     return jsonify({'message': message})
 
-@app.route("/strategy-switcher", methods=["GET"])
-def strategy_switcher_page():
-    return render_template("strategy_switcher.html")
-
 @app.route("/neuron", methods=["GET", "POST"])
 def neuron():
     if request.method == "POST":
@@ -574,6 +571,21 @@ def analyze_with_neuron(price):
             "sl": 0,
             "target": 0
         }
+        
+        @app.route("/strategy-switcher", methods=["GET"])
+def strategy_switcher_page():
+    return render_template("strategy_switcher.html")
+
+
+@app.route("/select-strategy", methods=["POST"])
+def api_select_strategy():
+    try:
+        market_data = request.get_json(force=True)
+        strategy = select_strategy(market_data)
+        return jsonify(strategy), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+        
 # --- Start App ---
 import os
 
