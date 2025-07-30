@@ -17,7 +17,7 @@ app = Flask(__name__)
 app.secret_key = "lakshmi_secret_key"
 app.config['UPLOAD_FOLDER'] = 'static/voice_notes'
 
-OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENROUTER_KEY = os.getenv("OPENROUTER_KEY")
 print("🔑 OPENROUTER_KEY:", OPENROUTER_KEY)  # ✅ Should now print the key
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
