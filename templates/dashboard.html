@@ -116,6 +116,11 @@
     document.getElementById(id).style.display = 'block';
   }
 
+  // Auto-show candle tool if we came from /candle route
+  if (window.location.pathname === "/candle") {
+    showTool("candle");
+  }
+
   document.getElementById("chat-form").addEventListener("submit", async function (e) {
     e.preventDefault();
     const input = document.getElementById("user-input");
@@ -136,7 +141,6 @@
       body: formData
     });
     const data = await res.json();
-    document.getElementById("candle-result").innerHTML = `<pre>${data.prediction || data.error}</pre>`;}; </script>
-
-</body>
-</html>
+    document.getElementById("candle-result").innerHTML = `<pre>${data.prediction || data.error}</pre>`;
+  };
+</script>
