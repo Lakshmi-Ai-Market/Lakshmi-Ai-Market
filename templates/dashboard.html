@@ -1,9 +1,10 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Lakshmi Dashboard — AI Trading Suite</title>
-  <link href="https://fonts.googleapis.com/css2?family=Segoe+UI&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Segoe+UI&display=swap" rel="stylesheet"/>
   <style>
     body {
       margin: 0;
@@ -64,83 +65,80 @@
 </head>
 <body>
 <header>💖 Lakshmi AI Trading Dashboard</header>
+
+<div class="container" style="text-align:center;">
+  <button class="tool-button" onclick="showTool('chat')">💬 Lakshmi Chat</button>
+  <button class="tool-button" onclick="showTool('strategy')">📘 Strategy Builder</button>
+  <button class="tool-button" onclick="showTool('candle')">🔮 Candle Predictor</button>
+  <button class="tool-button" onclick="showTool('matrix')">📊 Multi-Strategy Matrix</button>
+  <button class="tool-button" onclick="showTool('ai')">🤖 Ask AI Assistant</button>
+</div>
+
 <div class="container">
-  <div style="text-align:center;">
-    <button class="tool-button" onclick="showTool('chat')">💬 Lakshmi Chat</button>
-    <button class="tool-button" onclick="showTool('strategy')">📘 Strategy Builder</button>
-    <button class="tool-button" onclick="showTool('candle')">🔮 Candle Predictor</button>
-    <button class="tool-button" onclick="showTool('matrix')">📊 Multi-Strategy Matrix</button>
-    <button class="tool-button" onclick="showTool('askai')">🤖 Ask AI Assistant</button>
-  </div>  <div id="chat" class="tool-section">
-    <h2>💬 Lakshmi Romantic Chat</h2>
-    <form id="chat-form">
-      <input type="text" id="user-input" placeholder="Talk to Lakshmi..." required>
-      <button class="submit-btn" type="submit">Send</button>
-    </form>
-    <div id="chat-box" style="margin-top:15px; max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px;"></div>
-  </div>  <div id="strategy" class="tool-section">
-    <h2>📘 Strategy Builder</h2>
-    <form method="POST" action="/add_strategy">
-      <input type="text" name="name" placeholder="Strategy Name" required>
-      <input type="number" name="entry" placeholder="Entry Price" required>
-      <input type="number" name="sl" placeholder="Stop Loss" required>
-      <input type="number" name="target" placeholder="Target Price" required>
-      <textarea name="note" placeholder="Notes (optional)"></textarea>
-      <button class="submit-btn" type="submit">📂 Save Strategy</button>
-    </form>
-    <p><a href="/strategy" style="color:#0077cc">📋 View All Saved Strategies</a></p>
-  </div>  <div id="candle" class="tool-section">
-    <h2>🔮 AI Candle Predictor (OHLC)</h2>
+
+  <!-- 🔮 Candle Predictor Section -->
+  <div id="candle" class="tool-section">
+    <h2>🔮 Advanced AI Candle Predictor (OHLC)</h2>
     <form id="candle-form">
       <input type="number" name="open" placeholder="Open" required>
       <input type="number" name="high" placeholder="High" required>
       <input type="number" name="low" placeholder="Low" required>
       <input type="number" name="close" placeholder="Close" required>
-      <button type="submit">Predict</button>
+      <select name="timeframe">
+        <option value="1m">1 Minute</option>
+        <option value="5m">5 Minute</option>
+        <option value="15m">15 Minute</option>
+        <option value="1h">1 Hour</option>
+      </select>
+      <button class="submit-btn" type="submit">🔍 Predict Candle</button>
     </form>
     <div id="candle-result" style="margin-top:10px;"></div>
-  </div>  <div id="matrix" class="tool-section">
-    <h2>📊 Multi-Strategy Signal Matrix</h2>
-    <p>Coming soon: Combine up to 5 strategies, visualize alignment and signals here.</p>
-  </div>  <div id="askai" class="tool-section">
-    <h2>🤖 Ask Lakshmi AI</h2>
-    <form id="askai-form">
-      <textarea name="question" placeholder="Ask about markets, strategies, trading psychology..."></textarea>
-      <button class="submit-btn" type="submit">Get Insight</button>
-    </form>
-    <div id="askai-response" style="margin-top:15px;"></div>
   </div>
-</div><script>
+
+  <!-- 💬 Chat Section -->
+  <div id="chat" class="tool-section">
+    <h2>💬 Lakshmi Chat</h2>
+    <p>This is where the chat module goes...</p>
+  </div>
+
+  <!-- 📘 Strategy Builder Section -->
+  <div id="strategy" class="tool-section">
+    <h2>📘 Strategy Builder</h2>
+    <p>Strategy builder form or logic here...</p>
+  </div>
+
+  <!-- 📊 Multi-Strategy Matrix -->
+  <div id="matrix" class="tool-section">
+    <h2>📊 Multi-Strategy Matrix</h2>
+    <p>Matrix tools here...</p>
+  </div>
+
+  <!-- 🤖 Ask AI -->
+  <div id="ai" class="tool-section">
+    <h2>🤖 Ask AI Assistant</h2>
+    <p>Ask Lakshmi anything here...</p>
+  </div>
+</div>
+
+<script>
   function showTool(id) {
     document.querySelectorAll('.tool-section').forEach(div => div.style.display = 'none');
     document.getElementById(id).style.display = 'block';
   }
 
-  // Auto-show candle tool if we came from /candle route
-  if (window.location.pathname === "/candle") {
-    showTool("candle");
-  }
-
-  document.getElementById("chat-form").addEventListener("submit", async function (e) {
-    e.preventDefault();
-    const input = document.getElementById("user-input");
-    const res = await fetch("/chat", {
-      method: "POST",
-      body: new URLSearchParams({ user_input: input.value })
-    });
-    const data = await res.json();
-    document.getElementById("chat-box").innerHTML += `<p><strong>You:</strong> ${input.value}</p><p><strong>Lakshmi:</strong> ${data.reply}</p>`;
-    input.value = '';
-  });
+  // Show candle tool by default if redirected from /candle
+  const defaultTool = window.location.pathname.includes("/candle") ? "candle" : null;
+  if (defaultTool) showTool(defaultTool);
 
   document.getElementById("candle-form").onsubmit = async function (e) {
     e.preventDefault();
     const formData = new FormData(e.target);
-    const res = await fetch("/api/candle", {
-      method: "POST",
-      body: formData
-    });
+    const res = await fetch("/api/candle", { method: "POST", body: formData });
     const data = await res.json();
-    document.getElementById("candle-result").innerHTML = `<pre>${data.prediction || data.error}</pre>`;
+    document.getElementById("candle-result").innerHTML =
+      `<pre>${data.prediction || data.error}</pre>`;
   };
 </script>
+
+</body>
+</html>
