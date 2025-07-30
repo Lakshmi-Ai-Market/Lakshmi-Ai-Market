@@ -112,7 +112,7 @@ def login():
         return render_template("login.html", error="Invalid credentials 💔")
     return render_template("login.html")
     
-@app.route("/logout", methods=["GET"])
+@app.route("/logout", methods=["POST"])
 def logout():
     session.pop("username", None)
     session.pop("email", None)
