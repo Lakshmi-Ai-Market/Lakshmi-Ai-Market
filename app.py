@@ -237,12 +237,16 @@ def download_strategies():
 @app.route("/api/candle", methods=["POST"])
 def predict_candle():
     try:
-        o = float(request.form["open"])
-        h = float(request.form["high"])
-        l = float(request.form["low"])
-        c = float(request.form["close"])
+        if request.is_json:
+            data = request.get_json()
+        else:
+            data = request.form
 
-        # prompt and OpenRouter API call (same as before)
+        o = float(data["open"])
+        h = float(data["high"])
+        l = float(data["low"])
+        c = float(data["close"])
+
         prompt = f"""
 You are a technical analyst expert.
 
