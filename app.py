@@ -195,8 +195,9 @@ def google_callback():
 def dashboard():
     if 'username' not in session and 'user' not in session:
         return redirect("/login")
-    
-    return render_template("index.html", mood=current_mood)
+
+    name = session.get("username") or session["user"]["name"]
+    return render_template("index.html", mood=current_mood, name=name)
     
 @app.route("/strategy")
 def strategy_page():
