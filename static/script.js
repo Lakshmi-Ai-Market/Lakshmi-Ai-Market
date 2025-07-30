@@ -109,31 +109,6 @@ document.getElementById("voice-form").onsubmit = function (e) {
   });
 };
 
-// --- Candle Predictor ---
-document.getElementById("candle-form").onsubmit = function (e) {
-  e.preventDefault();
-
-  const formData = new FormData(this);
-  const payload = {
-    open: formData.get("open"),
-    high: formData.get("high"),
-    low: formData.get("low"),
-    close: formData.get("close")
-  };
-
-  fetch("/api/candle", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  })
-    .then(res => res.json())
-    .then(data => {
-      document.getElementById("candle-result").innerHTML = `
-        🔮 Prediction:<br><pre>${data.prediction || data.error}</pre>
-      `;
-    });
-};
-
 // --- Load Voices ---
 function loadVoiceList() {
   fetch("/voice_list")
