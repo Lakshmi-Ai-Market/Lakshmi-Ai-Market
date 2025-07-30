@@ -101,15 +101,20 @@ def signup():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    # ✅ Redirect if already logged in (either via username or Google)
+    if "username" in session or "user" in session:
+        return redirect("/dashboard")
+
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
         users = load_users()
         for u in users:
             if u["username"] == username and u["password"] == password:
-                session['username'] = username
+                session["username"] = username
                 return redirect("/dashboard")
         return render_template("login.html", error="Invalid credentials 💔")
+    
     return render_template("login.html")
 
 @app.route("/logout", methods=["POST"])
@@ -188,10 +193,11 @@ def google_callback():
 
 @app.route("/dashboard")
 def dashboard():
-    if 'username' not in session:
+    if 'username' not in session and 'user' not in session:
         return redirect("/login")
+    
     return render_template("index.html", mood=current_mood)
-
+    
 @app.route("/strategy")
 def strategy_page():
     if 'username' not in session:
