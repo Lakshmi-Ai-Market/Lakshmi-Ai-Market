@@ -4,6 +4,7 @@ from datetime import datetime
 from tools.strategy_switcher import select_strategy
 import pandas as pd
 import re
+from urllib.parse import urlencode
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -106,6 +107,63 @@ def login():
                 return redirect("/dashboard")
         return render_template("login.html", error="Invalid credentials 💔")
     return render_template("login.html")
+GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
+REDIRECT_URI = "https://lakshmi-ai-trades.onrender.com/auth/callback"
+
+def get_google_config():
+    return requests.get(GOOGLE_DISCOVERY_URL).json()
+
+@app.route("/auth/login")
+def google_login():
+    cfg = get_google_config()
+    auth_endpoint = cfg["authorization_endpoint"]
+    
+    params = {
+        "response_type": "code",
+        "client_id": os.getenv("GOOGLE_CLIENT_ID"),
+        "redirect_uri": REDIRECT_URI,
+        "scope": "openid email profile",
+        "access_type": "offline",
+        "prompt": "consent"
+    }
+    return redirect(f"{auth_endpoint}?{urlencode(params)}")
+
+@app.route("/auth/callback")
+def google_callback():
+    code = request.args.get("code")
+    if not code:
+        return "❌ No code from Google", 400
+
+    cfg = get_google_config()
+    token_endpoint = cfg["token_endpoint"]
+
+    # Step 1: Get tokens
+    token_res = requests.post(
+        token_endpoint,
+        data={
+            "code": code,
+            "client_id": os.getenv("GOOGLE_CLIENT_ID"),
+            "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
+            "redirect_uri": REDIRECT_URI,
+            "grant_type": "authorization_code"
+        },
+        headers={"Content-Type": "application/x-www-form-urlencoded"}
+    )
+    token_json = token_res.json()
+    access_token = token_json.get("access_token")
+    if not access_token:
+        return jsonify(token_json), 400
+
+    # Step 2: Get user info
+    userinfo_res = requests.get(
+        cfg["userinfo_endpoint"],
+        headers={"Authorization": f"Bearer {access_token}"}
+    )
+    userinfo = userinfo_res.json()
+    
+    # Step 3: Set session and redirect
+    session["username"] = userinfo["email"]
+    return redirect("/dashboard")
 
 @app.route("/logout", methods=["POST"])
 def logout():
