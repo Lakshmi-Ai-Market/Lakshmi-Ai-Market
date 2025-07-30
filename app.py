@@ -117,11 +117,11 @@ def login():
     
     return render_template("login.html")
 
-@app.route("/logout")
+@app.route("/logout", methods=["GET"])
 def logout():
     session.pop('username', None)
     return redirect("/login")
-
+    
 def get_google_config():
     import requests
     return requests.get("https://accounts.google.com/.well-known/openid-configuration").json()
