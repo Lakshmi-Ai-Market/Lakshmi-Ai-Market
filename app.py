@@ -266,11 +266,12 @@ Next Candle: Likely Bullish/Bearish/Neutral
 Reason: [Short reason]
 """
 
+        OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY")  # ✅ LOAD HERE
+        print("✅ Sending Bearer key:", OPENROUTER_KEY[:10], "...")  # Just first 10 chars
+
         headers = {
-            "Authorization": f"Bearer {os.getenv('OPENROUTER_KEY')}",
+            "Authorization": f"Bearer {OPENROUTER_KEY}",
             "Content-Type": "application/json",
-            "HTTP-Referer": "https://lakshmi-ai-trades.onrender.com",
-            "X-Title": "Lakshmi Candle Predictor"
         }
 
         payload = {
