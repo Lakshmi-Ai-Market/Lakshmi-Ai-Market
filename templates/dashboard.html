@@ -61,6 +61,18 @@
       color: white;
       margin-top: 15px;
     }
+    /* ✅ Fix for prediction output overflow */
+    #candle-result pre {
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 12px;
+      border-radius: 8px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      max-width: 100%;
+      font-size: 15px;
+    }
   </style>
 </head>
 <body>
@@ -123,12 +135,16 @@
 <script>
   function showTool(id) {
     document.querySelectorAll('.tool-section').forEach(div => div.style.display = 'none');
-    document.getElementById(id).style.display = 'block';
+    const section = document.getElementById(id);
+    if (section) section.style.display = 'block';
   }
 
-  // Show candle tool by default if redirected from /candle
-  const defaultTool = window.location.pathname.includes("/candle") ? "candle" : null;
-  if (defaultTool) showTool(defaultTool);
+  // ✅ Automatically show only candle tool if coming from /candle
+  window.onload = () => {
+    if (window.location.pathname.includes("/candle")) {
+      showTool("candle");
+    }
+  };
 
   document.getElementById("candle-form").onsubmit = async function (e) {
     e.preventDefault();
