@@ -144,7 +144,9 @@ def google_callback():
 
     cfg = get_google_config()
     token_endpoint = cfg["token_endpoint"]
+    userinfo_endpoint = cfg["userinfo_endpoint"]
 
+    # Exchange code for tokens
     token_res = requests.post(
         token_endpoint,
         data={
@@ -156,6 +158,33 @@ def google_callback():
         },
         headers={"Content-Type": "application/x-www-form-urlencoded"}
     )
+
+    if token_res.status_code != 200:
+        return f"❌ Failed to fetch token: {token_res.text}", 500
+
+    tokens = token_res.json()
+    access_token = tokens.get("access_token")
+
+    # Use access token to get user info
+    userinfo_res = requests.get(
+        userinfo_endpoint,
+        headers={"Authorization": f"Bearer {access_token}"}
+    )
+
+    if userinfo_res.status_code != 200:
+        return f"❌ Failed to fetch user info: {userinfo_res.text}", 500
+
+    userinfo = userinfo_res.json()
+    email = userinfo.get("email")
+    name = userinfo.get("name")
+
+    # You can store session info here
+    session["user"] = {
+        "email": email,
+        "name": name
+    }
+
+    return redirect("/dashboard")  # or wherever your dashboard route is
 
 @app.route("/dashboard")
 def dashboard():
