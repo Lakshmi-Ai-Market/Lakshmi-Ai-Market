@@ -130,18 +130,32 @@
 </div>
 
 <div id="candle" class="tool-section">
-  <h2>🔮 AI Candle Predictor</h2>
-  <form id="candle-form">
-    <input type="number" name="current_price" placeholder="Current LTP" required>
-    <select name="timeframe">
-      <option value="1m">1 Min</option>
-      <option value="5m">5 Min</option>
-      <option value="15m">15 Min</option>
-    </select>
-    <button class="submit-btn" type="submit">Predict</button>
+  <h2>🔮 AI Candle Predictor (OHLC)</h2>
+  <form method="POST" action="/api/candle" id="candle-form">
+    <input type="number" name="open" step="0.01" placeholder="Open Price" required>
+    <input type="number" name="high" step="0.01" placeholder="High Price" required>
+    <input type="number" name="low" step="0.01" placeholder="Low Price" required>
+    <input type="number" name="close" step="0.01" placeholder="Close Price" required>
+    <button class="submit-btn" type="submit">🔮 Predict</button>
   </form>
   <div id="candle-result" style="margin-top:10px;"></div>
 </div>
+
+<script>
+  document.getElementById("candle-form").onsubmit = async function(e) {
+    e.preventDefault();
+
+    const formData = new FormData(this);
+    const res = await fetch("/api/candle", {
+      method: "POST",
+      body: formData
+    });
+    const data = await res.json();
+    document.getElementById("candle-result").innerHTML = `
+      🔍 <b>Prediction:</b><br><pre>${data.prediction || data.error}</pre>
+    `;
+  };
+</script>
 
 <div id="matrix" class="tool-section">
   <h2>📊 Multi-Strategy Signal Matrix</h2>
