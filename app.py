@@ -234,14 +234,62 @@ def get_strategies():
 def download_strategies():
     return send_file("strategies.csv", as_attachment=True)
 
-@app.route("/candle", methods=["GET", "POST"])
-def candle_predictor():
-    prediction = None
-    if request.method == "POST":
-        data = request.form["data"]
-        prediction = "Bullish 📈" if "45" in data else "Bearish 📉"
-    return render_template("candle_predictor.html", prediction=prediction)
+@app.route("/api/candle", methods=["POST"])
+def predict_candle():
+    try:
+        data = request.get_json(force=True)
+        o = float(data["open"])
+        h = float(data["high"])
+        l = float(data["low"])
+        c = float(data["close"])
 
+        prompt = f"""
+You are a technical analyst expert.
+
+A trader provides the following candle data:
+- Open: {o}
+- High: {h}
+- Low: {l}
+- Close: {c}
+
+1. First, determine if the current candle is **Bullish** or **Bearish**.
+2. Then, predict whether the **next candle** is likely to be **Bullish**, **Bearish**, or **Neutral**, based on price action behavior only.
+3. Use basic concepts like momentum, wick size, engulfing, or indecision.
+4. Keep the explanation in **2-3 lines max**.
+
+Respond only in this structured format:
+
+Prediction: [Bullish/Bearish]  
+Next Candle: [Likely Bullish/Bearish/Neutral]  
+Reason: [Short explanation]
+"""
+
+        headers = {
+            "Authorization": f"Bearer {os.getenv('OPENROUTER_KEY')}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://lakshmi-ai-trades.onrender.com",
+            "X-Title": "Lakshmi Candle Predictor"
+        }
+
+        payload = {
+            "model": "deepseek/deepseek-chat-v3-0324",
+            "messages": [
+                {"role": "system", "content": "You are a professional trader who analyzes candlestick patterns."},
+                {"role": "user", "content": prompt}
+            ]
+        }
+
+        response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
+
+        if response.status_code == 200:
+            reply = response.json()["choices"][0]["message"]["content"].strip()
+            return jsonify({"prediction": reply})
+        else:
+            return jsonify({"error": f"❌ Error: {response.status_code} - {response.text}"})
+
+    except Exception as e:
+        return jsonify({"error": f"❌ Exception: {str(e)}"})
+        
 # --- Chat Endpoint ---
 @app.route("/chat", methods=["POST"])
 def chat():
