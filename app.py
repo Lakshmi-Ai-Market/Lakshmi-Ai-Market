@@ -237,7 +237,6 @@ def download_strategies():
 @app.route("/api/candle", methods=["POST"])
 def predict_candle():
     try:
-        data = request.get_json(force=True)
         o = float(data["open"])
         h = float(data["high"])
         l = float(data["low"])
