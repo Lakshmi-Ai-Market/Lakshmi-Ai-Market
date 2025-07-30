@@ -101,10 +101,6 @@ def signup():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    # ✅ Redirect if already logged in (either via username or Google)
-    if "username" in session or "user" in session:
-        return redirect("/dashboard")
-
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
@@ -114,12 +110,12 @@ def login():
                 session["username"] = username
                 return redirect("/dashboard")
         return render_template("login.html", error="Invalid credentials 💔")
-    
     return render_template("login.html")
-
+    
 @app.route("/logout", methods=["GET"])
 def logout():
-    session.pop('username', None)
+    session.pop("username", None)
+    session.pop("email", None)
     return redirect("/login")
     
 def get_google_config():
@@ -149,9 +145,7 @@ def google_callback():
 
     cfg = get_google_config()
     token_endpoint = cfg["token_endpoint"]
-    userinfo_endpoint = cfg["userinfo_endpoint"]
 
-    # Exchange code for tokens
     token_res = requests.post(
         token_endpoint,
         data={
@@ -164,40 +158,31 @@ def google_callback():
         headers={"Content-Type": "application/x-www-form-urlencoded"}
     )
 
-    if token_res.status_code != 200:
-        return f"❌ Failed to fetch token: {token_res.text}", 500
+    token_json = token_res.json()
+    access_token = token_json.get("access_token")
+    if not access_token:
+        return "❌ Failed to get token from Google", 400
 
-    tokens = token_res.json()
-    access_token = tokens.get("access_token")
-
-    # Use access token to get user info
     userinfo_res = requests.get(
-        userinfo_endpoint,
+        cfg["userinfo_endpoint"],
         headers={"Authorization": f"Bearer {access_token}"}
     )
-
-    if userinfo_res.status_code != 200:
-        return f"❌ Failed to fetch user info: {userinfo_res.text}", 500
-
     userinfo = userinfo_res.json()
     email = userinfo.get("email")
-    name = userinfo.get("name")
 
-    # You can store session info here
-    session["user"] = {
-        "email": email,
-        "name": name
-    }
+    if not email:
+        return "❌ Failed to get user email", 400
 
-    return redirect("/dashboard")  # or wherever your dashboard route is
+    session["email"] = email
+    return redirect("/dashboard")
 
 @app.route("/dashboard")
 def dashboard():
-    if 'username' not in session and 'user' not in session:
+    if "username" not in session and "email" not in session:
         return redirect("/login")
 
-    name = session.get("username") or session["user"]["name"]
-    return render_template("index.html", mood=current_mood, name=name)
+    name = session.get("username") or session.get("email")
+    return render_template("index.html", name=name, mood=current_mood)
     
 @app.route("/strategy")
 def strategy_page():
