@@ -117,6 +117,10 @@ def logout():
     session.pop('username', None)
     return redirect("/login")
 
+def get_google_config():
+    import requests
+    return requests.get("https://accounts.google.com/.well-known/openid-configuration").json()
+
 @app.route("/auth/login")
 def google_login():
     cfg = get_google_config()
