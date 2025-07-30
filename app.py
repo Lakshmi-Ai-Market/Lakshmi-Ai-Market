@@ -242,28 +242,24 @@ def predict_candle():
         l = float(request.form["low"])
         c = float(request.form["close"])
 
+        # prompt and OpenRouter API call (same as before)
         prompt = f"""
-You are a technical analysis expert.
+You are a technical analyst expert.
 
-A trader provides the following candle data:
-- Open: {o}
-- High: {h}
-- Low: {l}
-- Close: {c}
+OHLC:
+Open: {o}
+High: {h}
+Low: {l}
+Close: {c}
 
-1. Is this candle Bullish or Bearish?
-2. Predict the **next candle**: Bullish, Bearish, or Neutral?
-3. Use concepts like momentum, wick size, or engulfing.
-4. Keep your answer short, 2–3 lines only.
-
-Respond in this format:
-Prediction: [Bullish/Bearish]  
-Next Candle: [Likely Bullish/Bearish/Neutral]  
-Reason: [Short explanation]
+Predict in format:
+Prediction: Bullish/Bearish
+Next Candle: Likely Bullish/Bearish/Neutral
+Reason: [Short reason]
 """
 
         headers = {
-            "Authorization": f"Bearer {OPENROUTER_KEY}",
+            "Authorization": f"Bearer {os.getenv('OPENROUTER_KEY')}",
             "Content-Type": "application/json",
             "HTTP-Referer": "https://lakshmi-ai-trades.onrender.com",
             "X-Title": "Lakshmi Candle Predictor"
@@ -272,20 +268,21 @@ Reason: [Short explanation]
         payload = {
             "model": "deepseek/deepseek-chat-v3-0324",
             "messages": [
-                {"role": "system", "content": "You are a professional price action analyst."},
+                {"role": "system", "content": "You are a professional trader analyzing candles."},
                 {"role": "user", "content": prompt}
             ]
         }
 
-        res = requests.post(OPENROUTER_URL, headers=headers, json=payload)
+        res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
 
         if res.status_code == 200:
-            prediction = res.json()["choices"][0]["message"]["content"].strip()
-            return jsonify({"prediction": prediction})
+            reply = res.json()["choices"][0]["message"]["content"].strip()
+            return jsonify({"prediction": reply})
         else:
-            return jsonify({"error": f"Error {res.status_code}: {res.text}"})
+            return jsonify({"error": f"❌ OpenRouter error {res.status_code}: {res.text}"})
+
     except Exception as e:
-        return jsonify({"error": f"Exception: {str(e)}"})
+        return jsonify({"error": f"❌ Exception: {str(e)}"})
         
 # --- Chat Endpoint ---
 @app.route("/chat", methods=["POST"])
