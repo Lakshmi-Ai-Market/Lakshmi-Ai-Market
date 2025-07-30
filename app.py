@@ -21,6 +21,10 @@ OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY")
 print("🔑 OPENROUTER_KEY:", OPENROUTER_KEY)  # ✅ Should now print the key
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
+# --- Google OAuth Settings ---
+GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
+REDIRECT_URI = "https://lakshmi-ai-trades.onrender.com/auth/callback"
+
 # --- Global Variables ---
 mode = "wife"
 latest_ltp = 0
@@ -107,17 +111,17 @@ def login():
                 return redirect("/dashboard")
         return render_template("login.html", error="Invalid credentials 💔")
     return render_template("login.html")
-GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
-REDIRECT_URI = "https://lakshmi-ai-trades.onrender.com/auth/callback"
 
-def get_google_config():
-    return requests.get(GOOGLE_DISCOVERY_URL).json()
+@app.route("/logout", methods=["POST"])
+def logout():
+    session.pop('username', None)
+    return redirect("/login")
 
 @app.route("/auth/login")
 def google_login():
     cfg = get_google_config()
     auth_endpoint = cfg["authorization_endpoint"]
-    
+
     params = {
         "response_type": "code",
         "client_id": os.getenv("GOOGLE_CLIENT_ID"),
@@ -137,7 +141,6 @@ def google_callback():
     cfg = get_google_config()
     token_endpoint = cfg["token_endpoint"]
 
-    # Step 1: Get tokens
     token_res = requests.post(
         token_endpoint,
         data={
@@ -149,26 +152,6 @@ def google_callback():
         },
         headers={"Content-Type": "application/x-www-form-urlencoded"}
     )
-    token_json = token_res.json()
-    access_token = token_json.get("access_token")
-    if not access_token:
-        return jsonify(token_json), 400
-
-    # Step 2: Get user info
-    userinfo_res = requests.get(
-        cfg["userinfo_endpoint"],
-        headers={"Authorization": f"Bearer {access_token}"}
-    )
-    userinfo = userinfo_res.json()
-    
-    # Step 3: Set session and redirect
-    session["username"] = userinfo["email"]
-    return redirect("/dashboard")
-
-@app.route("/logout", methods=["POST"])
-def logout():
-    session.pop('username', None)
-    return redirect("/login")
 
 @app.route("/dashboard")
 def dashboard():
