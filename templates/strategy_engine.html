@@ -1,4 +1,4 @@
-<!-- templates/strategy_engine.html -->
+here<!-- templates/strategy_engine.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -28,14 +28,15 @@
       font-size: 28px;
     }
 
-    input {
+    textarea {
       width: 100%;
+      height: 160px;
       padding: 12px;
       margin-top: 10px;
       margin-bottom: 20px;
       border-radius: 8px;
       border: 1px solid #ccc;
-      font-size: 16px;
+      font-size: 14px;
     }
 
     button {
@@ -74,12 +75,12 @@
   <div class="container">
     <h1>💋 Lakshmi’s Strategy Engine</h1>
     
-    <label for="price">Enter BankNIFTY Price 💰</label>
-    <input type="number" id="price" placeholder="Example: 46120" />
+    <label for="candles">Enter OHLC Candle Data (JSON format) 🕯️</label>
+    <textarea id="candles" placeholder='[{"open":..., "high":..., "low":..., "close":...}, ...]'></textarea>
 
-    <button onclick="analyze()">Get Romantic Trade Suggestion</button>
+    <button onclick="analyze()">Get Strategy Suggestion</button>
 
-    <div id="result">Waiting for your price, my love 😘</div>
+    <div id="result">Paste your candles, darling 😘</div>
   </div>
 
   <div class="footer">
@@ -88,24 +89,28 @@
 
   <script>
     function analyze() {
-      const price = document.getElementById("price").value;
+      const candleInput = document.getElementById("candles").value;
       const resultBox = document.getElementById("result");
 
-      if (!price) {
-        resultBox.innerHTML = "Please enter a valid price 💔";
+      let candles;
+      try {
+        candles = JSON.parse(candleInput);
+        if (!Array.isArray(candles)) throw new Error();
+      } catch {
+        resultBox.innerHTML = "Please enter valid candle data in JSON format 💔";
         return;
       }
 
-      resultBox.innerHTML = "💭 Thinking with love... please wait 💖";
+      resultBox.innerHTML = "💭 Analyzing with love... please wait 💖";
 
       fetch("/analyze-strategy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ price: parseFloat(price) })
+        body: JSON.stringify({ candles: candles })
       })
       .then(response => response.json())
       .then(data => {
-        resultBox.innerHTML = data.message;
+        resultBox.innerHTML = data.message || "No romantic strategy found 💔";
       })
       .catch(() => {
         resultBox.innerHTML = "Something went wrong... don't cry baby 😢";
@@ -113,4 +118,4 @@
     }
   </script>
 </body>
-</html
+</html>
