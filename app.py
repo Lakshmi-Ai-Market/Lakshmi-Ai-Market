@@ -549,10 +549,16 @@ def option_chain():
     return render_template("option_chain.html", option_data=mock_data, strike_filter=strike_filter, expiry=expiry)
 
 @app.route("/strategy-engine")
-def strategy_engine():
+def render_strategy_page():  # ✅ Different function name
     if 'username' not in session:
         return redirect("/login")
     return render_template("strategy_engine.html")
+
+
+@app.route("/api/strategy", methods=["POST", "GET"])
+def strategy_engine():  # This can stay same
+    try:
+        ...
 
 @app.route("/api/strategy", methods=["POST", "GET"])
 def strategy_engine():
