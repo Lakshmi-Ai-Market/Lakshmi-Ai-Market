@@ -89,33 +89,34 @@ here<!-- templates/strategy_engine.html -->
 
   <script>
     function analyze() {
-      const candleInput = document.getElementById("candles").value;
-      const resultBox = document.getElementById("result");
+  const candleInput = document.getElementById("candles").value;
+  const resultBox = document.getElementById("result");
 
-      let candles;
-      try {
-        candles = JSON.parse(candleInput);
-        if (!Array.isArray(candles)) throw new Error();
-      } catch {
-        resultBox.innerHTML = "Please enter valid candle data in JSON format 💔";
-        return;
-      }
+  let candles;
+  try {
+    candles = JSON.parse(candleInput);
+    if (!Array.isArray(candles)) throw new Error();
+  } catch {
+    resultBox.innerHTML = "Please enter valid candle data in JSON format 💔";
+    return;
+  }
 
-      resultBox.innerHTML = "💭 Analyzing with love... please wait 💖";
+  resultBox.innerHTML = "💭 Analyzing with love... please wait 💖";
 
-      fetch("/analyze-strategy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ candles: candles })
-      })
-      .then(response => response.json())
-      .then(data => {
-        resultBox.innerHTML = data.message || "No romantic strategy found 💔";
-      })
-      .catch(() => {
-        resultBox.innerHTML = "Something went wrong... don't cry baby 😢";
-      });
+  fetch("/api/strategy", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ candles: candles })
+  })
+  .then(response => response.json())
+  .then(data => {
+    resultBox.innerHTML = data.reply || "No romantic strategy found 💔";
+  })
+  .catch(() => {
+    resultBox.innerHTML = "Something went wrong... don't cry baby 😢";
+  });
     }
+    
   </script>
 </body>
 </html>
