@@ -138,19 +138,25 @@
     document.querySelectorAll('.tool-section').forEach(div => {
       div.style.display = 'none';
     });
-    // Show the selected one
+    // Show selected section
     document.getElementById(id).style.display = 'block';
   }
 
-  // On first load: hide all tool-sections
-  document.querySelectorAll('.tool-section').forEach(div => {
-    div.style.display = 'none';
-  });
-
-  // Show candle if redirected from /candle, otherwise default to none
-  const path = window.location.pathname;
-  if (path.includes("/candle")) {
+  // Auto-show candle section if current path contains "/candle"
+  if (window.location.pathname.includes("/candle")) {
     showTool("candle");
+  } else {
+    // Default show nothing or one specific tool
+    showTool("chat"); // You can change this to "candle" if you prefer
   }
-</script>
 
+  // Candle form prediction logic
+  document.getElementById("candle-form").onsubmit = async function (e) {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const res = await fetch("/api/candle", { method: "POST", body: formData });
+    const data = await res.json();
+    document.getElementById("candle-result").innerHTML =
+      `<pre style="white-space: pre-wrap; word-wrap: break-word;">${data.prediction || data.error}</pre>`;
+  };
+                                                                    </script>
