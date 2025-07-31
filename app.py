@@ -548,19 +548,6 @@ def option_chain():
 
     return render_template("option_chain.html", option_data=mock_data, strike_filter=strike_filter, expiry=expiry)
 
-@app.route("/analyzer", methods=["GET", "POST"])
-def analyzer():
-    signal = ""
-    if request.method == "POST":
-        r = random.random()
-        if r > 0.7:
-            signal = "📈 Strong BUY — Momentum detected!"
-        elif r < 0.3:
-            signal = "📉 SELL — Weakness detected!"
-        else:
-            signal = "⏳ No clear signal — Stay out!"
-    return render_template("analyzer.html", signal=signal)
-
 @app.route("/strategy-engine")
 def strategy_engine():
     if 'username' not in session:
