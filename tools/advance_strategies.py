@@ -1,17 +1,17 @@
 import requests
 import numpy as np
 
-# ✅ Fetch real candles from your internal candle API
+# === Fetch real candles from your internal candle API ===
 def fetch_candles():
     try:
-        res = requests.get("https://lakshmi-ai-trades.onrender.com/api/candle")  # Use your deployed candle endpoint
+        res = requests.get("https://lakshmi-ai-trades.onrender.com/api/candle")  # or your deployed endpoint
         data = res.json()
         return data if isinstance(data, list) else []
     except Exception as e:
         print("❌ Error fetching candles:", str(e))
         return []
 
-# ✅ EMA Crossover Strategy
+# === EMA Crossover Strategy ===
 def ema_crossover(candles):
     closes = [c['close'] for c in candles]
     if len(closes) < 21:
@@ -23,7 +23,7 @@ def ema_crossover(candles):
     elif ema9 < ema21:
         return {"strategy": "📉 EMA Bearish Crossover", "confidence": 80}
 
-# ✅ RSI Reversal Strategy
+# === RSI Reversal Strategy ===
 def rsi_reversal(candles):
     closes = [c['close'] for c in candles]
     if len(closes) < 15:
@@ -46,7 +46,7 @@ def rsi_reversal(candles):
     elif rsi > 70:
         return {"strategy": "🔄 RSI Bearish Reversal (>70)", "confidence": 75}
 
-# ✅ MACD Divergence Strategy
+# === MACD Strategy ===
 def macd_strategy(candles):
     closes = [c['close'] for c in candles]
     if len(closes) < 35:
@@ -60,15 +60,17 @@ def macd_strategy(candles):
     elif macd < signal:
         return {"strategy": "🔻 MACD Bearish Momentum", "confidence": 77}
 
-# ✅ Breakout Strategy
+# === Breakout Strategy ===
 def breakout_strategy(candles):
     highs = [c['high'] for c in candles]
     closes = [c['close'] for c in candles]
+    if len(highs) < 10:
+        return None
     resistance = max(highs[-10:-1])
     if closes[-1] > resistance:
         return {"strategy": "💥 Breakout Above Resistance", "confidence": 79}
 
-# ✅ Pullback Strategy
+# === Pullback Strategy ===
 def pullback_strategy(candles):
     closes = [c['close'] for c in candles]
     if len(closes) < 10:
@@ -77,7 +79,7 @@ def pullback_strategy(candles):
     if retracement:
         return {"strategy": "🔂 Pullback Entry Signal", "confidence": 74}
 
-# ✅ Volume Surge Strategy
+# === Volume Surge Strategy ===
 def volume_surge(candles):
     vols = [c['volume'] for c in candles]
     if len(vols) < 10:
@@ -86,7 +88,7 @@ def volume_surge(candles):
     if vols[-1] > 1.5 * avg_vol:
         return {"strategy": "📊 Volume Surge Detected", "confidence": 76}
 
-# ✅ SuperTrend (Simplified)
+# === SuperTrend Signal (Basic) ===
 def supertrend(candles):
     if len(candles) < 10:
         return None
@@ -97,7 +99,7 @@ def supertrend(candles):
         "confidence": 78 if trend == "Bullish" else 72
     }
 
-# ✅ Combine All Strategies
+# === Analyze All Strategies Combined ===
 def analyze_all():
     candles = fetch_candles()
     if not candles:
