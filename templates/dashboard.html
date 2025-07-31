@@ -134,54 +134,23 @@
     <h2>🤖 Ask AI Assistant</h2>
     <p>Ask Lakshmi anything here...</p>
   </div>
-</div>
-
-<script>
-  function showTool(id) {
-  document.querySelectorAll('.tool-section').forEach(div => {
-    div.style.display = 'none';
-  });
-  const selected = document.getElementById(id);
-  if (selected) selected.style.display = 'block';
-
-  history.pushState(null, '', '/' + id); // this updates the URL
-  }
-  // ✅ Detect based on path (e.g., /candle)
+</div> 
   
-  window.onpopstate = () => {
-  const path = window.location.pathname;
-  if (path.includes("/candle")) showTool("candle");
-  else if (path.includes("/chat")) showTool("chat");
-  else if (path.includes("/strategy")) showTool("strategy");
-  else if (path.includes("/matrix")) showTool("matrix");
-  else if (path.includes("/ai")) showTool("ai");
-  else showTool("chat");
-};
-
-  // ✅ Candle form prediction logic
-  document.getElementById("candle-form")?.addEventListener("submit", async function (e) {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-
-    try {
-      const res = await fetch("/api/candle", {
-        method: "POST",
-        body: formData
-      });
-
-      const data = await res.json();
-      const resultBox = document.getElementById("candle-result");
-
-      if (data.prediction) {
-        resultBox.innerHTML = `<pre style="white-space: pre-wrap; word-wrap: break-word;">${data.prediction}</pre>`;
-      } else if (data.error) {
-        resultBox.innerHTML = `<pre style="color: red;">${data.error}</pre>`;
-      } else {
-        resultBox.innerHTML = "<pre>❌ No response.</pre>";
-      }
-
-    } catch (err) {
-      document.getElementById("candle-result").innerHTML = `<pre style="color:red;">❌ JS Error: ${err.message}</pre>`;
+</div>  <script>
+    function showTool(id) {
+      document.querySelectorAll('.tool-section').forEach(div => div.style.display = 'none');
+      document.getElementById(id).style.display = 'block';
     }
-  });
-</script>
+    document.getElementById('chat-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const input = document.getElementById('user-input');
+      const res = await fetch('/chat', {
+        method: 'POST',
+        body: new URLSearchParams({ message: input.value })
+      });
+      const data = await res.json();
+      document.getElementById('chat-box').innerHTML += `<p><strong>You:</strong> ${input.value}</p><p><strong>Lakshmi:</strong> ${data.reply}</p>`;
+      input.value = '';
+    });
+  </script></body>
+</html>
