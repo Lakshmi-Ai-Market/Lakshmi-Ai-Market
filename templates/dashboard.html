@@ -60,6 +60,10 @@
       background: #ff4d88;
       color: white;
       margin-top: 15px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
     }
     /* ✅ Fix for prediction output overflow */
     #candle-result pre {
@@ -89,7 +93,7 @@
 <div class="container">
 
   <!-- 🔮 Candle Predictor Section -->
-  <div id="candle" class="tool-section">
+  <div id="candle" class="tool-section" style="display:block;">
     <h2>🔮 Advanced AI Candle Predictor (OHLC)</h2>
     <form id="candle-form">
       <input type="number" name="open" placeholder="Open" required>
@@ -108,25 +112,25 @@
   </div>
 
   <!-- 💬 Chat Section -->
-  <div id="chat" class="tool-section">
+  <div id="chat" class="tool-section" style="display:none;">
     <h2>💬 Lakshmi Chat</h2>
     <p>This is where the chat module goes...</p>
   </div>
 
   <!-- 📘 Strategy Builder Section -->
-  <div id="strategy" class="tool-section">
+  <div id="strategy" class="tool-section" style="display:none;">
     <h2>📘 Strategy Builder</h2>
     <p>Strategy builder form or logic here...</p>
   </div>
 
   <!-- 📊 Multi-Strategy Matrix -->
-  <div id="matrix" class="tool-section">
+  <div id="matrix" class="tool-section" style="display:none;">
     <h2>📊 Multi-Strategy Matrix</h2>
     <p>Matrix tools here...</p>
   </div>
 
   <!-- 🤖 Ask AI -->
-  <div id="ai" class="tool-section">
+  <div id="ai" class="tool-section" style="display:none;">
     <h2>🤖 Ask AI Assistant</h2>
     <p>Ask Lakshmi anything here...</p>
   </div>
@@ -134,20 +138,10 @@
 
 <script>
   function showTool(id) {
-    // Hide all tool sections
     document.querySelectorAll('.tool-section').forEach(div => {
       div.style.display = 'none';
     });
-    // Show selected section
     document.getElementById(id).style.display = 'block';
-  }
-
-  // Auto-show candle section if current path contains "/candle"
-  if (window.location.pathname.includes("/candle")) {
-    showTool("candle");
-  } else {
-    // Default show nothing or one specific tool
-    showTool("chat"); // You can change this to "candle" if you prefer
   }
 
   // Candle form prediction logic
@@ -157,6 +151,9 @@
     const res = await fetch("/api/candle", { method: "POST", body: formData });
     const data = await res.json();
     document.getElementById("candle-result").innerHTML =
-      `<pre style="white-space: pre-wrap; word-wrap: break-word;">${data.prediction || data.error}</pre>`;
+      `<pre>${data.prediction || data.error}</pre>`;
   };
-                                                                    </script>
+</script>
+
+</body>
+</html>
