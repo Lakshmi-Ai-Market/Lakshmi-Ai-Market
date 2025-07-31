@@ -1,5 +1,6 @@
 import requests import numpy as np
-# ➤ Fetch real candles from your internal candle API
+
+# Fetch real candles from your internal candle API
 def fetch_candles(): try: res = requests.get("https://lakshmi-ai-trades.onrender.com/api/candle")  # or your deployed endpoint data = res.json() return data if isinstance(data, list) else [] except Exception as e: print("❌ Error fetching candles:", str(e)) return []
 
 ➤ EMA Crossover Strategy
