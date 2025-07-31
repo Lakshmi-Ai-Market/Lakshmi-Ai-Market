@@ -548,6 +548,12 @@ def option_chain():
 
     return render_template("option_chain.html", option_data=mock_data, strike_filter=strike_filter, expiry=expiry)
 
+@app.route("/strategy-engine")
+def strategy_engine():
+    if 'username' not in session:
+        return redirect("/login")
+    return render_template("strategy_engine.html")
+
 @app.route("/api/strategy", methods=["POST", "GET"])
 def strategy_engine():
     try:
