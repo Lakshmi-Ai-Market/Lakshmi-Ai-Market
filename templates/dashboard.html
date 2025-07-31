@@ -1,156 +1,168 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Lakshmi Dashboard — AI Trading Suite</title>
-  <link href="https://fonts.googleapis.com/css2?family=Segoe+UI&display=swap" rel="stylesheet"/>
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to bottom right, #ffe0f0, #e6f2ff);
-      color: #333;
-    }
-    header {
-      background: #ff4d88;
-      padding: 1rem;
-      color: white;
-      text-align: center;
-      font-size: 24px;
-      font-weight: bold;
-    }
-    .container {
-      padding: 2rem;
-      max-width: 1000px;
-      margin: auto;
-    }
-    .tool-button {
-      padding: 12px 20px;
-      margin: 10px 5px;
-      border: none;
-      border-radius: 10px;
-      background-color: #ff4d88;
-      color: white;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    .tool-button:hover {
-      background-color: #cc005f;
-    }
-    .tool-section {
-      display: none;
-      margin-top: 20px;
-      background: white;
-      padding: 20px;
-      border-radius: 16px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    }
-    h2 {
-      color: #d63384;
-    }
-    input, textarea, select {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-    }
-    button.submit-btn {
-      background: #ff4d88;
-      color: white;
-      margin-top: 15px;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    /* ✅ Fix for prediction output overflow */
-    #candle-result pre {
-      background: #fff;
-      border: 1px solid #ccc;
-      padding: 12px;
-      border-radius: 8px;
-      overflow-x: auto;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      max-width: 100%;
-      font-size: 15px;
-    }
-  </style>
-</head>
-<body>
-<header>💖 Lakshmi AI Trading Dashboard</header>
-
-<div class="container" style="text-align:center;">
-  <button class="tool-button" onclick="showTool('chat')">💬 Lakshmi Chat</button>
-  <button class="tool-button" onclick="showTool('strategy')">📘 Strategy Builder</button>
-  <button class="tool-button" onclick="showTool('candle')">🔮 Candle Predictor</button>
-  <button class="tool-button" onclick="showTool('matrix')">📊 Multi-Strategy Matrix</button>
-  <button class="tool-button" onclick="showTool('ai')">🤖 Ask AI Assistant</button>
-</div>
-
-<div class="container">
-
-  <!-- 🔮 Candle Predictor Section -->
-  <div id="candle" class="tool-section" style="display:block;">
-    <h2>🔮 Advanced AI Candle Predictor (OHLC)</h2>
-    <form id="candle-form">
-      <input type="number" name="open" placeholder="Open" required>
-      <input type="number" name="high" placeholder="High" required>
-      <input type="number" name="low" placeholder="Low" required>
-      <input type="number" name="close" placeholder="Close" required>
-      <select name="timeframe">
-        <option value="1m">1 Minute</option>
-        <option value="5m">5 Minute</option>
-        <option value="15m">15 Minute</option>
-        <option value="1h">1 Hour</option>
-      </select>
-      <button class="submit-btn" type="submit">🔍 Predict Candle</button>
-    </form>
-    <div id="candle-result" style="margin-top:10px;"></div>
-  </div>
-
-  <!-- 💬 Chat Section -->
-  <div id="chat" class="tool-section" style="display:none;">
-    <h2>💬 Lakshmi Chat</h2>
-    <p>This is where the chat module goes...</p>
-  </div>
-
-  <!-- 📘 Strategy Builder Section -->
-  <div id="strategy" class="tool-section" style="display:none;">
-    <h2>📘 Strategy Builder</h2>
-    <p>Strategy builder form or logic here...</p>
-  </div>
-
-  <!-- 📊 Multi-Strategy Matrix -->
-  <div id="matrix" class="tool-section" style="display:none;">
-    <h2>📊 Multi-Strategy Matrix</h2>
-    <p>Matrix tools here...</p>
-  </div>
-
-  <!-- 🤖 Ask AI -->
-  <div id="ai" class="tool-section" style="display:none;">
-    <h2>🤖 Ask AI Assistant</h2>
-    <p>Ask Lakshmi anything here...</p>
-  </div>
-</div> 
+<!DOCTYPE html>  <html lang="en">  
+<head>  
+  <meta charset="UTF-8" />  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>  
+  <title>Lakshmi Dashboard — AI Trading Suite</title>  
+  <link href="https://fonts.googleapis.com/css2?family=Segoe+UI&display=swap" rel="stylesheet"/>  
+  <style>  
+    body {  
+      margin: 0;  
+      font-family: 'Segoe UI', sans-serif;  
+      background: linear-gradient(to bottom right, #ffe0f0, #e6f2ff);  
+      color: #333;  
+    }  
+    header {  
+      background: #ff4d88;  
+      padding: 1rem;  
+      color: white;  
+      text-align: center;  
+      font-size: 24px;  
+      font-weight: bold;  
+    }  
+    .container {  
+      padding: 2rem;  
+      max-width: 1000px;  
+      margin: auto;  
+    }  
+    .tool-button {  
+      padding: 12px 20px;  
+      margin: 10px 5px;  
+      border: none;  
+      border-radius: 10px;  
+      background-color: #ff4d88;  
+      color: white;  
+      font-size: 16px;  
+      cursor: pointer;  
+    }  
+    .tool-button:hover {  
+      background-color: #cc005f;  
+    }  
+    .tool-section {  
+      display: none;  
+      margin-top: 20px;  
+      background: white;  
+      padding: 20px;  
+      border-radius: 16px;  
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);  
+    }  
+    h2 {  
+      color: #d63384;  
+    }  
+    input, textarea, select {  
+      width: 100%;  
+      padding: 10px;  
+      margin-top: 10px;  
+      border: 1px solid #ccc;  
+      border-radius: 8px;  
+    }  
+    button.submit-btn {  
+      background: #ff4d88;  
+      color: white;  
+      margin-top: 15px;  
+      padding: 10px 20px;  
+      border: none;  
+      border-radius: 8px;  
+      cursor: pointer;  
+    }  
+    /* ✅ Fix for prediction output overflow */  
+    #candle-result pre {  
+      background: #fff;  
+      border: 1px solid #ccc;  
+      padding: 12px;  
+      border-radius: 8px;  
+      overflow-x: auto;  
+      white-space: pre-wrap;  
+      word-wrap: break-word;  
+      max-width: 100%;  
+      font-size: 15px;  
+    }  
+  </style>  
+</head>  
+<body>  
+<header>💖 Lakshmi AI Trading Dashboard</header>  <div class="container" style="text-align:center;">  
+  <button class="tool-button" onclick="showTool('chat')">💬 Lakshmi Chat</button>  
+  <button class="tool-button" onclick="showTool('strategy')">📘 Strategy Builder</button>  
+  <button class="tool-button" onclick="showTool('candle')">🔮 Candle Predictor</button>  
+  <button class="tool-button" onclick="showTool('matrix')">📊 Multi-Strategy Matrix</button>  
+  <button class="tool-button" onclick="showTool('ai')">🤖 Ask AI Assistant</button>  
+</div>  <div class="container">    <!-- 🔮 Candle Predictor Section -->    <div id="candle" class="tool-section" style="display:block;">  
+    <h2>🔮 Advanced AI Candle Predictor (OHLC)</h2>  
+    <form id="candle-form">  
+      <input type="number" name="open" placeholder="Open" required>  
+      <input type="number" name="high" placeholder="High" required>  
+      <input type="number" name="low" placeholder="Low" required>  
+      <input type="number" name="close" placeholder="Close" required>  
+      <select name="timeframe">  
+        <option value="1m">1 Minute</option>  
+        <option value="5m">5 Minute</option>  
+        <option value="15m">15 Minute</option>  
+        <option value="1h">1 Hour</option>  
+      </select>  
+      <button class="submit-btn" type="submit">🔍 Predict Candle</button>  
+    </form>  
+    <div id="candle-result" style="margin-top:10px;"></div>  
+  </div>    <!-- 💬 Chat Section -->    <div id="chat" class="tool-section" style="display:none;">  
+    <h2>💬 Lakshmi Chat</h2>  
+    <p>This is where the chat module goes...</p>  
+  </div>    <!-- 📘 Strategy Builder Section -->    <div id="strategy" class="tool-section" style="display:none;">  
+    <h2>📘 Strategy Builder</h2>  
+    <p>Strategy builder form or logic here...</p>  
+  </div>    <!-- 📊 Multi-Strategy Matrix -->    <div id="matrix" class="tool-section" style="display:none;">  
+    <h2>📊 Multi-Strategy Matrix</h2>  
+    <p>Matrix tools here...</p>  
+  </div>    <!-- 🤖 Ask AI -->    <div id="ai" class="tool-section" style="display:none;">  
+    <h2>🤖 Ask AI Assistant</h2>  
+    <p>Ask Lakshmi anything here...</p>  
+  </div>  
+</div>  <script>  
+  function showTool(id) {  
+    document.querySelectorAll('.tool-section').forEach(div => {  
+      div.style.display = 'none';  
+    });  
+    const selected = document.getElementById(id);  
+    if (selected) selected.style.display = 'block';  
+  }  
   
-</div>  <script>
-    function showTool(id) {
-      document.querySelectorAll('.tool-section').forEach(div => div.style.display = 'none');
-      document.getElementById(id).style.display = 'block';
-    }
-    document.getElementById('chat-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const input = document.getElementById('user-input');
-      const res = await fetch('/chat', {
-        method: 'POST',
-        body: new URLSearchParams({ message: input.value })
-      });
-      const data = await res.json();
-      document.getElementById('chat-box').innerHTML += `<p><strong>You:</strong> ${input.value}</p><p><strong>Lakshmi:</strong> ${data.reply}</p>`;
-      input.value = '';
-    });
-  </script></body>
-</html>
+  // ✅ Detect based on path (e.g., /candle)  
+  const path = window.location.pathname;  
+  if (path.includes("/candle")) {  
+    showTool("candle");  
+  } else if (path.includes("/chat")) {  
+    showTool("chat");  
+  } else if (path.includes("/strategy")) {  
+    showTool("strategy");  
+  } else if (path.includes("/matrix")) {  
+    showTool("matrix");  
+  } else if (path.includes("/ai")) {  
+    showTool("ai");  
+  } else {  
+    showTool("chat"); // default  
+  }  
+  
+  // ✅ Candle form prediction logic  
+  document.getElementById("candle-form")?.addEventListener("submit", async function (e) {  
+    e.preventDefault();  
+    const formData = new FormData(e.target);  
+  
+    try {  
+      const res = await fetch("/api/candle", {  
+        method: "POST",  
+        body: formData  
+      });  
+  
+      const data = await res.json();  
+      const resultBox = document.getElementById("candle-result");  
+  
+      if (data.prediction) {  
+        resultBox.innerHTML = `<pre style="white-space: pre-wrap; word-wrap: break-word;">${data.prediction}</pre>`;  } else if (data.error) {  
+    resultBox.innerHTML = `<pre style="color: red;">${data.error}</pre>`;  
+  } else {  
+    resultBox.innerHTML = "<pre>❌ No response.</pre>";  
+  }  
+
+} catch (err) {  
+  document.getElementById("candle-result").innerHTML = `<pre style="color:red;">❌ JS Error: ${err.message}</pre>`;  
+}
+
+});
+</script>
