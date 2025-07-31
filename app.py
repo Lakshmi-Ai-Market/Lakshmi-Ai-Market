@@ -554,14 +554,8 @@ def render_strategy_page():  # ✅ Different function name
         return redirect("/login")
     return render_template("strategy_engine.html")
 
-
 @app.route("/api/strategy", methods=["POST", "GET"])
-def strategy_engine():  # This can stay same
-    try:
-        ...
-
-@app.route("/api/strategy", methods=["POST", "GET"])
-def strategy_engine():
+def analyze_strategy_api():  # Avoid naming conflict
     try:
         result = analyze_all()
 
@@ -579,7 +573,7 @@ def strategy_engine():
             reply += f"\n• {s['strategy']} ({s['confidence']}% confidence)"
 
         return jsonify({"reply": reply.strip()})
-    
+
     except Exception as e:
         return jsonify({"reply": f"❌ Internal error: {str(e)}"})
         
