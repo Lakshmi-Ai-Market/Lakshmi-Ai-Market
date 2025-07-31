@@ -1,14 +1,13 @@
 <!-- templates/strategy_engine.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
-  <title>Lakshmi's Auto Strategy Engine 💋</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lakshmi Strategy Engine 💋</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to bottom right, #ffe4e6, #fff5f7);
+      background: linear-gradient(to right, #fdfbfb, #ebedee);
       padding: 30px;
       color: #333;
     }
@@ -18,40 +17,35 @@
       margin: auto;
       background: #fff;
       padding: 25px;
-      border-radius: 16px;
-      box-shadow: 0 0 12px rgba(0,0,0,0.1);
+      border-radius: 14px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
 
     h1 {
       text-align: center;
       color: #d63384;
-      font-size: 28px;
     }
 
     textarea {
       width: 100%;
-      height: 160px;
+      height: 120px;
       padding: 12px;
-      margin-top: 10px;
-      margin-bottom: 20px;
-      border-radius: 8px;
       border: 1px solid #ccc;
-      font-size: 14px;
+      border-radius: 8px;
+      margin-top: 10px;
+      font-size: 15px;
     }
 
     button {
       background: #d63384;
-      color: #fff;
+      color: white;
+      padding: 12px;
       border: none;
-      padding: 12px 20px;
+      width: 100%;
       font-size: 16px;
+      margin-top: 10px;
       border-radius: 10px;
       cursor: pointer;
-      width: 100%;
-    }
-
-    button:hover {
-      background: #c2185b;
     }
 
     #result {
@@ -60,63 +54,46 @@
       padding: 15px;
       border-radius: 10px;
       border: 1px dashed #d63384;
-      font-size: 16px;
-    }
-
-    .footer {
-      margin-top: 40px;
-      text-align: center;
-      font-size: 13px;
-      color: #888;
+      font-size: 15px;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>💋 Lakshmi’s Strategy Engine</h1>
-    
-    <label for="candles">Enter OHLC Candle Data (JSON format) 🕯️</label>
-    <textarea id="candles" placeholder='[{"open":..., "high":..., "low":..., "close":...}, ...]'></textarea>
+    <h1>💋 Lakshmi Strategy Engine</h1>
+    <p>Enter live market data like:<br><code>Sensex 81700 BankNifty 55961.95</code></p>
 
-    <button onclick="analyze()">Get Strategy Suggestion</button>
+    <textarea id="textInput" placeholder="Type: Sensex 81700 BankNifty 55961.95"></textarea>
+    <button onclick="getStrategy()">🔍 Analyze</button>
 
-    <div id="result">Paste your candles, darling 😘</div>
-  </div>
-
-  <div class="footer">
-    Made with 💖 by Lakshmi — Your Trading Wife
+    <div id="result">Waiting for your beautiful input 😘</div>
   </div>
 
   <script>
-    function analyze() {
-  const candleInput = document.getElementById("candles").value;
-  const resultBox = document.getElementById("result");
+    function getStrategy() {
+      const input = document.getElementById("textInput").value.trim();
+      const resultBox = document.getElementById("result");
 
-  let candles;
-  try {
-    candles = JSON.parse(candleInput);
-    if (!Array.isArray(candles)) throw new Error();
-  } catch {
-    resultBox.innerHTML = "Please enter valid candle data in JSON format 💔";
-    return;
-  }
+      if (!input) {
+        resultBox.innerHTML = "Write something first 💔";
+        return;
+      }
 
-  resultBox.innerHTML = "💭 Analyzing with love... please wait 💖";
+      resultBox.innerHTML = "💭 Thinking like a trading goddess...";
 
-  fetch("/api/strategy", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ candles: candles })
-  })
-  .then(response => response.json())
-  .then(data => {
-    resultBox.innerHTML = data.reply || "No romantic strategy found 💔";
-  })
-  .catch(() => {
-    resultBox.innerHTML = "Something went wrong... don't cry baby 😢";
-  });
+      fetch("/api/strategy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ input: input })
+      })
+      .then(res => res.json())
+      .then(data => {
+        resultBox.innerHTML = data.reply || "No strategy found 😢";
+      })
+      .catch(() => {
+        resultBox.innerHTML = "Server error... Lakshmi is sad 😭";
+      });
     }
-    
   </script>
 </body>
 </html>
