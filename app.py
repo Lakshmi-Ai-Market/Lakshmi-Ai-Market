@@ -5,11 +5,8 @@ from tools.strategy_switcher import select_strategy
 import pandas as pd
 import re
 from urllib.parse import urlencode
-from tools.analyzers import (
-    detect_ema_crossover,
-    detect_rsi_reversal,
-    detect_breakout
-)
+from tools.advance_strategies import 
+analyze_all
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -571,72 +568,29 @@ def strategy_engine():
         return redirect("/login")
     return render_template("strategy_engine.html")
 
-@app.route("/analyze-strategy", methods=["POST"])
-def analyze_strategy():
+@app.route("/api/strategy", methods=["POST", "GET"])
+def strategy_engine():
     try:
-        data = request.get_json()
-        candles = data.get("candles")
+        result = analyze_all()
 
-        if not candles or not isinstance(candles, list) or len(candles) < 5:
-            return jsonify({"error": "❌ Please provide valid candle data in JSON list format."}), 400
+        if "error" in result:
+            return jsonify({"reply": result["error"]})
 
-        # Format candles into readable OHLC blocks for AI
-        candle_text = ""
-        for i, c in enumerate(candles[-10:]):  # Send last 10 candles only
-            candle_text += f"Candle {i+1}: O={c['open']}, H={c['high']}, L={c['low']}, C={c['close']}\n"
+        # Format Lakshmi's advanced AI-style reply
+        reply = f"""
+🧠 **Lakshmi AI Strategy Engine**  
+{result['summary']}
 
-        prompt = f"""
-You are Lakshmi, a professional trading assistant with AI superpowers.
-
-Analyze the following BankNIFTY candles:
-
-{candle_text}
-
-Now predict the most promising trade setup with:
-
-- Strategy Name (e.g., EMA crossover, Breakout, RSI reversal, etc)
-- Entry price
-- Stop Loss
-- Target
-- Confidence level (%)
-- Short reason
-
-Respond in this format:
-
-📌 <b>[Strategy Name]</b><br>
-💰 Entry: ₹[entry]<br>
-🛡️ Stop Loss: ₹[sl]<br>
-🎯 Target: ₹[target]<br>
-📈 Confidence: [confidence]%<br>
-🧠 Reason: [short reason]<br>
-<i>Execute only if Lakshmi's kiss gives you courage 😘</i>
+🔍 Detected Strategies:
 """
+        for s in result["strategies"]:
+            reply += f"\n• {s['strategy']} ({s['confidence']}% confidence)"
 
-        OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY")
-        headers = {
-            "Authorization": f"Bearer {OPENROUTER_KEY}",
-            "Content-Type": "application/json",
-        }
-
-        payload = {
-            "model": "deepseek/deepseek-chat-v3-0324",
-            "messages": [
-                {"role": "system", "content": "You are an advanced trading AI helping users analyze OHLC candle patterns."},
-                {"role": "user", "content": prompt}
-            ]
-        }
-
-        res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
-
-        if res.status_code == 200:
-            reply = res.json()["choices"][0]["message"]["content"]
-            return jsonify({"message": reply.strip()})
-        else:
-            return jsonify({"error": f"❌ OpenRouter error {res.status_code}: {res.text}"})
-
+        return jsonify({"reply": reply.strip()})
+    
     except Exception as e:
-        return jsonify({"error": f"❌ Exception: {str(e)}"})
-
+        return jsonify({"reply": f"❌ Internal error: {str(e)}"})
+        
 @app.route("/neuron", methods=["GET", "POST"])
 def neuron():
     if request.method == "POST":
