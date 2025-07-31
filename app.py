@@ -549,25 +549,34 @@ def option_chain():
     return render_template("option_chain.html", option_data=mock_data, strike_filter=strike_filter, expiry=expiry)
 
 @app.route("/strategy-engine")
-def render_strategy_page():  # ✅ Different function name
+def render_strategy_page():
     if 'username' not in session:
         return redirect("/login")
     return render_template("strategy_engine.html")
 
-@app.route("/api/strategy", methods=["POST", "GET"])
-def analyze_strategy_api():  # Avoid naming conflict
+
+@app.route("/api/strategy", methods=["POST"])
+def analyze_strategy_api():
     try:
-        result = analyze_all()
+        data = request.get_json()
+        user_input = data.get("input", "").strip()
+
+        if not user_input:
+            return jsonify({"reply": "❌ No input received."})
+
+        # Import your strategy logic
+        from advance_strategies import analyze_all
+        result = analyze_all(user_input)  # input like 'Sensex 81700 BankNifty 55961.95'
 
         if "error" in result:
             return jsonify({"reply": result["error"]})
 
-        # Format Lakshmi's advanced AI-style reply
+        # Format Lakshmi AI-style response
         reply = f"""
-🧠 **Lakshmi AI Strategy Engine**  
-{result['summary']}
+💋 **Lakshmi Strategy Engine Result**  
+📊 {result['summary']}
 
-🔍 Detected Strategies:
+✨ **Detected Strategies**:
 """
         for s in result["strategies"]:
             reply += f"\n• {s['strategy']} ({s['confidence']}% confidence)"
@@ -575,8 +584,8 @@ def analyze_strategy_api():  # Avoid naming conflict
         return jsonify({"reply": reply.strip()})
 
     except Exception as e:
-        return jsonify({"reply": f"❌ Internal error: {str(e)}"})
-        
+        return jsonify({"reply": f"❌ Internal server error: {str(e)}"})
+
 @app.route("/neuron", methods=["GET", "POST"])
 def neuron():
     if request.method == "POST":
