@@ -571,29 +571,71 @@ def strategy_engine():
         return redirect("/login")
     return render_template("strategy_engine.html")
 
-
 @app.route("/analyze-strategy", methods=["POST"])
 def analyze_strategy():
-    data = request.get_json()
-    candles = data.get("candles")
+    try:
+        data = request.get_json()
+        candles = data.get("candles")
 
-    if not candles or not isinstance(candles, list):
-        return jsonify({"error": "Invalid or missing candle data."}), 400
+        if not candles or not isinstance(candles, list) or len(candles) < 5:
+            return jsonify({"error": "❌ Please provide valid candle data in JSON list format."}), 400
 
-    for detector in [detect_ema_crossover, detect_rsi_reversal, detect_breakout]:
-        result = detector(candles)
-        if result:
-            message = f"""
-💌 <b>{result['strategy']}</b><br>
-❤️ Entry: ₹{result['entry']}<br>
-🔻 Stop Loss: ₹{result['sl']}<br>
-🎯 Target: ₹{result['target']}<br>
-📊 Confidence Score: <b>{result['confidence']}%</b><br><br>
-<i>Take this trade only if you feel my kiss of confidence 😘</i>
+        # Format candles into readable OHLC blocks for AI
+        candle_text = ""
+        for i, c in enumerate(candles[-10:]):  # Send last 10 candles only
+            candle_text += f"Candle {i+1}: O={c['open']}, H={c['high']}, L={c['low']}, C={c['close']}\n"
+
+        prompt = f"""
+You are Lakshmi, a professional trading assistant with AI superpowers.
+
+Analyze the following BankNIFTY candles:
+
+{candle_text}
+
+Now predict the most promising trade setup with:
+
+- Strategy Name (e.g., EMA crossover, Breakout, RSI reversal, etc)
+- Entry price
+- Stop Loss
+- Target
+- Confidence level (%)
+- Short reason
+
+Respond in this format:
+
+📌 <b>[Strategy Name]</b><br>
+💰 Entry: ₹[entry]<br>
+🛡️ Stop Loss: ₹[sl]<br>
+🎯 Target: ₹[target]<br>
+📈 Confidence: [confidence]%<br>
+🧠 Reason: [short reason]<br>
+<i>Execute only if Lakshmi's kiss gives you courage 😘</i>
 """
-            return jsonify({"message": message.strip()})
 
-    return jsonify({"message": "No strong strategy signal detected. Wait patiently 💆‍♂️"})
+        OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY")
+        headers = {
+            "Authorization": f"Bearer {OPENROUTER_KEY}",
+            "Content-Type": "application/json",
+        }
+
+        payload = {
+            "model": "deepseek/deepseek-chat-v3-0324",
+            "messages": [
+                {"role": "system", "content": "You are an advanced trading AI helping users analyze OHLC candle patterns."},
+                {"role": "user", "content": prompt}
+            ]
+        }
+
+        res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
+
+        if res.status_code == 200:
+            reply = res.json()["choices"][0]["message"]["content"]
+            return jsonify({"message": reply.strip()})
+        else:
+            return jsonify({"error": f"❌ OpenRouter error {res.status_code}: {res.text}"})
+
+    except Exception as e:
+        return jsonify({"error": f"❌ Exception: {str(e)}"})
 
 @app.route("/neuron", methods=["GET", "POST"])
 def neuron():
