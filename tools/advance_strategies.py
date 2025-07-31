@@ -101,7 +101,7 @@ def supertrend(candles):
 
 # === Analyze All Strategies Combined ===
 def analyze_all():
-    candles = fetch_candles()
+    candles = fetch_candles()  # ✅ from your /api/candle system
     if not candles:
         return {"error": "❌ Unable to fetch real candle data."}
 
