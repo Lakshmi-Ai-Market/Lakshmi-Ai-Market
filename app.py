@@ -554,24 +554,21 @@ def render_strategy_page():
         return redirect("/login")
     return render_template("strategy_engine.html")
 
-
 @app.route("/api/strategy", methods=["POST"])
 def analyze_strategy_api():
     try:
         data = request.get_json()
-        user_input = data.get("input", "").strip()
+        user_input = data.get("input", "").strip()  # Not used, just collected
 
-        if not user_input:
-            return jsonify({"reply": "❌ No input received."})
-
-        # Import your strategy logic
         from advance_strategies import analyze_all
-        result = analyze_all(user_input)  # input like 'Sensex 81700 BankNifty 55961.95'
+        result = analyze_all()
 
         if "error" in result:
             return jsonify({"reply": result["error"]})
+        elif "message" in result:
+            return jsonify({"reply": result["message"]})
 
-        # Format Lakshmi AI-style response
+        # Final formatted output
         reply = f"""
 💋 **Lakshmi Strategy Engine Result**  
 📊 {result['summary']}
