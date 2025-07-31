@@ -134,27 +134,23 @@
 
 <script>
   function showTool(id) {
-    document.querySelectorAll('.tool-section').forEach(div => div.style.display = 'none');
-    const section = document.getElementById(id);
-    if (section) section.style.display = 'block';
+    // Hide all tool sections
+    document.querySelectorAll('.tool-section').forEach(div => {
+      div.style.display = 'none';
+    });
+    // Show the selected one
+    document.getElementById(id).style.display = 'block';
   }
 
-  // ✅ Automatically show only candle tool if coming from /candle
-  window.onload = () => {
-    if (window.location.pathname.includes("/candle")) {
-      showTool("candle");
-    }
-  };
+  // On first load: hide all tool-sections
+  document.querySelectorAll('.tool-section').forEach(div => {
+    div.style.display = 'none';
+  });
 
-  document.getElementById("candle-form").onsubmit = async function (e) {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const res = await fetch("/api/candle", { method: "POST", body: formData });
-    const data = await res.json();
-    document.getElementById("candle-result").innerHTML =
-      `<pre>${data.prediction || data.error}</pre>`;
-  };
+  // Show candle if redirected from /candle, otherwise default to none
+  const path = window.location.pathname;
+  if (path.includes("/candle")) {
+    showTool("candle");
+  }
 </script>
 
-</body>
-</html>
