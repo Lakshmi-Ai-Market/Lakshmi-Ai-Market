@@ -9,3 +9,4 @@ yfinance
 beautifulsoup4
 matplotlib
 python-dotenv
+ta==0.11.0
