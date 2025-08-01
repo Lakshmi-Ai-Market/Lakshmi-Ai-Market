@@ -5,16 +5,18 @@ import re
 
 # 💡 Extract F&O index name from input
 def extract_symbol_from_text(user_input):
-    input_lower = user_input.lower()
+    input_lower = user_input.lower().strip()
 
-    if "banknifty" in input_lower or "bank nifty" in input_lower or "bank" in input_lower:
+    if "banknifty" in input_lower or "bank nifty" in input_lower:
         return "BANKNIFTY"
     elif "nifty" in input_lower and "bank" not in input_lower:
         return "NIFTY"
     elif "sensex" in input_lower or "sen" in input_lower:
         return "SENSEX"
-    return None
-
+    else:
+        print("DEBUG ❌ Could not detect index in input:", user_input)
+        return None
+        
 # 🔥 Fetch candle data from Dhan API (5 min resolution, 1 hour)
 def fetch_candles(symbol):
     try:
@@ -167,12 +169,19 @@ def tweezers_top(c): a,b=c[-2],c[-1]; return {"strategy":"🍡 Tweezers Top","co
 # === Analyzer ===
 def analyze_all_strategies(user_input):
     symbol = extract_symbol_from_text(user_input)
+
     if not symbol:
-        return {"error": "❌ Could not detect a valid F&O index (e.g. NIFTY, BANKNIFTY, SENSEX)"}
-    
+        return {"error": f"❌ Could not detect a valid index name in the input: {user_input}"}
+
+    print("✅ Detected symbol:", symbol)
+
+    # Fake dummy candle return if you're not using live API
     candles = fetch_candles(symbol)
     if not candles:
         return {"error": "❌ Unable to fetch real candle data."}
+
+    # Strategy check logic remains the same
+    ...
 
     strategies = [
         ema_crossover(candles), rsi_reversal(candles), macd_strategy(candles),
