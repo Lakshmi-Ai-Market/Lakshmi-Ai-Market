@@ -4,16 +4,17 @@ import time
 import os
 from datetime import datetime, timedelta
 
-# === Detect F&O symbol from free text ===
 def extract_symbol_from_text(user_input):
     input_lower = user_input.lower()
+
     if re.search(r"\bbank\s?nifty|\bbanknifty|\bbank\b", input_lower):
-        return "NSE_INDEX|BANKNIFTY"
-    elif re.search(r"\bnifty\b", input_lower):
-        return "NSE_INDEX|NIFTY_50"
-    elif re.search(r"\bsensex\b|\bsen\b", input_lower):
-        return "BSE_INDEX|SENSEX"
-    return None
+        return "BANKNIFTY"
+    elif re.search(r"\bnifty\s?50|\bnifty50|\bnifty\b", input_lower):
+        return "NIFTY"
+    elif re.search(r"\bsensex\b|\bsen\b|\bsenex\b", input_lower):
+        return "SENSEX"
+    else:
+        return None
 
 # === Fetch candles from Dhan API ===
 def fetch_candles(symbol):
