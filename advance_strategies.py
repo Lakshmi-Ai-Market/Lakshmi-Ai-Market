@@ -1,14 +1,32 @@
 import os
 import time
 import requests
+import re
+from dhan_data import fetch_dhan_price  # Assuming you're using live data from Dhan
+from strategies import (
+    strategy_rsi, strategy_ema_crossover, strategy_price_action,  # example strategy names
+    # ... include all your 27 strategy imports here
+)
+from utils import extract_symbol_from_text, extract_price_from_text, fetch_candles
+from strategies import *
 
-# ✅ Extract index symbol from user input
-def extract_symbol_from_text(text):
-    text = text.upper()
-    for s in ["SENSEX", "NIFTY", "BANKNIFTY"]:
-        if s in text:
-            return s
-    return None
+
+def extract_symbol_and_price(text):
+    text = text.lower()
+    fno_map = {
+        "banknifty": "BANKNIFTY",
+        "nifty": "NIFTY",
+        "finnifty": "FINNIFTY",
+        "sensex": "SENSEX"
+    }
+    found = []
+    for key, val in fno_map.items():
+        match = re.search(fr"{key}\s+([\d.]+)", text)
+        if match:
+            price = float(match.group(1))
+            found.append((val, price))
+    return found
+
 
 # ✅ Fetch 5-min candles for the last 1 hour from Dhan API
 def fetch_candles(symbol):
@@ -153,12 +171,15 @@ def tweezers_top(c): a,b=c[-2],c[-1]; return {"strategy":"🍡 Tweezers Top","co
 # ✅ Final Analyzer
 def analyze_all_strategies(user_input):
     print("💬 User Input:", user_input)
-    symbol = extract_symbol_from_text(user_input)
-    print("🔍 Extracted Symbol:", symbol)
+
+    # Clean and extract
+    cleaned_input = user_input.strip().lower()
+    symbol = extract_symbol_from_text(cleaned_input)
+    price = extract_price_from_text(cleaned_input)
+
     print("🔥 Cleaned input:", cleaned_input)
-print("🔥 Detected symbol:", symbol)
-print("🔥 Extracted price:", price)
-print("🔥 Matched strategies:", results)
+    print("🔥 Detected symbol:", symbol)
+    print("🔥 Extracted price:", price)
 
     if not symbol:
         return {"error": f"❌ Could not detect a valid index name in the input: {user_input}"}
@@ -167,6 +188,7 @@ print("🔥 Matched strategies:", results)
     if not candles:
         return {"error": "❌ Unable to fetch real candle data from Dhan."}
 
+    # Run all strategies
     strategies = [
         ema_crossover(candles), rsi_reversal(candles), macd_strategy(candles),
         breakout_strategy(candles), pullback_strategy(candles), volume_surge(candles),
@@ -182,24 +204,35 @@ print("🔥 Matched strategies:", results)
         tweezers_bottom(candles), tweezers_top(candles)
     ]
 
-    valid = [s for s in strategies if s]
-    if not valid:
-        return {"message": "⚠️ No strong signals detected. Market unclear."}
+    # Filter valid signals
+    results = [s for s in strategies if s]
+    print("🔥 Matched strategies:", results)
 
-    bullish = sum(1 for s in valid if "Bullish" in s['strategy'] or "Breakout" in s['strategy'])
-    bearish = len(valid) - bullish
+    if not results:
+        return {
+            "summary": "⚠️ No strong signals detected. Market unclear.",
+            "strategies": [],
+            "symbol": symbol,
+            "bias": "❓ Neutral",
+            "confidence": 0
+        }
+
+    bullish = sum(1 for s in results if "Bullish" in s['strategy'] or "Breakout" in s['strategy'])
+    bearish = len(results) - bullish
     bias = "📈 Bullish" if bullish > bearish else "📉 Bearish"
-    confidence = round((max(bullish, bearish) / len(valid)) * 100)
+    confidence = round((max(bullish, bearish) / len(results)) * 100)
 
     return {
         "summary": f"Market Bias: {bias} ({confidence}% confidence)",
-        "strategies": valid,
-        "symbol": symbol
+        "strategies": results,
+        "symbol": symbol,
+        "bias": bias,
+        "confidence": confidence
     }
 
-# ✅ Example Usage
+# ✅ Example test (comment out when running in Flask app)
 if __name__ == "__main__":
     os.environ["DHAN_ACCESS_TOKEN"] = "your_real_token_here"
     os.environ["DHAN_CLIENT_ID"] = "your_client_id_here"
-    result = analyze_all_strategies("sensex 81700 momentum breakout")
+    result = analyze_all_strategies("Sensex 81700 BankNifty 55961.95")
     print(result)
