@@ -555,21 +555,45 @@ def render_strategy_page():
     return render_template("strategy_engine.html")
 
 @app.route("/api/strategy", methods=["POST"])
-def strategy_engine():
+def analyze_strategy_api():
     try:
-        if request.is_json:
-            user_input = request.json.get("message", "")
-        else:
-            user_input = request.form.get("message", "")
-        
-        if not user_input.strip():
-            return jsonify({"error": "❌ No input provided."})
-        
-        result = analyze_all_strategies(user_input)
-        return jsonify(result)
+        data = request.get_json()
+        user_input = data.get("input", "").strip()
+
+        if not user_input:
+            return jsonify({"reply": "❌ No input provided."})
+
+        # Extract symbol from plain text like 'banknifty 81900'
+        from advance_strategies import analyze_all_strategies, extract_symbol_from_text
+
+        symbol = extract_symbol_from_text(user_input)
+        if not symbol:
+            return jsonify({"reply": "❌ Could not detect valid F&O index in input. Try 'NIFTY 19800' or 'BANKNIFTY 45000'."})
+
+        # Analyze all strategies using real candles
+        result = analyze_all_strategies(symbol)
+
+        if "error" in result:
+            return jsonify({"reply": result["error"]})
+        if not result.get("strategies"):
+            return jsonify({"reply": "⚠️ No strategy found for the given input."})
+
+        # Build final reply
+        reply = f"""
+💋 **Lakshmi Strategy Engine Result**  
+📊 **Index**: {symbol}  
+🕰️ **Timeframe**: 5m  
+🧠 **Summary**: {result.get("summary", "No summary.")}
+
+✨ **Detected Strategies**:
+"""
+        for s in result["strategies"]:
+            reply += f"\n• {s['strategy']} ({s['confidence']}% confidence)"
+
+        return jsonify({"reply": reply.strip()})
 
     except Exception as e:
-        return jsonify({"error": f"❌ Server error: {str(e)}"})
+        return jsonify({"reply": f"❌ Internal server error: {str(e)}"})
 
 @app.route("/neuron", methods=["GET", "POST"])
 def neuron():
