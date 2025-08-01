@@ -5,16 +5,17 @@ import re
 
 # 💡 Extract F&O index name from input
 def extract_symbol_from_text(user_input):
-    input_clean = user_input.lower().replace(" ", "")
+def extract_symbol_from_text(user_input):
+    input_lower = user_input.lower()
 
-    if "banknifty" in input_clean:
+    if "banknifty" in input_lower.replace(" ", ""):
         return "BANKNIFTY"
-    elif "nifty" in input_clean and "banknifty" not in input_clean:
+    elif "nifty" in input_lower.replace(" ", "") and "banknifty" not in input_lower.replace(" ", ""):
         return "NIFTY"
-    elif "sensex" in input_clean or "sen" in input_clean:
+    elif "sensex" in input_lower or "sen" in input_lower:
         return "SENSEX"
     else:
-        print("❌ No match in:", input_clean)
+        print("❌ No valid index keyword in input:", input_lower)
         return None
         
 # 🔥 Fetch candle data from Dhan API (5 min resolution, 1 hour)
@@ -168,10 +169,10 @@ def tweezers_top(c): a,b=c[-2],c[-1]; return {"strategy":"🍡 Tweezers Top","co
 
 # === Analyzer ===
 def analyze_all_strategies(user_input):
-    print("🧪 Raw Input:", user_input)  # Add this line to show what was typed
+    print("🧪 Raw User Input:", user_input)
     
     symbol = extract_symbol_from_text(user_input)
-    print("🧪 Detected Symbol:", symbol)  # Add this line to confirm detection
+    print("🧪 Detected Symbol:", symbol)
 
     if not symbol:
         return {"error": f"❌ Could not detect a valid index name in the input: {user_input}"}
