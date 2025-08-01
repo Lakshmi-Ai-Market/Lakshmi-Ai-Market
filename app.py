@@ -563,25 +563,17 @@ def analyze_strategy_api():
         if not user_input:
             return jsonify({"reply": "❌ No input provided."})
 
-        # Extract symbol from plain text like 'banknifty 81900'
-        from advance_strategies import analyze_all_strategies, extract_symbol_from_text
-
-        symbol = extract_symbol_from_text(user_input)
-        if not symbol:
-            return jsonify({"reply": "❌ Could not detect valid F&O index in input. Try 'NIFTY 19800' or 'BANKNIFTY 45000'."})
-
-        # Analyze all strategies using real candles
-        result = analyze_all_strategies(symbol)
+        result = analyze_all_strategies(user_input)
 
         if "error" in result:
             return jsonify({"reply": result["error"]})
         if not result.get("strategies"):
-            return jsonify({"reply": "⚠️ No strategy found for the given input."})
+            return jsonify({"reply": "⚠️ No strong strategies found for the input."})
 
-        # Build final reply
+        # Compose final reply
         reply = f"""
 💋 **Lakshmi Strategy Engine Result**  
-📊 **Index**: {symbol}  
+📊 **Index**: {result['symbol']}  
 🕰️ **Timeframe**: 5m  
 🧠 **Summary**: {result.get("summary", "No summary.")}
 
@@ -593,7 +585,7 @@ def analyze_strategy_api():
         return jsonify({"reply": reply.strip()})
 
     except Exception as e:
-        return jsonify({"reply": f"❌ Internal server error: {str(e)}"})
+        return jsonify({"reply": f"❌ Internal Server Error: {str(e)}"})
 
 @app.route("/neuron", methods=["GET", "POST"])
 def neuron():
