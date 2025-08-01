@@ -3,12 +3,12 @@ import time
 import requests
 import re
 from dhan_data import fetch_dhan_price  # Assuming you're using live data from Dhan
-from advance_strategies import (
+from strategies import (
     strategy_rsi, strategy_ema_crossover, strategy_price_action,  # example strategy names
     # ... include all your 27 strategy imports here
 )
 from utils import extract_symbol_from_text, extract_price_from_text, fetch_candles
-from advance_strategies import *
+from strategies import *
 
 def fetch_dhan_price(symbol):
     instrument_map = {
