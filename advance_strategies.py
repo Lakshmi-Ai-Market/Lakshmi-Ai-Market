@@ -216,6 +216,7 @@ def analyze_all_strategies(user_input):
     confidence = round((max(bullish, bearish) / total) * 100)
 
     return {
-        "summary": f"Market Bias: {bias} ({confidence}% confidence)",
-        "strategies": valid
+    "summary": f"Market Bias: {bias} ({confidence}% confidence)",
+    "strategies": valid,
+    "symbol": symbol  # <- this is needed for the reply to show index properly!
     }
