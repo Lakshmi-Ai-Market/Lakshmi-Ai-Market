@@ -5,7 +5,6 @@ import re
 
 # 💡 Extract F&O index name from input
 def extract_symbol_from_text(user_input):
-def extract_symbol_from_text(user_input):
     input_lower = user_input.lower()
 
     if "banknifty" in input_lower.replace(" ", ""):
