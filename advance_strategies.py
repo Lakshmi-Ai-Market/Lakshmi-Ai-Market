@@ -68,12 +68,16 @@ def fetch_candles(symbol):
         return []
 
 # === Strategies ===
-
-def ema_crossover(c): closes = [x['close'] for x in c]; 
-if len(closes) < 21: return None
-ema9 = sum(closes[-9:]) / 9; ema21 = sum(closes[-21:]) / 21
-if ema9 > ema21: return {"strategy": "📈 EMA Bullish Crossover", "confidence": 85}
-elif ema9 < ema21: return {"strategy": "📉 EMA Bearish Crossover", "confidence": 80}
+def ema_crossover(c):
+    closes = [x['close'] for x in c]
+    if len(closes) < 21:
+        return None
+    ema9 = sum(closes[-9:]) / 9
+    ema21 = sum(closes[-21:]) / 21
+    if ema9 > ema21:
+        return {"strategy": "📈 EMA Bullish Crossover", "confidence": 85}
+    elif ema9 < ema21:
+        return {"strategy": "📉 EMA Bearish Crossover", "confidence": 80}
 
 def rsi_reversal(c):
     closes = [x['close'] for x in c]
