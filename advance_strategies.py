@@ -7,7 +7,7 @@ import re
 def extract_symbol_from_text(user_input):
     input_lower = user_input.lower()
 
-    if "banknifty" in input_lower or "bank nifty" in input_lower:
+    if "banknifty" in input_lower or "bank nifty" in input_lower or "bank" in input_lower:
         return "BANKNIFTY"
     elif "nifty" in input_lower and "bank" not in input_lower:
         return "NIFTY"
