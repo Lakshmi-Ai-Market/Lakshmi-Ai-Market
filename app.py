@@ -585,6 +585,15 @@ def analyze_strategy_api():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/analyze")
+def analyze():
+    symbol = request.args.get("symbol")
+    if not symbol:
+        return jsonify({"error": "Symbol required"})
+    
+    result = analyze_all_strategies(symbol)
+    return jsonify(result)
+
 @app.route("/neuron", methods=["GET", "POST"])
 def neuron():
     if request.method == "POST":
