@@ -1,5 +1,11 @@
 from dhan_data import fetch_candle_data
 import datetime
+from advance_strategies import (
+    strategy_rsi,
+    strategy_ema_crossover,
+    strategy_price_action,
+    # ... and the rest
+)
 
 def strategy_trend_bias(symbol):
     data = fetch_dhan_candles(symbol, "5m", 20)  # last 20 five-minute candles
