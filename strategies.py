@@ -1,10 +1,4 @@
 from dhan_data import fetch_candle_data
-from advance_strategies import (
-    strategy_rsi,
-    strategy_ema_crossover,
-    strategy_price_action,
-    # ... and the rest
-)
 import datetime
 
 def strategy_trend_bias(symbol):
