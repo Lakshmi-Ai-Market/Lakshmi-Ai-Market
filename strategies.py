@@ -6,6 +6,7 @@ from advance_strategies import (
     strategy_price_action,
     # ... and the rest
 )
+from dhan_data import fetch_dhan_price, fetch_candle_data
 
 def strategy_trend_bias(symbol):
     data = fetch_dhan_candles(symbol, "5m", 20)  # last 20 five-minute candles
