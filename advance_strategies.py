@@ -5,22 +5,17 @@ import re
 
 # 💡 Extract F&O index name from input
 def extract_symbol_from_text(user_input):
-    input_lower = user_input.lower()
+    input_clean = user_input.lower().replace(" ", "")
 
-    # Match Bank Nifty with or without space
-    if re.search(r"\bbank\s?nifty\b", input_lower):
+    if "banknifty" in input_clean:
         return "BANKNIFTY"
-    
-    # Match Nifty but not BankNifty
-    elif re.search(r"\bnifty\b", input_lower) and not re.search(r"bank\s?nifty", input_lower):
+    elif "nifty" in input_clean and "banknifty" not in input_clean:
         return "NIFTY"
-
-    # Match Sensex or Sen
-    elif re.search(r"\bsensex\b|\bsen\b", input_lower):
+    elif "sensex" in input_clean or "sen" in input_clean:
         return "SENSEX"
-    
-    # Default fallback
-    return None
+    else:
+        print("❌ No match in:", input_clean)
+        return None
         
 # 🔥 Fetch candle data from Dhan API (5 min resolution, 1 hour)
 def fetch_candles(symbol):
