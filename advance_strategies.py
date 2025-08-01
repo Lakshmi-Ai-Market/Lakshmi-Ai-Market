@@ -3,8 +3,6 @@ import time
 import requests
 import re
 from dhan_data import fetch_dhan_price  # Assuming you're using live data from Dhan    
-from utils import extract_symbol_from_text, extract_price_from_text, fetch_candles
-from strategies import *
 
 def fetch_dhan_price(symbol):
     instrument_map = {
