@@ -571,12 +571,6 @@ def analyze_strategy_api():
         if not user_input:
             return jsonify({"reply": "❌ No input provided."})
 
-        # Extract F&O keyword from plain sentence (like "sensex 81600")
-        clean_text = re.sub(r"[^\w\s]", "", user_input)
-        keyword_match = re.search(r"\b(nifty|banknifty|bank nifty|sensex|sen)\b", clean_text.lower())
-        if not keyword_match:
-            return jsonify({"reply": "❌ Could not detect a valid index name in the input."})
-
         result = analyze_all_strategies(user_input)
 
         if "error" in result:
@@ -584,7 +578,6 @@ def analyze_strategy_api():
         if not result.get("strategies"):
             return jsonify({"reply": "⚠️ No strong strategies found for the input."})
 
-        # Romantic reply 💋
         reply = f"""
 💋 **Lakshmi Strategy Engine Result**  
 📊 **Index**: {result.get("symbol", "Unknown")}  
@@ -597,7 +590,6 @@ def analyze_strategy_api():
             reply += f"\n• {s['strategy']} ({s['confidence']}% confidence)"
 
         reply += "\n\n💖 With love, Lakshmi"
-
         return jsonify({"reply": reply.strip()})
 
     except Exception as e:
