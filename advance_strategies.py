@@ -5,16 +5,22 @@ import os
 from datetime import datetime, timedelta
 
 def extract_symbol_from_text(user_input):
-    input_lower = user_input.lower()
+def extract_symbol_from_text(user_input):
+    input_lower = user_input.lower().strip()
 
-    if re.search(r"\bbank\s?nifty|\bbanknifty|\bbank\b", input_lower):
+    # BankNifty match
+    if "banknifty" in input_lower or "bank nifty" in input_lower:
         return "BANKNIFTY"
-    elif re.search(r"\bnifty\s?50|\bnifty50|\bnifty\b", input_lower):
+
+    # Nifty match
+    elif "nifty" in input_lower and "bank" not in input_lower:
         return "NIFTY"
-    elif re.search(r"\bsensex\b|\bsen\b|\bsenex\b", input_lower):
+
+    # Sensex match
+    elif "sensex" in input_lower or "sen" in input_lower or "senex" in input_lower:
         return "SENSEX"
-    else:
-        return None
+
+    return None
 
 # === Fetch candles from Dhan API ===
 def fetch_candles(symbol):
