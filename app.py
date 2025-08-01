@@ -6,6 +6,7 @@ import pandas as pd
 import re
 from urllib.parse import urlencode
 from advance_strategies import analyze_all
+import signal
 from dotenv import load_dotenv
 from pathlib import Path
 
