@@ -556,28 +556,22 @@ def render_strategy_page():
     return render_template("strategy_engine.html")
 
 @app.route("/api/strategy", methods=["POST"])
-def analyze_strategy_api():
+def analyze_strategy():
     try:
-        user_input = request.json.get("message", "").strip()
-        if not user_input:
+        user_msg = request.json.get("message", "")
+        if not user_msg:
             return jsonify({"reply": "❌ No input provided."})
 
-        symbol = extract_symbol_from_text(user_input)
-        if not symbol:
-            return jsonify({"reply": "❌ Couldn't detect a valid F&O index like NIFTY, BANKNIFTY, SENSEX, etc."})
+        indices = ["NIFTY", "BANKNIFTY", "SENSEX", "FINNIFTY", "MIDCPNIFTY"]
+        found = [s for s in indices if s.lower() in user_msg.lower()]
+        if not found:
+            return jsonify({"reply": "⚠️ No F&O index found. Try: 'nifty 24400'"})
 
-        result = analyze_all_strategies(symbol)
-        if "error" in result:
-            return jsonify({"reply": result["error"]})
-
-        summary = result["summary"]
-        strategies = "\n".join([f"- {s['strategy']} ({s['confidence']}%)" for s in result["strategies"]])
-        final_reply = f"✅ Strategy Report for {symbol}:\n\n{summary}\n\n{strategies}"
-
-        return jsonify({"reply": final_reply})
-    
+        from advance_strategies import analyze_all
+        results = [analyze_all(sym) for sym in found]
+        return jsonify({"reply": results})
     except Exception as e:
-        return jsonify({"reply": f"❌ Server error: {str(e)}"})
+        return jsonify({"reply": f"❌ Error occurred: {str(e)}"})
 
 @app.route("/neuron", methods=["GET", "POST"])
 def neuron():
