@@ -169,10 +169,8 @@ def tweezers_top(c): a,b=c[-2],c[-1]; return {"strategy":"🍡 Tweezers Top","co
 
 # === Analyzer ===
 def analyze_all_strategies(user_input):
-    print("🧪 Raw User Input:", user_input)
-    
-    symbol = extract_symbol_from_text(user_input)
-    print("🧪 Detected Symbol:", symbol)
+    print("💬 User Input:", user_input)
+print("🔍 Extracted Symbol:", extract_symbol_from_text(user_input))
 
     if not symbol:
         return {"error": f"❌ Could not detect a valid index name in the input: {user_input}"}
