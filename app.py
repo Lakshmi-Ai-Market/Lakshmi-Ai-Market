@@ -5,7 +5,7 @@ from tools.strategy_switcher import select_strategy
 import pandas as pd
 import re
 from urllib.parse import urlencode
-from advance_strategies import analyze_all
+from advance_strategies import extract_symbol_from_text, analyze_all_strategies
 import signal
 from dotenv import load_dotenv
 from pathlib import Path
@@ -554,46 +554,30 @@ def render_strategy_page():
     if 'username' not in session:
         return redirect("/login")
     return render_template("strategy_engine.html")
-    
+
 @app.route("/api/strategy", methods=["POST"])
 def analyze_strategy_api():
-    def timeout_handler(signum, frame):
-        raise TimeoutError("⏱️ Strategy analysis took too long. Try again later.")
-
-    signal.signal(signal.SIGALRM, timeout_handler)
-    signal.alarm(15)  # 🕒 Limit to 15 seconds
-
     try:
-        data = request.get_json()
-        user_input = data.get("input", "").strip()
+        user_input = request.json.get("message", "").strip()
+        if not user_input:
+            return jsonify({"reply": "❌ No input provided."})
 
-        result = analyze_all()
+        symbol = extract_symbol_from_text(user_input)
+        if not symbol:
+            return jsonify({"reply": "❌ Couldn't detect a valid F&O index like NIFTY, BANKNIFTY, SENSEX, etc."})
 
+        result = analyze_all_strategies(symbol)
         if "error" in result:
             return jsonify({"reply": result["error"]})
-        elif "message" in result:
-            return jsonify({"reply": result["message"]})
 
-        reply = f"""
-💋 **Lakshmi Strategy Engine Result**  
-📊 {result['summary']}
+        summary = result["summary"]
+        strategies = "\n".join([f"- {s['strategy']} ({s['confidence']}%)" for s in result["strategies"]])
+        final_reply = f"✅ Strategy Report for {symbol}:\n\n{summary}\n\n{strategies}"
 
-✨ **Detected Strategies**:
-"""
-        for s in result["strategies"]:
-            reply += f"\n• {s['strategy']} ({s['confidence']}% confidence)"
-
-        return jsonify({"reply": reply.strip()})
-
-    except TimeoutError as te:
-        return jsonify({"reply": str(te)})
-
+        return jsonify({"reply": final_reply})
+    
     except Exception as e:
-        return jsonify({"reply": f"❌ Internal server error: {str(e)}"})
-
-    finally:
-        signal.alarm(0)  # Cancel the alarm
-
+        return jsonify({"reply": f"❌ Server error: {str(e)}"})
 
 @app.route("/neuron", methods=["GET", "POST"])
 def neuron():
