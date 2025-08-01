@@ -1,76 +1,71 @@
+import os
+import time
 import requests
 import re
-import time
-import os
-from datetime import datetime, timedelta
 
+# 💡 Extract F&O index name from input
 def extract_symbol_from_text(user_input):
-    input_lower = user_input.lower().strip()
+    input_lower = user_input.lower()
 
-    # Match BankNifty
     if "banknifty" in input_lower or "bank nifty" in input_lower:
         return "BANKNIFTY"
-
-    # Match Nifty (only if 'bank' not also present)
     elif "nifty" in input_lower and "bank" not in input_lower:
         return "NIFTY"
-
-    # Match Sensex
-    elif "sensex" in input_lower or "sen" in input_lower or "senex" in input_lower:
+    elif "sensex" in input_lower or "sen" in input_lower:
         return "SENSEX"
-
     return None
 
-# === Fetch candles from Dhan API ===
+# 🔥 Fetch candle data from Dhan API (5 min resolution, 1 hour)
 def fetch_candles(symbol):
     try:
-        token = os.getenv("DHAN_API_TOKEN")
-        if not token:
-            print("❌ Missing DHAN_API_TOKEN in environment.")
+        instrument_map = {
+            "NIFTY": "1330",
+            "BANKNIFTY": "2320",
+            "SENSEX": "1210"
+        }
+
+        instrument_id = instrument_map.get(symbol)
+        if not instrument_id:
+            print("❌ Unknown symbol:", symbol)
             return []
 
-        exchange = symbol.split("|")[0]
-        security = symbol.split("|")[1]
-
-        url = "https://api.dhan.co/market/v1/candles"
-        now = datetime.utcnow()
-        past = now - timedelta(minutes=60)
-
-        params = {
-            "securityId": f"{exchange}|{security}",
-            "exchangeSegment": exchange,
-            "instrumentType": "INDEX",
-            "fromDate": past.strftime("%Y-%m-%dT%H:%M:%S"),
-            "toDate": now.strftime("%Y-%m-%dT%H:%M:%S"),
-            "interval": "5MIN"
+        url = f"https://api.dhan.co/market/v1/instruments/{instrument_id}/historical-candle"
+        now = int(time.time())
+        past = now - (60 * 60)  # 1 hour ago
+        payload = {
+            "from": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(past)),
+            "to": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now)),
+            "interval": "5m"
         }
 
         headers = {
-            "Authorization": f"Bearer {token}",
-            "Accept": "application/json"
+            "accept": "application/json",
+            "access-token": os.getenv("DHAN_ACCESS_TOKEN"),
+            "client-id": os.getenv("DHAN_CLIENT_ID")
         }
 
-        res = requests.get(url, headers=headers, params=params)
-        data = res.json()
+        response = requests.get(url, headers=headers, params=payload)
+        data = response.json()
 
-        if "candles" not in data:
-            print("❌ Dhan error:", data)
+        if not isinstance(data, list) or len(data) < 5:
+            print("❌ No valid candle data:", data)
             return []
 
         candles = []
-        for i in data["candles"]:
+        for candle in data:
             candles.append({
-                "time": int(datetime.strptime(i["startTime"], "%Y-%m-%dT%H:%M:%S").timestamp()),
-                "open": i["open"],
-                "high": i["high"],
-                "low": i["low"],
-                "close": i["close"],
-                "volume": i["volume"]
+                "time": int(time.mktime(time.strptime(candle['startTime'], "%Y-%m-%dT%H:%M:%S"))),
+                "open": candle["open"],
+                "high": candle["high"],
+                "low": candle["low"],
+                "close": candle["close"],
+                "volume": candle["volume"]
             })
 
         return candles
+
     except Exception as e:
-        print("❌ Error fetching candles:", str(e))
+        print("❌ Error fetching from Dhan:", e)
         return []
 
 # === Strategies ===
