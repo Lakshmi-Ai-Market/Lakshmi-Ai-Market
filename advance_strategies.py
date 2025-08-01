@@ -2,7 +2,8 @@ import os
 import time
 import requests
 import re
-from dhan_data import fetch_dhan_price  # Assuming you're using live data from Dhan    
+from dhan_data import fetch_dhan_price, fetch_candle_data
+from strategies import strategy_rsi, strategy_trend, strategy_candle_size
 
 def fetch_dhan_price(symbol):
     instrument_map = {
