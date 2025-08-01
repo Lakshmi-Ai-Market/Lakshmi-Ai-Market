@@ -155,6 +155,10 @@ def analyze_all_strategies(user_input):
     print("💬 User Input:", user_input)
     symbol = extract_symbol_from_text(user_input)
     print("🔍 Extracted Symbol:", symbol)
+    print("🔥 Cleaned input:", cleaned_input)
+print("🔥 Detected symbol:", symbol)
+print("🔥 Extracted price:", price)
+print("🔥 Matched strategies:", results)
 
     if not symbol:
         return {"error": f"❌ Could not detect a valid index name in the input: {user_input}"}
