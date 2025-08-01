@@ -1,99 +1,72 @@
 import os
 import time
 import requests
-import re
 
-# 💡 Extract F&O index name from input
-def analyze_all_strategies(user_input):
-    symbol = extract_symbol_from_text(user_input)
-    if not symbol:
-        return {"error": "❌ No valid symbol found in input."}
+# ✅ Extract index symbol from user input
+def extract_symbol_from_text(text):
+    text = text.upper()
+    for s in ["SENSEX", "NIFTY", "BANKNIFTY"]:
+        if s in text:
+            return s
+    return None
 
-    strategies = []
-    summary = "Market seems volatile today."
-
-    # Example logic to fill strategy list
-    input_lower = user_input.lower()
-
-    if "buy" in input_lower:
-        strategies.append({"strategy": "Breakout Strategy", "confidence": 85})
-    if "sell" in input_lower:
-        strategies.append({"strategy": "Pullback Strategy", "confidence": 78})
-    if "range" in input_lower:
-        strategies.append({"strategy": "Range-Bound Strategy", "confidence": 65})
-    if "momentum" in input_lower:
-        strategies.append({"strategy": "Momentum Strategy", "confidence": 72})
-
-    return {
-        "symbol": symbol,
-        "strategies": strategies,
-        "summary": summary
-    }
-        
-# 🔥 Fetch candle data from Dhan API (5 min resolution, 1 hour)
+# ✅ Fetch 5-min candles for the last 1 hour from Dhan API
 def fetch_candles(symbol):
-    try:
-        instrument_map = {
-            "NIFTY": "1330",
-            "BANKNIFTY": "2320",
-            "SENSEX": "1210"
-        }
+    instrument_map = {
+        "NIFTY": "1330",
+        "BANKNIFTY": "2320",
+        "SENSEX": "1210"
+    }
 
-        instrument_id = instrument_map.get(symbol)
-        if not instrument_id:
-            print("❌ Unknown symbol:", symbol)
-            return []
-
-        url = f"https://api.dhan.co/market/v1/instruments/{instrument_id}/historical-candle"
-        now = int(time.time())
-        past = now - (60 * 60)  # 1 hour ago
-        payload = {
-            "from": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(past)),
-            "to": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now)),
-            "interval": "5m"
-        }
-
-        headers = {
-            "accept": "application/json",
-            "access-token": os.getenv("DHAN_ACCESS_TOKEN"),
-            "client-id": os.getenv("DHAN_CLIENT_ID")
-        }
-
-        response = requests.get(url, headers=headers, params=payload)
-        data = response.json()
-
-        if not isinstance(data, list) or len(data) < 5:
-            print("❌ No valid candle data:", data)
-            return []
-
-        candles = []
-        for candle in data:
-            candles.append({
-                "time": int(time.mktime(time.strptime(candle['startTime'], "%Y-%m-%dT%H:%M:%S"))),
-                "open": candle["open"],
-                "high": candle["high"],
-                "low": candle["low"],
-                "close": candle["close"],
-                "volume": candle["volume"]
-            })
-
-        return candles
-
-    except Exception as e:
-        print("❌ Error fetching from Dhan:", e)
+    instrument_id = instrument_map.get(symbol)
+    if not instrument_id:
+        print("❌ Unknown symbol:", symbol)
         return []
 
-# === Strategies ===
+    end = int(time.time())
+    start = end - 60 * 60
+
+    params = {
+        "instrument_id": instrument_id,
+        "exchange_segment": "NSE_INDEX",
+        "interval": "5m",
+        "from": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start)),
+        "to": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(end))
+    }
+
+    headers = {
+        "access-token": os.getenv("DHAN_ACCESS_TOKEN"),
+        "client-id": os.getenv("DHAN_CLIENT_ID"),
+        "accept": "application/json"
+    }
+
+    url = "https://api.dhan.co/market/v1/instruments/historical"
+
+    try:
+        res = requests.get(url, headers=headers, params=params)
+        data = res.json()
+        if "data" not in data or not data["data"]:
+            return []
+        return [{
+            "time": int(time.mktime(time.strptime(d["startTime"], "%Y-%m-%dT%H:%M:%S"))),
+            "open": d["open"],
+            "high": d["high"],
+            "low": d["low"],
+            "close": d["close"],
+            "volume": d["volume"]
+        } for d in data["data"]]
+    except Exception as e:
+        print("❌ Dhan Fetch Error:", e)
+        return []
+
+# ✅ All Technical Strategy Functions (same as yours)
 def ema_crossover(c):
     closes = [x['close'] for x in c]
-    if len(closes) < 21:
-        return None
+    if len(closes) < 21: return None
     ema9 = sum(closes[-9:]) / 9
     ema21 = sum(closes[-21:]) / 21
-    if ema9 > ema21:
-        return {"strategy": "📈 EMA Bullish Crossover", "confidence": 85}
-    elif ema9 < ema21:
-        return {"strategy": "📉 EMA Bearish Crossover", "confidence": 80}
+    if ema9 > ema21: return {"strategy": "📈 EMA Bullish Crossover", "confidence": 85}
+    elif ema9 < ema21: return {"strategy": "📉 EMA Bearish Crossover", "confidence": 80}
 
 def rsi_reversal(c):
     closes = [x['close'] for x in c]
@@ -126,8 +99,7 @@ def breakout_strategy(c):
     closes = [x['close'] for x in c]
     if len(highs) < 10: return None
     resistance = max(highs[-10:-1])
-    if closes[-1] > resistance:
-        return {"strategy": "💥 Breakout Above Resistance", "confidence": 79}
+    if closes[-1] > resistance: return {"strategy": "💥 Breakout Above Resistance", "confidence": 79}
 
 def pullback_strategy(c):
     closes = [x['close'] for x in c]
@@ -157,8 +129,7 @@ def bollinger_band_squeeze(c):
     if (upper - lower) / sma < 0.03:
         return {"strategy": "🧨 Bollinger Squeeze", "confidence": 78}
 
-# === Candlestick Patterns ===
-
+# ✅ Candlestick Patterns
 def marubozu_bullish(c): last = c[-1]; return {"strategy": "🚩 Bullish Marubozu", "confidence": 79} if last['open'] == min(last['open'], last['close']) and last['close'] == max(last['open'], last['close']) else None
 def marubozu_bearish(c): last = c[-1]; return {"strategy": "🚩 Bearish Marubozu", "confidence": 78} if last['open'] == max(last['open'], last['close']) and last['close'] == min(last['open'], last['close']) else None
 def bullish_engulfing(c): a,b=c[-2],c[-1]; return {"strategy": "🟩 Bullish Engulfing", "confidence": 80} if a['close']<a['open'] and b['close']>b['open'] and b['close']>a['open'] and b['open']<a['close'] else None
@@ -179,20 +150,19 @@ def doji_star_bearish(c): a,b,d=c[-3],c[-2],c[-1]; return {"strategy":"💫 Bear
 def tweezers_bottom(c): a,b=c[-2],c[-1]; return {"strategy":"🍥 Tweezers Bottom","confidence":76} if a['low']==b['low'] and a['close']<a['open'] and b['close']>b['open'] else None
 def tweezers_top(c): a,b=c[-2],c[-1]; return {"strategy":"🍡 Tweezers Top","confidence":76} if a['high']==b['high'] and a['close']>a['open'] and b['close']<b['open'] else None
 
-# === Analyzer ===
+# ✅ Final Analyzer
 def analyze_all_strategies(user_input):
     print("💬 User Input:", user_input)
-print("🔍 Extracted Symbol:", extract_symbol_from_text(user_input))
+    symbol = extract_symbol_from_text(user_input)
+    print("🔍 Extracted Symbol:", symbol)
 
     if not symbol:
         return {"error": f"❌ Could not detect a valid index name in the input: {user_input}"}
 
-    # Fetch candles (real or fake)
     candles = fetch_candles(symbol)
     if not candles:
-        return {"error": "❌ Unable to fetch real candle data."}
+        return {"error": "❌ Unable to fetch real candle data from Dhan."}
 
-    # Strategy evaluation
     strategies = [
         ema_crossover(candles), rsi_reversal(candles), macd_strategy(candles),
         breakout_strategy(candles), pullback_strategy(candles), volume_surge(candles),
@@ -222,3 +192,10 @@ print("🔍 Extracted Symbol:", extract_symbol_from_text(user_input))
         "strategies": valid,
         "symbol": symbol
     }
+
+# ✅ Example Usage
+if __name__ == "__main__":
+    os.environ["DHAN_ACCESS_TOKEN"] = "your_real_token_here"
+    os.environ["DHAN_CLIENT_ID"] = "your_client_id_here"
+    result = analyze_all_strategies("sensex 81700 momentum breakout")
+    print(result)
