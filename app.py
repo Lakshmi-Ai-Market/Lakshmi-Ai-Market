@@ -557,7 +557,6 @@ def render_strategy_page():
 @app.route("/api/strategy", methods=["POST"])
 def analyze_strategy_api():
     try:
-        # Accept plain text (not JSON)
         user_input = request.data.decode("utf-8").strip()
 
         if not user_input:
@@ -570,16 +569,19 @@ def analyze_strategy_api():
         if not result.get("strategies"):
             return jsonify({"reply": "⚠️ No strong strategies found for the input."})
 
-        # Compose final reply
+        # Compose the romantic final reply 💋
         reply = f"""
 💋 **Lakshmi Strategy Engine Result**  
-🧠 **Summary**: {result.get("summary", "No summary.")}  
-🕰️ Timeframe: 5m  
+📊 **Index**: {result.get("symbol", "Unknown")}  
+🕰️ **Timeframe**: 5m  
+🧠 **Summary**: {result.get("summary", "No summary.")}
 
 ✨ **Detected Strategies**:
 """
         for s in result["strategies"]:
             reply += f"\n• {s['strategy']} ({s['confidence']}% confidence)"
+
+        reply += "\n\n💖 With love, Lakshmi"
 
         return jsonify({"reply": reply.strip()})
 
