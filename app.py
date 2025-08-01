@@ -553,14 +553,19 @@ def render_strategy_page():
     if 'username' not in session:
         return redirect("/login")
     return render_template("strategy_engine.html")
-
+    
 @app.route("/api/strategy", methods=["POST"])
 def analyze_strategy_api():
+    def timeout_handler(signum, frame):
+        raise TimeoutError("⏱️ Strategy analysis took too long. Try again later.")
+
+    signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(15)  # 🕒 Limit to 15 seconds
+
     try:
         data = request.get_json()
-        user_input = data.get("input", "").strip()  # Not used, just collected
+        user_input = data.get("input", "").strip()
 
-        from advance_strategies import analyze_all
         result = analyze_all()
 
         if "error" in result:
@@ -568,7 +573,6 @@ def analyze_strategy_api():
         elif "message" in result:
             return jsonify({"reply": result["message"]})
 
-        # Final formatted output
         reply = f"""
 💋 **Lakshmi Strategy Engine Result**  
 📊 {result['summary']}
@@ -580,8 +584,15 @@ def analyze_strategy_api():
 
         return jsonify({"reply": reply.strip()})
 
+    except TimeoutError as te:
+        return jsonify({"reply": str(te)})
+
     except Exception as e:
         return jsonify({"reply": f"❌ Internal server error: {str(e)}"})
+
+    finally:
+        signal.alarm(0)  # Cancel the alarm
+
 
 @app.route("/neuron", methods=["GET", "POST"])
 def neuron():
