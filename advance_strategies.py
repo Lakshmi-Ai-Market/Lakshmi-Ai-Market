@@ -193,8 +193,10 @@ def analyze_all_strategies(user_input):
 
     # Clean and extract
     cleaned_input = user_input.strip().lower()
-    symbol = extract_symbol_from_text(cleaned_input)
-    price = extract_price_from_text(cleaned_input)
+parsed = extract_symbol_and_price(cleaned_input)
+if not parsed:
+    return {"error": f"❌ Could not detect any symbol and price in: {user_input}"}
+symbol, price = parsed[0]
 
     print("🔥 Cleaned input:", cleaned_input)
     print("🔥 Detected symbol:", symbol)
