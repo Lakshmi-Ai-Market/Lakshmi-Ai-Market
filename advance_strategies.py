@@ -3,7 +3,7 @@ import time
 import requests
 import re
 from dhan_data import fetch_dhan_price  # Assuming you're using live data from Dhan
-from strategies import (
+from advance_strategies import (
     strategy_rsi, strategy_ema_crossover, strategy_price_action,  # example strategy names
     # ... include all your 27 strategy imports here
 )
