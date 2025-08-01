@@ -26,6 +26,44 @@ def strategy_trend_bias(symbol):
     else:
         return {"bias": "Neutral", "confidence": 50, "reason": "Price around average"}
 
+def strategy_rsi(candles):
+    if len(candles) < 14:
+        return None
+
+    closes = [c[4] for c in candles]  # close price
+    gains = [max(0, closes[i] - closes[i-1]) for i in range(1, len(closes))]
+    losses = [max(0, closes[i-1] - closes[i]) for i in range(1, len(closes))]
+
+    avg_gain = sum(gains[-14:]) / 14
+    avg_loss = sum(losses[-14:]) / 14
+    rs = avg_gain / avg_loss if avg_loss != 0 else 0
+    rsi = 100 - (100 / (1 + rs))
+
+    if rsi > 70:
+        return {"strategy": "RSI", "bias": "Bearish", "confidence": round(rsi, 2)}
+    elif rsi < 30:
+        return {"strategy": "RSI", "bias": "Bullish", "confidence": round(100 - rsi, 2)}
+    else:
+        return None
+
+def strategy_trend(candles):
+    closes = [c[4] for c in candles]
+    if closes[-1] > closes[0]:
+        return {"strategy": "Trend", "bias": "Bullish", "confidence": 70}
+    elif closes[-1] < closes[0]:
+        return {"strategy": "Trend", "bias": "Bearish", "confidence": 70}
+    return None
+
+def strategy_candle_size(candles):
+    bullish = sum(1 for c in candles if c[4] > c[1])
+    bearish = sum(1 for c in candles if c[4] < c[1])
+    total = bullish + bearish
+    if total == 0:
+        return None
+    bias = "Bullish" if bullish > bearish else "Bearish"
+    confidence = round((max(bullish, bearish) / total) * 100, 2)
+    return {"strategy": "Candle Strength", "bias": bias, "confidence": confidence}
+
 def strategy_breakout(symbol):
     candles = fetch_dhan_candles(symbol, "15m", 10)
     if not candles or len(candles) < 5:
