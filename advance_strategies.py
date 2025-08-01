@@ -4,18 +4,31 @@ import requests
 import re
 
 # 💡 Extract F&O index name from input
-def extract_symbol_from_text(user_input):
+def analyze_all_strategies(user_input):
+    symbol = extract_symbol_from_text(user_input)
+    if not symbol:
+        return {"error": "❌ No valid symbol found in input."}
+
+    strategies = []
+    summary = "Market seems volatile today."
+
+    # Example logic to fill strategy list
     input_lower = user_input.lower()
 
-    if "banknifty" in input_lower.replace(" ", ""):
-        return "BANKNIFTY"
-    elif "nifty" in input_lower.replace(" ", "") and "banknifty" not in input_lower.replace(" ", ""):
-        return "NIFTY"
-    elif "sensex" in input_lower or "sen" in input_lower:
-        return "SENSEX"
-    else:
-        print("❌ No valid index keyword in input:", input_lower)
-        return None
+    if "buy" in input_lower:
+        strategies.append({"strategy": "Breakout Strategy", "confidence": 85})
+    if "sell" in input_lower:
+        strategies.append({"strategy": "Pullback Strategy", "confidence": 78})
+    if "range" in input_lower:
+        strategies.append({"strategy": "Range-Bound Strategy", "confidence": 65})
+    if "momentum" in input_lower:
+        strategies.append({"strategy": "Momentum Strategy", "confidence": 72})
+
+    return {
+        "symbol": symbol,
+        "strategies": strategies,
+        "summary": summary
+    }
         
 # 🔥 Fetch candle data from Dhan API (5 min resolution, 1 hour)
 def fetch_candles(symbol):
