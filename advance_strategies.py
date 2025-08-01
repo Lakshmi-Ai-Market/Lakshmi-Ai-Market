@@ -1,20 +1,19 @@
 import requests
-import numpy as np
 
-# === Fetch real candles from your internal candle API ===
-def fetch_candles():
+VALID_INDICES = ["SENSEX", "BANKNIFTY", "NIFTY", "FINNIFTY", "MIDCPNIFTY"]
+
+def fetch_candles(symbol):
     try:
         res = requests.post("https://lakshmi-ai-trades.onrender.com/api/candle", json={
-    "symbol": symbol.upper(),
-    "timeframe": "5m"
-}, timeout=8)  # <-- Add timeout!
+            "symbol": symbol.upper(),
+            "timeframe": "5m"
+        }, timeout=8)
         data = res.json()
         return data if isinstance(data, list) else []
     except Exception as e:
         print("❌ Error fetching candles:", str(e))
         return []
 
-# === EMA Crossover Strategy ===
 def ema_crossover(candles):
     closes = [c['close'] for c in candles]
     if len(closes) < 21:
@@ -26,7 +25,6 @@ def ema_crossover(candles):
     elif ema9 < ema21:
         return {"strategy": "📉 EMA Bearish Crossover", "confidence": 80}
 
-# === RSI Reversal Strategy ===
 def rsi_reversal(candles):
     closes = [c['close'] for c in candles]
     if len(closes) < 15:
@@ -49,7 +47,6 @@ def rsi_reversal(candles):
     elif rsi > 70:
         return {"strategy": "🔄 RSI Bearish Reversal (>70)", "confidence": 75}
 
-# === MACD Strategy ===
 def macd_strategy(candles):
     closes = [c['close'] for c in candles]
     if len(closes) < 35:
@@ -63,7 +60,6 @@ def macd_strategy(candles):
     elif macd < signal:
         return {"strategy": "🔻 MACD Bearish Momentum", "confidence": 77}
 
-# === Breakout Strategy ===
 def breakout_strategy(candles):
     highs = [c['high'] for c in candles]
     closes = [c['close'] for c in candles]
@@ -73,7 +69,6 @@ def breakout_strategy(candles):
     if closes[-1] > resistance:
         return {"strategy": "💥 Breakout Above Resistance", "confidence": 79}
 
-# === Pullback Strategy ===
 def pullback_strategy(candles):
     closes = [c['close'] for c in candles]
     if len(closes) < 10:
@@ -82,7 +77,6 @@ def pullback_strategy(candles):
     if retracement:
         return {"strategy": "🔂 Pullback Entry Signal", "confidence": 74}
 
-# === Volume Surge Strategy ===
 def volume_surge(candles):
     vols = [c['volume'] for c in candles]
     if len(vols) < 10:
@@ -91,7 +85,6 @@ def volume_surge(candles):
     if vols[-1] > 1.5 * avg_vol:
         return {"strategy": "📊 Volume Surge Detected", "confidence": 76}
 
-# === SuperTrend Signal (Basic) ===
 def supertrend(candles):
     if len(candles) < 10:
         return None
@@ -102,11 +95,10 @@ def supertrend(candles):
         "confidence": 78 if trend == "Bullish" else 72
     }
 
-# === Analyze All Strategies Combined ===
-def analyze_all():
-    candles = fetch_candles()  # ✅ from your /api/candle system
+def analyze_all_strategies(symbol):
+    candles = fetch_candles(symbol)
     if not candles:
-        return {"error": "❌ Unable to fetch real candle data."}
+        return {"error": f"❌ Unable to fetch candle data for {symbol.upper()}."}
 
     strategies = [
         ema_crossover(candles),
@@ -117,7 +109,6 @@ def analyze_all():
         volume_surge(candles),
         supertrend(candles)
     ]
-
     valid = [s for s in strategies if s is not None]
     if not valid:
         return {"message": "⚠️ No strong signals detected. Market unclear."}
@@ -132,3 +123,11 @@ def analyze_all():
         "summary": f"Market Bias: {bias} ({confidence}% confidence)",
         "strategies": valid
     }
+
+def extract_symbol_from_text(user_input):
+    parts = user_input.upper().split()
+    for word in parts:
+        clean = word.replace(" ", "").replace("-", "")
+        if clean in VALID_INDICES:
+            return clean
+    return None
