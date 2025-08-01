@@ -566,34 +566,24 @@ def render_strategy_page():
 @app.route("/api/strategy", methods=["POST"])
 def analyze_strategy_api():
     try:
-        user_input = request.data.decode("utf-8").strip()
-
-        if not user_input:
-            return jsonify({"reply": "❌ No input provided."})
-
-        result = analyze_all_strategies(user_input)
-
-        if "error" in result:
-            return jsonify({"reply": result["error"]})
-        if not result.get("strategies"):
-            return jsonify({"reply": "⚠️ No strong strategies found for the input."})
-
-        reply = f"""
-💋 **Lakshmi Strategy Engine Result**  
-📊 **Index**: {result.get("symbol", "Unknown")}  
-🕰️ **Timeframe**: 5min  
-🧠 **Summary**: {result.get("summary", "No summary.")}
-
-✨ **Detected Strategies**:
-"""
-        for s in result["strategies"]:
-            reply += f"\n• {s['strategy']} ({s['confidence']}% confidence)"
-
-        reply += "\n\n💖 With love, Lakshmi"
-        return jsonify({"reply": reply.strip()})
-
+        symbol = request.data.decode("utf-8").strip().upper()
+        if not symbol:
+            return jsonify({"error": "Symbol is required"}), 400
+        
+        result = analyze_all_strategies(symbol)
+        response_text = (
+            f"📈 Symbol: {result['symbol']}\n"
+            f"🧠 Bias: {result['bias']}\n"
+            f"📊 Confidence: {result['confidence']}%\n"
+            f"🧮 Summary: {result['summary']}\n\n"
+            + "\n".join([
+                f"✅ {s['strategy']} → {s['confidence']}%" for s in result["strategies"]
+            ])
+        )
+        return jsonify({"reply": response_text})
+    
     except Exception as e:
-        return jsonify({"reply": f"❌ Internal Server Error: {str(e)}"})
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/neuron", methods=["GET", "POST"])
 def neuron():
