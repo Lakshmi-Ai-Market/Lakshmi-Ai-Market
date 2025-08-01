@@ -9,7 +9,7 @@ from tools.strategy_switcher import select_strategy
 import pandas as pd
 import re
 from urllib.parse import urlencode
-from strategies import analyze_all_strategies
+from advance_strategies import analyze_all_strategies
 from dotenv import load_dotenv
 from pathlib import Path
 
