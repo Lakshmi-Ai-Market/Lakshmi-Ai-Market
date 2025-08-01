@@ -1,4 +1,8 @@
-from dhan_data import fetch_dhan_price, fetch_dhan_candles
+from dhan_data import fetch_candle_data
+from advance_strategies import (
+    strategy_rsi,
+    strategy_supertrend,
+    strategy_macd
 import datetime
 
 def strategy_trend_bias(symbol):
