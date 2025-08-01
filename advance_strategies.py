@@ -4,24 +4,49 @@ import requests
 def extract_symbol_from_text(user_input):
     input_lower = user_input.lower()
     if "banknifty" in input_lower:
-        return "BANKNIFTY"
+        return "^NSEBANK"
     elif "nifty" in input_lower:
-        return "NIFTY"
+        return "^NSEI"
     elif "sensex" in input_lower:
-        return "SENSEX"
+        return "^BSESN"
     return None
 
 # === Fetch candles from your internal API ===
 def fetch_candles(symbol):
     try:
-        res = requests.post("https://lakshmi-ai-trades.onrender.com/api/candle", json={
-            "symbol": symbol,
-            "timeframe": "5m"
-        }, timeout=8)
+        now = int(time.time())
+        past = now - (60 * 60)  # last 1 hour
+
+        url = f"https://finnhub.io/api/v1/stock/candle"
+        params = {
+            "symbol": symbol,  # already mapped
+            "resolution": "5",
+            "from": past,
+            "to": now,
+            "token": os.getenv("FINNHUB_API_KEY")
+        }
+
+        res = requests.get(url, params=params, timeout=10)
         data = res.json()
-        return data if isinstance(data, list) else []
+
+        if data.get("s") != "ok":
+            print("❌ Finnhub error:", data)
+            return []
+
+        candles = []
+        for i in range(len(data["t"])):
+            candles.append({
+                "time": data["t"][i],
+                "open": data["o"][i],
+                "high": data["h"][i],
+                "low": data["l"][i],
+                "close": data["c"][i],
+                "volume": data["v"][i]
+            })
+
+        return candles
     except Exception as e:
-        print("❌ Error fetching candles:", str(e))
+        print("❌ Error fetching from Finnhub:", str(e))
         return []
 
 # === Strategies ===
