@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
-import random, csv, os, requests, time
+random, csv, os, requests, time
 from datetime import datetime
 from tools.strategy_switcher import select_strategy
 import pandas as pd
@@ -14,7 +14,10 @@ from pathlib import Path
 env_path = Path(__file__).parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
-print("🔑 FINNHUB_API_KEY:", os.getenv("FINNHUB_API_KEY"))
+# ✅ Print loaded keys (for debug only — remove in production)
+print("🔑 DHAN_CLIENT_ID:", os.getenv("DHAN_CLIENT_ID"))
+print("🔑 DHAN_ACCESS_TOKEN:", os.getenv("DHAN_ACCESS_TOKEN"))
+print("🔑 OPENROUTER_KEY:", os.getenv("OPENROUTER_API_KEY"))
 
 app = Flask(__name__)
 app.secret_key = "lakshmi_secret_key"
@@ -564,6 +567,12 @@ def analyze_strategy_api():
         if not user_input:
             return jsonify({"reply": "❌ No input provided."})
 
+        # Extract F&O keyword from plain sentence (like "sensex 81600")
+        clean_text = re.sub(r"[^\w\s]", "", user_input)
+        keyword_match = re.search(r"\b(nifty|banknifty|bank nifty|sensex|sen)\b", clean_text.lower())
+        if not keyword_match:
+            return jsonify({"reply": "❌ Could not detect a valid index name in the input."})
+
         result = analyze_all_strategies(user_input)
 
         if "error" in result:
@@ -571,11 +580,11 @@ def analyze_strategy_api():
         if not result.get("strategies"):
             return jsonify({"reply": "⚠️ No strong strategies found for the input."})
 
-        # Compose the romantic final reply 💋
+        # Romantic reply 💋
         reply = f"""
 💋 **Lakshmi Strategy Engine Result**  
 📊 **Index**: {result.get("symbol", "Unknown")}  
-🕰️ **Timeframe**: 5m  
+🕰️ **Timeframe**: 5min  
 🧠 **Summary**: {result.get("summary", "No summary.")}
 
 ✨ **Detected Strategies**:
