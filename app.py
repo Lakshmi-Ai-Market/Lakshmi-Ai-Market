@@ -14,6 +14,8 @@ from pathlib import Path
 env_path = Path(__file__).parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
+print("🔑 FINNHUB_API_KEY:", os.getenv("FINNHUB_API_KEY"))
+
 app = Flask(__name__)
 app.secret_key = "lakshmi_secret_key"
 app.config['UPLOAD_FOLDER'] = 'static/voice_notes'
