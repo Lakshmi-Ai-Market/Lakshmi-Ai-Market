@@ -5,18 +5,17 @@ import os
 from datetime import datetime, timedelta
 
 def extract_symbol_from_text(user_input):
-def extract_symbol_from_text(user_input):
     input_lower = user_input.lower().strip()
 
-    # BankNifty match
+    # Match BankNifty
     if "banknifty" in input_lower or "bank nifty" in input_lower:
         return "BANKNIFTY"
 
-    # Nifty match
+    # Match Nifty (only if 'bank' not also present)
     elif "nifty" in input_lower and "bank" not in input_lower:
         return "NIFTY"
 
-    # Sensex match
+    # Match Sensex
     elif "sensex" in input_lower or "sen" in input_lower or "senex" in input_lower:
         return "SENSEX"
 
