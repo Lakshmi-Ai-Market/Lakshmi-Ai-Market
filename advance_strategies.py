@@ -8,7 +8,7 @@ from advance_strategies import (
     # ... include all your 27 strategy imports here
 )
 from utils import extract_symbol_from_text, extract_price_from_text, fetch_candles
-from strategies import *
+from advance_strategies import *
 
 def fetch_dhan_price(symbol):
     instrument_map = {
