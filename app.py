@@ -5,7 +5,7 @@ from tools.strategy_switcher import select_strategy
 import pandas as pd
 import re
 from urllib.parse import urlencode
-from advance_strategies import analyze_all
+from advance_strategies import analyze_all_strategies
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -555,22 +555,21 @@ def render_strategy_page():
     return render_template("strategy_engine.html")
 
 @app.route("/api/strategy", methods=["POST"])
-def analyze_strategy():
+def strategy_engine():
     try:
-        user_msg = request.json.get("message", "")
-        if not user_msg:
-            return jsonify({"reply": "❌ No input provided."})
+        if request.is_json:
+            user_input = request.json.get("message", "")
+        else:
+            user_input = request.form.get("message", "")
+        
+        if not user_input.strip():
+            return jsonify({"error": "❌ No input provided."})
+        
+        result = analyze_all_strategies(user_input)
+        return jsonify(result)
 
-        indices = ["NIFTY", "BANKNIFTY", "SENSEX", "FINNIFTY", "MIDCPNIFTY"]
-        found = [s for s in indices if s.lower() in user_msg.lower()]
-        if not found:
-            return jsonify({"reply": "⚠️ No F&O index found. Try: 'nifty 24400'"})
-
-        from advance_strategies import analyze_all
-        results = [analyze_all(sym) for sym in found]
-        return jsonify({"reply": results})
     except Exception as e:
-        return jsonify({"reply": f"❌ Error occurred: {str(e)}"})
+        return jsonify({"error": f"❌ Server error: {str(e)}"})
 
 @app.route("/neuron", methods=["GET", "POST"])
 def neuron():
