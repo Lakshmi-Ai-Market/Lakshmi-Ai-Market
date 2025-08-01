@@ -5,17 +5,22 @@ import re
 
 # 💡 Extract F&O index name from input
 def extract_symbol_from_text(user_input):
-    input_lower = user_input.lower().strip()
+    input_lower = user_input.lower()
 
-    if "banknifty" in input_lower or "bank nifty" in input_lower:
+    # Match Bank Nifty with or without space
+    if re.search(r"\bbank\s?nifty\b", input_lower):
         return "BANKNIFTY"
-    elif "nifty" in input_lower and "bank" not in input_lower:
+    
+    # Match Nifty but not BankNifty
+    elif re.search(r"\bnifty\b", input_lower) and not re.search(r"bank\s?nifty", input_lower):
         return "NIFTY"
-    elif "sensex" in input_lower or "sen" in input_lower:
+
+    # Match Sensex or Sen
+    elif re.search(r"\bsensex\b|\bsen\b", input_lower):
         return "SENSEX"
-    else:
-        print("DEBUG ❌ Could not detect index in input:", user_input)
-        return None
+    
+    # Default fallback
+    return None
         
 # 🔥 Fetch candle data from Dhan API (5 min resolution, 1 hour)
 def fetch_candles(symbol):
@@ -168,21 +173,20 @@ def tweezers_top(c): a,b=c[-2],c[-1]; return {"strategy":"🍡 Tweezers Top","co
 
 # === Analyzer ===
 def analyze_all_strategies(user_input):
+    print("🧪 Raw Input:", user_input)  # Add this line to show what was typed
+    
     symbol = extract_symbol_from_text(user_input)
+    print("🧪 Detected Symbol:", symbol)  # Add this line to confirm detection
 
     if not symbol:
         return {"error": f"❌ Could not detect a valid index name in the input: {user_input}"}
 
-    print("✅ Detected symbol:", symbol)
-
-    # Fake dummy candle return if you're not using live API
+    # Fetch candles (real or fake)
     candles = fetch_candles(symbol)
     if not candles:
         return {"error": "❌ Unable to fetch real candle data."}
 
-    # Strategy check logic remains the same
-    ...
-
+    # Strategy evaluation
     strategies = [
         ema_crossover(candles), rsi_reversal(candles), macd_strategy(candles),
         breakout_strategy(candles), pullback_strategy(candles), volume_surge(candles),
