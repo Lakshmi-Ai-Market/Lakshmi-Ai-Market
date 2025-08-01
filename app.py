@@ -1,5 +1,9 @@
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
-random, csv, os, requests, time
+import random
+import csv
+import os
+import requests
+import time
 from datetime import datetime
 from tools.strategy_switcher import select_strategy
 import pandas as pd
