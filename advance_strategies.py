@@ -186,37 +186,31 @@ def doji_star_bearish(c): a,b,d=c[-3],c[-2],c[-1]; return {"strategy":"💫 Bear
 def tweezers_bottom(c): a,b=c[-2],c[-1]; return {"strategy":"🍥 Tweezers Bottom","confidence":76} if a['low']==b['low'] and a['close']<a['open'] and b['close']>b['open'] else None
 def tweezers_top(c): a,b=c[-2],c[-1]; return {"strategy":"🍡 Tweezers Top","confidence":76} if a['high']==b['high'] and a['close']>a['open'] and b['close']<b['open'] else None
 
-# ✅ Final Analyzer
+# === Final Analyzer ===
 def analyze_all_strategies(user_input):
     if "banknifty" not in user_input.lower():
         return "❌ BankNifty symbol missing in input."
 
-    symbol = "BANKNIFTY23AUGFUT"  # Adjust symbol if expiry changes
-    token = get_fno_index_token(symbol)
-
-    if not token:
-        return "❌ Could not fetch F&O token for BankNifty."
-
-    candles = fetch_candle_data(token)
-    if len(candles) < 10:
-        return "⚠️ Not enough candle data returned for strategy analysis."
+    symbol = "BANKNIFTY"  # Just the name; futures token fetched dynamically
 
     try:
-        # Pass actual candles to each strategy
-        rsi_result = strategy_rsi(candles)
-        ema_result = strategy_ema_crossover(candles)
-        price_result = strategy_price_action(candles)
+        rsi_result = strategy_rsi(symbol)
+        ema_result = strategy_ema_crossover(symbol)
+        price_result = strategy_price_action(symbol)
 
         results = [rsi_result, ema_result, price_result]
 
-        # Trend logic
-        if all("Bullish" in r for r in results):
+        # Determine overall trend
+        bullish = sum(1 for r in results if "Bullish" in r)
+        bearish = sum(1 for r in results if "Bearish" in r)
+
+        if bullish == 3:
             trend = "📈 Strong Bullish"
-        elif any("Bullish" in r for r in results):
+        elif bullish == 2:
             trend = "📊 Mild Bullish"
-        elif all("Bearish" in r for r in results):
+        elif bearish == 3:
             trend = "📉 Strong Bearish"
-        elif any("Bearish" in r for r in results):
+        elif bearish == 2:
             trend = "🔻 Mild Bearish"
         else:
             trend = "🔍 Sideways / Neutral"
@@ -224,4 +218,4 @@ def analyze_all_strategies(user_input):
         return f"✅ Trend Summary: {trend}\n\n" + "\n".join(results)
 
     except Exception as e:
-        return f"❌ Error during strategy analysis: {e}"
+        return f"❌ Error during analysis: {e}"
