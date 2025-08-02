@@ -189,29 +189,85 @@ def tweezers_bottom(c): a,b=c[-2],c[-1]; return {"strategy":"🍥 Tweezers Botto
 def tweezers_top(c): a,b=c[-2],c[-1]; return {"strategy":"🍡 Tweezers Top","confidence":76} if a['high']==b['high'] and a['close']>a['open'] and b['close']<b['open'] else None
 
 # ✅ Final Analyzer
-def analyze_all_strategies(user_input):
-    user_input = user_input.strip().lower()
+from dhan_data import fetch_candle_data, fetch_latest_data
 
-    if "sensex" in user_input and "banknifty" in user_input:
-        return (
-            "📈 *Lakshmi Strategy Output*\n"
-            "✅ Trend: Strong Bullish\n"
-            "🎯 Buy BankNifty above 56000\n"
-            "🛑 Stop Loss: 55800\n"
-            "📊 Confidence: 89.7%\n"
-            "✨ Strategy: EMA Crossover + RSI"
-        )
-    elif "nifty" in user_input and "banknifty" in user_input:
-        return (
-            "📉 *Lakshmi Strategy Output*\n"
-            "⚠️ Trend: Weak Bearish\n"
-            "🚫 Avoid fresh entries\n"
-            "📊 Confidence: 61.2%\n"
-            "✨ Strategy: Price Action + RSI Divergence"
-        )
-    elif "sensex" in user_input:
-        return "🙋‍♀️ Please provide both Sensex and BankNifty data 💬"
-    elif not user_input.strip():
-        return ""
+def calculate_ema(candles, period):
+    prices = [float(c[4]) for c in candles]  # close prices
+    k = 2 / (period + 1)
+    ema = prices[0]
+    for price in prices[1:]:
+        ema = price * k + ema * (1 - k)
+    return ema
+
+def calculate_rsi(candles, period=14):
+    closes = [float(c[4]) for c in candles]
+    if len(closes) < period + 1:
+        return 0
+
+    gains = []
+    losses = []
+    for i in range(1, period + 1):
+        diff = closes[i] - closes[i - 1]
+        if diff >= 0:
+            gains.append(diff)
+        else:
+            losses.append(abs(diff))
+
+    avg_gain = sum(gains) / period
+    avg_loss = sum(losses) / period
+    if avg_loss == 0:
+        return 100
+
+    rs = avg_gain / avg_loss
+    rsi = 100 - (100 / (1 + rs))
+    return rsi
+
+def analyze_all_strategies(user_input):
+    user_input = user_input.lower()
+
+    symbol_map = {
+        "sensex": "11536",  # Replace with correct Dhan ID
+        "banknifty": "23252"  # Replace with correct Dhan ID
+    }
+
+    if "banknifty" in user_input:
+        symbol = symbol_map["banknifty"]
+        candles = fetch_candle_data(symbol)
+
+        if not candles:
+            return "No candle data found from Dhan 😢"
+
+        ema10 = calculate_ema(candles[-10:], 10)
+        ema20 = calculate_ema(candles[-15:], 20)
+        rsi = calculate_rsi(candles)
+
+        ltp = fetch_latest_data(symbol)
+
+        if ema10 > ema20 and rsi > 55:
+            trend = "Strong Bullish"
+            entry = round(ltp + 50, 2)
+            sl = round(ltp - 100, 2)
+            confidence = 90.3
+            strategy = "EMA Crossover + RSI"
+        elif ema10 < ema20 and rsi < 45:
+            trend = "Bearish"
+            entry = round(ltp - 50, 2)
+            sl = round(ltp + 100, 2)
+            confidence = 81.6
+            strategy = "EMA Crossunder + RSI"
+        else:
+            trend = "Sideways"
+            entry = round(ltp, 2)
+            sl = round(ltp - 50, 2)
+            confidence = 65.2
+            strategy = "Neutral Consolidation"
+
+        return f"""📈 *Lakshmi Strategy Output* ✅
+Trend: {trend}
+🎯 Entry Price: {entry}
+🛑 Stop Loss: {sl}
+📊 Confidence: {confidence}%
+✨ Strategy: {strategy}"""
+
     else:
-        return "😕 Sorry, I couldn't understand the market input."
+        return "No strategy found for input. Try mentioning BankNifty or Sensex 🙏"
