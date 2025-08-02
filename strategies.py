@@ -1,57 +1,71 @@
-# strategies.py
+from dhan_data import fetch_candle_data
 
-from dhan_data import fetch_dhan_price, fetch_candle_data
-import numpy as np
-
-# === Candle Fetch ===
-def fetch_dhan_candles(symbol, interval="1m", limit=20):
+def fetch_dhan_candles(symbol, interval="5m", limit=15):
     candles = fetch_candle_data(symbol)
     if not candles:
         print(f"⚠️ No candle data found for symbol: {symbol}")
         return []
-    return candles[-limit:]  # Latest 'limit' candles only
+    return candles[-limit:]  # Last N candles
 
-# === Strategy 1: EMA Crossover ===
-def strategy_ema_crossover(symbol):
-    candles = fetch_dhan_candles(symbol, limit=50)
-    if len(candles) < 20:
-        return ""
-
-    closes = [float(c['close']) for c in candles]
-    ema_9 = np.mean(closes[-9:])
-    ema_21 = np.mean(closes[-21:])
-
-    if ema_9 > ema_21:
-        return f"📊 EMA Crossover: Strong Bullish on {symbol}"
-    elif ema_9 < ema_21:
-        return f"📉 EMA Crossover: Bearish on {symbol}"
-    return ""
-
-# === Strategy 2: RSI ===
 def strategy_rsi(symbol):
-    candles = fetch_dhan_candles(symbol, limit=20)
-    if len(candles) < 15:
-        return ""
+    candles = fetch_dhan_candles(symbol)
+    if len(candles) < 14:
+        return "Not enough data for RSI"
 
-    closes = [float(c['close']) for c in candles]
-    deltas = np.diff(closes)
-    gains = deltas[deltas > 0].sum()
-    losses = -deltas[deltas < 0].sum()
-    if losses == 0:
-        rsi = 100
+    closes = [float(c[4]) for c in candles]  # Close prices
+    gains = []
+    losses = []
+
+    for i in range(1, len(closes)):
+        change = closes[i] - closes[i-1]
+        if change >= 0:
+            gains.append(change)
+            losses.append(0)
+        else:
+            gains.append(0)
+            losses.append(-change)
+
+    avg_gain = sum(gains) / 14
+    avg_loss = sum(losses) / 14 if sum(losses) != 0 else 0.0001
+    rs = avg_gain / avg_loss
+    rsi = 100 - (100 / (1 + rs))
+
+    trend = "Bullish" if rsi > 60 else "Bearish" if rsi < 40 else "Neutral"
+    return f"RSI = {rsi:.2f} ➜ {trend}"
+
+def strategy_ema_crossover(symbol):
+    candles = fetch_dhan_candles(symbol)
+    if len(candles) < 20:
+        return "Not enough data for EMA"
+
+    closes = [float(c[4]) for c in candles]
+    
+    def ema(data, period):
+        k = 2 / (period + 1)
+        ema_vals = [sum(data[:period]) / period]
+        for price in data[period:]:
+            ema_vals.append(price * k + ema_vals[-1] * (1 - k))
+        return ema_vals
+
+    short_ema = ema(closes, 9)
+    long_ema = ema(closes, 21)
+
+    if short_ema[-1] > long_ema[-1]:
+        return "EMA crossover ➜ Bullish"
     else:
-        rs = gains / losses
-        rsi = 100 - (100 / (1 + rs))
+        return "EMA crossover ➜ Bearish"
 
-    if rsi > 70:
-        return f"⚠️ RSI: Overbought ({rsi:.1f}) on {symbol}"
-    elif rsi < 30:
-        return f"✅ RSI: Oversold ({rsi:.1f}) on {symbol}"
-    return ""
-
-# === Strategy 3: Price Action (Dummy) ===
 def strategy_price_action(symbol):
-    price = fetch_dhan_price(symbol)
-    if not price:
-        return ""
-    return f"💰 Price Action: Current price of {symbol} is {price}"
+    candles = fetch_dhan_candles(symbol)
+    if len(candles) < 3:
+        return "Not enough data for price action"
+
+    last = candles[-1]
+    prev = candles[-2]
+
+    if float(last[4]) > float(prev[4]):
+        return "Price Action ➜ Bullish Engulfing"
+    elif float(last[4]) < float(prev[4]):
+        return "Price Action ➜ Bearish Engulfing"
+    else:
+        return "Price Action ➜ Sideways"
