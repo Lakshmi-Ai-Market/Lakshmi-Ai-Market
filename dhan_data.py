@@ -13,34 +13,29 @@ HEADERS = {
     "client-id": os.getenv("DHAN_CLIENT_ID")
 }
 
-# ✅ Get NSE_FNO Index Future Token
 def get_fno_index_token(symbol):
     try:
-        url = "https://images.dhan.co/api-data/FNO.csv"
-        headers = {
-            "User-Agent": "Mozilla/5.0"
-        }
-        response = requests.get(url, headers=headers)
+        url = "https://images.dhan.co/api-data/api-scrip-master.csv"
+        response = requests.get(url)
         response.raise_for_status()
 
-        df = pd.read_csv(StringIO(response.text))
+        csv_data = response.text
+        df = pd.read_csv(StringIO(csv_data))
 
-        df = df[
-            (df['instrument_type'] == 'FUTIDX') &
-            (df['exchange_segment'] == 'NSE_FNO') &
-            (df['trading_symbol'].str.contains(symbol.upper()))
-        ]
+        # Filter for F&O and matching symbol
+        match = df[(df['segment'].str.contains("FNO", na=False)) & 
+                   (df['tradingSymbol'].str.contains(symbol.upper(), na=False))]
 
-        if df.empty:
-            print(f"❌ No matching F&O Index found for: {symbol}")
+        if not match.empty:
+            token = match.iloc[0]['instrumentToken']
+            print(f"✅ Found token for {symbol}: {token}")
+            return token
+        else:
+            print(f"⚠️ No token found for {symbol}")
             return None
 
-        security_id = df.iloc[0]['security_id']
-        print(f"✅ Found {symbol}: Security ID = {security_id}")
-        return security_id
-
     except Exception as e:
-        print("❌ Error fetching instrument from CSV:", str(e))
+        print(f"❌ Error fetching instrument from Dhan CSV: {e}")
         return None
 
 
