@@ -17,16 +17,18 @@ def get_fno_index_token(symbol):
         url = f"{DHAN_BASE_URL}/instruments/fno"
         response = requests.get(url, headers=HEADERS)
         
-        # Confirm we got JSON and it's a list
+        print("🔁 Response status:", response.status_code)
+        print("📦 Raw response:", response.text)
+
         instruments = response.json()
+
         if not isinstance(instruments, list):
             print("❌ Unexpected API format: instruments is not a list.")
             return None
 
         for item in instruments:
             if not isinstance(item, dict):
-                continue  # skip non-dict entries safely
-
+                continue
             if (
                 symbol.upper() in item.get('trading_symbol', '') and
                 item.get('instrument_type') == 'FUTIDX' and
