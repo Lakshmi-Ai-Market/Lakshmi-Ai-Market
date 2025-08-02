@@ -582,54 +582,72 @@ def strategy_engine():
 
     return render_template("strategy_engine.html", result=result)
 
-@app.route('/api/strategy', methods=['POST'])
+@app.route("/api/strategy", methods=["POST"])
 def strategy_api():
+    import pandas as pd
+    import requests
+    from strategies import apply_strategy, combined_trend  # ⬅️ added
+    import os
+
+    data = request.json
+    symbol = data.get("symbol", "").upper()
+
+    # ✅ Load CSV from Google Drive
     try:
-        data = request.get_json()
-        symbol = data.get("symbol", "").upper()
+        file_id = "1MYE4KAaxtshYi8OZcfM8rsQ5M4pSqwP0"
+        raw_csv_url = f"https://drive.google.com/uc?id={file_id}&export=download"
 
-        # Load tokens
-        token_df = pd.read_csv("dhan_tokens.csv")
-        row = token_df[token_df["TRADING_SYMBOL"] == symbol]
+        df = pd.read_csv(raw_csv_url)
+        token_row = df[df["TRADING_SYMBOL"].str.upper() == symbol]
 
-        if row.empty:
-            return jsonify({"error": f"❌ Symbol '{symbol}' not found in token list."}), 400
+        if token_row.empty:
+            return jsonify({"error": f"❌ Token not found for {symbol}"}), 404
 
-        security_id = str(row.iloc[0]["SECURITY_ID"])
+        security_id = token_row["SECURITY_ID"].values[0]
 
-        # Get live data from Dhan
+    except Exception as e:
+        return jsonify({"error": "❌ Failed to read token CSV", "details": str(e)}), 500
+
+    # ✅ Fetch real market data from Dhan API
+    try:
+        DHAN_BASE_URL = "https://api.dhan.co"
         headers = {
             "access-token": os.getenv("DHAN_ACCESS_TOKEN"),
             "client-id": os.getenv("DHAN_CLIENT_ID")
         }
 
-        url = f"https://api.dhan.co/market/feed/rt/scrip/{security_id}"
-        response = requests.get(url, headers=headers)
+        payload = {
+            "securityId": str(security_id),
+            "exchangeSegment": "NSE_FNO",
+            "instrumentType": "FUTIDX"
+        }
 
-        if response.status_code != 200:
-            return jsonify({"error": "❌ Failed to fetch live data"}), 500
-
+        response = requests.post(f"{DHAN_BASE_URL}/market-feed/real-time", json=payload, headers=headers)
         market_data = response.json()
 
-        # Extract values safely
-        ltp = float(market_data.get("lastTradedPrice", 0)) / 100
-        open_price = float(market_data.get("openPrice", 0)) / 100
-        high = float(market_data.get("highPrice", 0)) / 100
-        low = float(market_data.get("lowPrice", 0)) / 100
-
-        result = apply_strategy(symbol, ltp, open_price, high, low)
-        result.update({
-            "ltp": ltp,
-            "open": open_price,
-            "high": high,
-            "low": low,
-            "symbol": symbol
-        })
-
-        return jsonify(result)
+        ltp = market_data["data"]["lastTradedPrice"] / 100.0
+        open_price = market_data["data"]["openPrice"] / 100.0
+        high = market_data["data"]["highPrice"] / 100.0
+        low = market_data["data"]["lowPrice"] / 100.0
 
     except Exception as e:
-        return jsonify({"error": f"Server error: {str(e)}"}), 500
+        return jsonify({"error": "❌ Failed to fetch live data", "details": str(e)}), 500
+
+    # ✅ Combine all strategies
+    basic_result = apply_strategy(symbol, ltp, open_price, high, low)
+    trend_summary = combined_trend(symbol)
+
+    return jsonify({
+        "symbol": symbol,
+        "ltp": ltp,
+        "open": open_price,
+        "high": high,
+        "low": low,
+        "bias": basic_result.get("bias"),
+        "confidence": basic_result.get("confidence"),
+        "token_used": security_id,
+        "trend_summary": trend_summary
+    })
 
 @app.route('/strategy', methods=['POST'])
 def run_strategy_analysis():
