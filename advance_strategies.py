@@ -2,10 +2,8 @@ import os
 import time
 import requests
 import re
-from dhan_data import fetch_dhan_price, fetch_candle_data
+from dhan_data import get_fno_index_token, fetch_candle_data
 from strategies import strategy_rsi, strategy_ema_crossover, strategy_price_action
-# Add all other strategies here
-from dhan_data import fetch_latest_data  # optional, if used
 def fetch_dhan_price(symbol):
     instrument_map = {
         "NIFTY": "1330",
@@ -191,28 +189,39 @@ def tweezers_top(c): a,b=c[-2],c[-1]; return {"strategy":"🍡 Tweezers Top","co
 # ✅ Final Analyzer
 def analyze_all_strategies(user_input):
     if "banknifty" not in user_input.lower():
-        return "BankNifty data missing."
+        return "❌ BankNifty symbol missing in input."
 
-    symbol = "BANKNIFTY23AUGFUT"  # Change if your symbol differs on Dhan
-    results = []
+    symbol = "BANKNIFTY23AUGFUT"  # Adjust symbol if expiry changes
+    token = get_fno_index_token(symbol)
+
+    if not token:
+        return "❌ Could not fetch F&O token for BankNifty."
+
+    candles = fetch_candle_data(token)
+    if len(candles) < 10:
+        return "⚠️ Not enough candle data returned for strategy analysis."
 
     try:
-        rsi_result = strategy_rsi(symbol)
-        ema_result = strategy_ema_crossover(symbol)
-        price_result = strategy_price_action(symbol)
+        # Pass actual candles to each strategy
+        rsi_result = strategy_rsi(candles)
+        ema_result = strategy_ema_crossover(candles)
+        price_result = strategy_price_action(candles)
 
-        results.append(rsi_result)
-        results.append(ema_result)
-        results.append(price_result)
+        results = [rsi_result, ema_result, price_result]
 
-        if any("Bullish" in res for res in results):
-            trend = "Strong Bullish" if all("Bullish" in res for res in results) else "Mild Bullish"
-        elif any("Bearish" in res for res in results):
-            trend = "Strong Bearish" if all("Bearish" in res for res in results) else "Mild Bearish"
+        # Trend logic
+        if all("Bullish" in r for r in results):
+            trend = "📈 Strong Bullish"
+        elif any("Bullish" in r for r in results):
+            trend = "📊 Mild Bullish"
+        elif all("Bearish" in r for r in results):
+            trend = "📉 Strong Bearish"
+        elif any("Bearish" in r for r in results):
+            trend = "🔻 Mild Bearish"
         else:
-            trend = "Sideways"
+            trend = "🔍 Sideways / Neutral"
 
-        return f"✅ Trend: {trend}\n\n" + "\n".join(results)
+        return f"✅ Trend Summary: {trend}\n\n" + "\n".join(results)
 
     except Exception as e:
-        return f"Error analyzing strategy: {e}"
+        return f"❌ Error during strategy analysis: {e}"
