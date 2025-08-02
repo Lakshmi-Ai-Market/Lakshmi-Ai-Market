@@ -585,7 +585,9 @@ def strategy_engine():
 @app.route("/api/strategy", methods=["POST"])
 def get_strategy():
     try:
-        user_input = request.json.get("input", "")
+        data = request.get_json() or {}  # Safely get JSON dict
+        user_input = data.get("input", "").strip()
+
         if not user_input:
             return jsonify({"reply": "Please enter valid input like: Sensex 81700 BankNifty 55961.95 😇"})
 
@@ -599,7 +601,6 @@ def get_strategy():
 
     except Exception as e:
         return jsonify({"reply": f"Server error: {str(e)}"})
-
 
 @app.route('/strategy', methods=['POST'])
 def run_strategy_analysis():
