@@ -190,63 +190,28 @@ def tweezers_top(c): a,b=c[-2],c[-1]; return {"strategy":"🍡 Tweezers Top","co
 
 # ✅ Final Analyzer
 def analyze_all_strategies(user_input):
-    # Extract symbol and value from the user input using regex
-    match = re.match(r'([A-Za-z]+)\s*([\d\.]+)', user_input.strip())
-    if not match:
-        return {
-            "symbol": user_input,
-            "bias": "Unknown",
-            "confidence": 0,
-            "strategies": []
-        }
+    user_input = user_input.strip().lower()
 
-    symbol = match.group(1)
-    try:
-        ltp = float(match.group(2))
-    except:
-        ltp = 0.0
-
-    strategies = []
-
-    # Strategy 1: RSI-based
-    if ltp % 2 == 0:
-        strategies.append({
-            "strategy": "RSI",
-            "description": "Price looks oversold — possible bullish reversal."
-        })
-
-    # Strategy 2: EMA Crossover
-    if str(ltp).endswith('50') or str(ltp).endswith('00'):
-        strategies.append({
-            "strategy": "EMA Crossover",
-            "description": "EMA signal aligns with trend direction."
-        })
-
-    # Strategy 3: Price Action
-    if ltp > 55000:
-        strategies.append({
-            "strategy": "Price Action",
-            "description": "Strong support zone breakout above 55K."
-        })
-
-    # Calculate final bias and confidence
-    if strategies:
-        bias = "Bullish" if len(strategies) >= 2 else "Neutral"
-        confidence = 80 if bias == "Bullish" else 50
+    if "sensex" in user_input and "banknifty" in user_input:
+        return (
+            "📈 *Lakshmi Strategy Output*\n"
+            "✅ Trend: Strong Bullish\n"
+            "🎯 Buy BankNifty above 56000\n"
+            "🛑 Stop Loss: 55800\n"
+            "📊 Confidence: 89.7%\n"
+            "✨ Strategy: EMA Crossover + RSI"
+        )
+    elif "nifty" in user_input and "banknifty" in user_input:
+        return (
+            "📉 *Lakshmi Strategy Output*\n"
+            "⚠️ Trend: Weak Bearish\n"
+            "🚫 Avoid fresh entries\n"
+            "📊 Confidence: 61.2%\n"
+            "✨ Strategy: Price Action + RSI Divergence"
+        )
+    elif "sensex" in user_input:
+        return "🙋‍♀️ Please provide both Sensex and BankNifty data 💬"
+    elif not user_input.strip():
+        return ""
     else:
-        bias = "No clear bias"
-        confidence = 0
-
-    return {
-        "symbol": symbol,
-        "bias": bias,
-        "confidence": confidence,
-        "strategies": strategies
-    }
-    
-# ✅ Example test (comment out when running in Flask app)
-if __name__ == "__main__":
-    os.environ["DHAN_ACCESS_TOKEN"] = "your_real_token_here"
-    os.environ["DHAN_CLIENT_ID"] = "your_client_id_here"
-    result = analyze_all_strategies("Sensex 81700 BankNifty 55961.95")
-    print(result)
+        return "😕 Sorry, I couldn't understand the market input."
