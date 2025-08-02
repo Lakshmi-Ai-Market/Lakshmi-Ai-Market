@@ -585,84 +585,48 @@ def strategy_engine():
 @app.route("/api/strategy", methods=["POST"])
 def strategy_api():
     import pandas as pd
-    import requests
-    import os
     from flask import request, jsonify
-    from strategies import apply_strategy, combined_trend  # Your functions must be here
+    from strategies import apply_strategy, combined_trend  # You must define these in strategies.py
 
     data = request.json
     symbol = data.get("symbol", "").upper()
 
-    # ✅ Load Token CSV from Google Drive
     try:
-        file_id = "1MYE4KAaxtshYi8OZcfM8rsQ5M4pSqwP0"
-        csv_url = f"https://drive.google.com/uc?id={file_id}&export=download"
-        df = pd.read_csv(csv_url, low_memory=False)
+        # ✅ Load compressed token CSV from local root directory
+        df = pd.read_csv("api-scrip-master-detailed.csv", low_memory=False)
 
-        token_row = df[df["TRADING_SYMBOL"].str.upper() == symbol]
+        # Make column names consistent
+        df.columns = [col.strip().lower() for col in df.columns]
+
+        # Match by TRADING_SYMBOL (assuming column name in compressed file)
+        token_row = df[df["trading_symbol"].str.upper() == symbol]
         if token_row.empty:
             return jsonify({"error": f"❌ Token not found for symbol '{symbol}'"}), 404
 
-        security_id = str(token_row["SECURITY_ID"].values[0])
+        security_id = str(token_row["security_id"].values[0])
+        segment = str(token_row["segment"].values[0]) if "segment" in token_row else "NSE_FNO"
 
     except Exception as e:
         return jsonify({
-            "error": "❌ Failed to fetch token CSV",
+            "error": "❌ Failed to fetch token from CSV",
             "details": str(e)
         }), 500
 
-    # ✅ Fetch Live Market Data from Dhan
     try:
-        DHAN_BASE_URL = "https://api.dhan.co"
-        headers = {
-            "access-token": os.getenv("DHAN_ACCESS_TOKEN"),
-            "client-id": os.getenv("DHAN_CLIENT_ID")
-        }
-
-        payload = {
-            "securityId": security_id,
-            "exchangeSegment": "NSE_FNO",
-            "instrumentType": "FUTIDX"
-        }
-
-        response = requests.post(f"{DHAN_BASE_URL}/market-feed/real-time", json=payload, headers=headers)
-        market_data = response.json()
-
-        if "data" not in market_data:
-            return jsonify({"error": "❌ Invalid response from Dhan API"}), 500
-
-        data = market_data["data"]
-        ltp = data.get("lastTradedPrice", 0) / 100.0
-        open_price = data.get("openPrice", 0) / 100.0
-        high = data.get("highPrice", 0) / 100.0
-        low = data.get("lowPrice", 0) / 100.0
-
-    except Exception as e:
-        return jsonify({
-            "error": "❌ Failed to fetch live data from Dhan",
-            "details": str(e)
-        }), 500
-
-    # ✅ Run Strategy Logic
-    try:
-        result = apply_strategy(symbol, ltp, open_price, high, low)
+        # ✅ Apply strategy logic using your own functions
+        result = apply_strategy(symbol, security_id, segment)
         trend = combined_trend(symbol)
 
         return jsonify({
             "symbol": symbol,
-            "ltp": ltp,
-            "open": open_price,
-            "high": high,
-            "low": low,
-            "bias": result.get("bias", "Unknown"),
-            "confidence": result.get("confidence", "N/A"),
-            "token_used": security_id,
-            "trend_summary": trend
+            "security_id": security_id,
+            "segment": segment,
+            "result": result,
+            "trend": trend
         })
-
     except Exception as e:
         return jsonify({
-            "error": "❌ Strategy logic failed",
+            "error": "❌ Strategy execution failed",
             "details": str(e)
         }), 500
 
