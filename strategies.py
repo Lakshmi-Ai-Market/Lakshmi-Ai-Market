@@ -1,6 +1,6 @@
 import datetime from dhan_data import fetch_dhan_price, fetch_candle_data
 
-🔧 Correct function to fetch candles consistently
+# 🔧 Correct function to fetch candles consistently
 
 def fetch_dhan_candles(symbol, interval, limit): candles = fetch_candle_data(symbol) if not candles: print(f"⚠️ No candle data found for symbol: {symbol}") return [] return candles[-limit:]  # Take latest 'limit' candles
 
