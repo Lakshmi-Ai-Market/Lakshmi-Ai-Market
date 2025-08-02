@@ -1,8 +1,8 @@
 from dhan_data import fetch_candle_data, get_fno_index_token
 
 # === Core Fetch for Strategies ===
-def fetch_dhan_candles(symbol, limit=30):
-    token = get_fno_index_token(symbol)
+def fetch_dhan_candles(symbol, limit=40):
+    token = get_fno_index_token(symbol.upper())
     if not token:
         print(f"❌ Could not fetch token for symbol: {symbol}")
         return []
@@ -17,10 +17,9 @@ def strategy_rsi(symbol):
     candles = fetch_dhan_candles(symbol, limit=20)
     if len(candles) < 15:
         return "RSI ➜ Not enough data"
-
     closes = [float(c[4]) for c in candles[-15:]]
-    gains, losses = [], []
 
+    gains, losses = [], []
     for i in range(1, len(closes)):
         delta = closes[i] - closes[i - 1]
         gains.append(max(0, delta))
@@ -37,7 +36,6 @@ def strategy_rsi(symbol):
         trend = "Bearish"
     else:
         trend = "Neutral"
-
     return f"RSI = {rsi:.2f} ➜ {trend}"
 
 # === Strategy 2: EMA Crossover ===
@@ -45,7 +43,6 @@ def strategy_ema_crossover(symbol):
     candles = fetch_dhan_candles(symbol, limit=40)
     if len(candles) < 30:
         return "EMA ➜ Not enough data"
-
     closes = [float(c[4]) for c in candles]
 
     def ema(data, period):
@@ -65,7 +62,7 @@ def strategy_ema_crossover(symbol):
     else:
         return "EMA ➜ Sideways"
 
-# === Strategy 3: Price Action (Engulfing) ===
+# === Strategy 3: Price Action (Engulfing + Direction) ===
 def strategy_price_action(symbol):
     candles = fetch_dhan_candles(symbol, limit=5)
     if len(candles) < 3:
@@ -73,7 +70,6 @@ def strategy_price_action(symbol):
 
     last = candles[-1]
     prev = candles[-2]
-
     last_open = float(last[1])
     last_close = float(last[4])
     prev_open = float(prev[1])
@@ -89,3 +85,22 @@ def strategy_price_action(symbol):
         return "Price Action ➜ Mild Bearish"
     else:
         return "Price Action ➜ Sideways"
+
+# === Trend Summary Combiner ===
+def combined_trend(symbol):
+    rsi_result = strategy_rsi(symbol)
+    ema_result = strategy_ema_crossover(symbol)
+    price_action_result = strategy_price_action(symbol)
+
+    signals = f"{rsi_result}\n{ema_result}\n{price_action_result}"
+
+    if "Bullish" in signals and "Bearish" not in signals:
+        overall = "📈 Strong Bullish Bias"
+    elif "Bearish" in signals and "Bullish" not in signals:
+        overall = "📉 Strong Bearish Bias"
+    elif "Neutral" in signals or "Sideways" in signals:
+        overall = "🔍 Sideways / Neutral"
+    else:
+        overall = "⚖️ Mixed Signals"
+
+    return f"✅ Trend Summary: {overall}\n\n{signals}"
