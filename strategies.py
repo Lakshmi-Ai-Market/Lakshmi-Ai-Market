@@ -1,18 +1,19 @@
 from dhan_data import fetch_candle_data
 
-def fetch_dhan_candles(symbol, interval="5m", limit=15):
+def fetch_dhan_candles(symbol, interval="5m", limit=30):
     candles = fetch_candle_data(symbol)
-    if not candles:
-        print(f"⚠️ No candle data found for symbol: {symbol}")
+    if not candles or len(candles) < limit:
+        print(f"⚠️ Not enough candles ({len(candles) if candles else 0}) for symbol: {symbol}")
         return []
-    return candles[-limit:]  # Last N candles
+    print(f"✅ Fetched {len(candles)} candles for {symbol}")
+    return candles[-limit:]  # Return latest candles
 
 def strategy_rsi(symbol):
-    candles = fetch_dhan_candles(symbol)
-    if len(candles) < 14:
+    candles = fetch_dhan_candles(symbol, limit=20)
+    if len(candles) < 15:
         return "Not enough data for RSI"
 
-    closes = [float(c[4]) for c in candles]  # Close prices
+    closes = [float(c[4]) for c in candles[-15:]]  # Last 15 close prices
     gains = []
     losses = []
 
@@ -34,38 +35,54 @@ def strategy_rsi(symbol):
     return f"RSI = {rsi:.2f} ➜ {trend}"
 
 def strategy_ema_crossover(symbol):
-    candles = fetch_dhan_candles(symbol)
-    if len(candles) < 20:
+    candles = fetch_dhan_candles(symbol, limit=40)
+    if len(candles) < 30:
         return "Not enough data for EMA"
 
     closes = [float(c[4]) for c in candles]
-    
+
     def ema(data, period):
+        if len(data) < period:
+            return []
         k = 2 / (period + 1)
-        ema_vals = [sum(data[:period]) / period]
+        ema_values = [sum(data[:period]) / period]
         for price in data[period:]:
-            ema_vals.append(price * k + ema_vals[-1] * (1 - k))
-        return ema_vals
+            ema_values.append(price * k + ema_values[-1] * (1 - k))
+        return ema_values
 
     short_ema = ema(closes, 9)
     long_ema = ema(closes, 21)
 
+    if not short_ema or not long_ema or len(short_ema) < 1 or len(long_ema) < 1:
+        return "EMA calculation error"
+
     if short_ema[-1] > long_ema[-1]:
         return "EMA crossover ➜ Bullish"
-    else:
+    elif short_ema[-1] < long_ema[-1]:
         return "EMA crossover ➜ Bearish"
+    else:
+        return "EMA crossover ➜ Sideways"
 
 def strategy_price_action(symbol):
-    candles = fetch_dhan_candles(symbol)
+    candles = fetch_dhan_candles(symbol, limit=5)
     if len(candles) < 3:
         return "Not enough data for price action"
 
     last = candles[-1]
     prev = candles[-2]
 
-    if float(last[4]) > float(prev[4]):
+    last_close = float(last[4])
+    prev_close = float(prev[4])
+    last_open = float(last[1])
+    prev_open = float(prev[1])
+
+    if last_close > prev_open and last_open < prev_close:
         return "Price Action ➜ Bullish Engulfing"
-    elif float(last[4]) < float(prev[4]):
+    elif last_close < prev_open and last_open > prev_close:
         return "Price Action ➜ Bearish Engulfing"
+    elif last_close > prev_close:
+        return "Price Action ➜ Mild Bullish"
+    elif last_close < prev_close:
+        return "Price Action ➜ Mild Bearish"
     else:
         return "Price Action ➜ Sideways"
