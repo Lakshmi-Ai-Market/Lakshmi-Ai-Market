@@ -1,5 +1,6 @@
 import os
 import requests
+import pandas as pd
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -14,34 +15,26 @@ HEADERS = {
 # ✅ Get NSE_FNO Index Future Token
 def get_fno_index_token(symbol):
     try:
-        url = f"{DHAN_BASE_URL}/instruments/fno"
-        response = requests.get(url, headers=HEADERS)
-        
-        print("🔁 Response status:", response.status_code)
-        print("📦 Raw response:", response.text)
+        url = "https://images.dhan.co/api-data/FNO.csv"
+        df = pd.read_csv(url)
 
-        instruments = response.json()
+        # Filter rows
+        df = df[
+            (df['instrument_type'] == 'FUTIDX') &
+            (df['exchange_segment'] == 'NSE_FNO') &
+            (df['trading_symbol'].str.contains(symbol.upper()))
+        ]
 
-        if not isinstance(instruments, list):
-            print("❌ Unexpected API format: instruments is not a list.")
+        if df.empty:
+            print(f"❌ No matching F&O Index found for: {symbol}")
             return None
 
-        for item in instruments:
-            if not isinstance(item, dict):
-                continue
-            if (
-                symbol.upper() in item.get('trading_symbol', '') and
-                item.get('instrument_type') == 'FUTIDX' and
-                item.get('exchange_segment') == 'NSE_FNO'
-            ):
-                print(f"✅ Found: {item['trading_symbol']} -> {item['security_id']}")
-                return item['security_id']
-
-        print(f"❌ No matching F&O Index found for: {symbol}")
-        return None
+        security_id = df.iloc[0]['security_id']
+        print(f"✅ Found {symbol}: Security ID = {security_id}")
+        return security_id
 
     except Exception as e:
-        print("❌ Error fetching instrument:", str(e))
+        print("❌ Error fetching instrument from CSV:", str(e))
         return None
 
 
