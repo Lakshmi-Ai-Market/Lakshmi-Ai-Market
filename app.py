@@ -586,54 +586,64 @@ def strategy_engine():
 def strategy_api():
     import pandas as pd
     from flask import request, jsonify
-    from strategies import apply_strategy, combined_trend  # You must define these in strategies.py
-
-    data = request.json
-    symbol = data.get("symbol", "").upper()
+    from strategies import apply_strategy, combined_trend
 
     try:
-        # ✅ Load COMPRESSED token CSV file
-        df = pd.read_csv("api-scrip-master.csv", low_memory=False)
+        # Accept plain text or JSON body
+        if request.is_json:
+            data = request.get_json()
+            raw_input = data.get("symbol", "").strip()
+        else:
+            raw_input = request.data.decode("utf-8").strip()
 
-        # Normalize column names
+        if not raw_input:
+            return jsonify({"error": "❌ No input received"}), 400
+
+        print("📩 Received input:", raw_input)
+
+        # Load the token list
+        df = pd.read_csv("api-scrip-master.csv", low_memory=False)
         df.columns = [col.strip().lower() for col in df.columns]
 
-        # ✅ Debug print to verify symbol exists
-        print("📊 Checking symbol:", symbol)
-        print("🧾 Columns:", df.columns.tolist())
+        # Check symbol-style input (like BANKNIFTY24AUG55600PE)
+        raw_input_upper = raw_input.upper()
+        if "sem_trading_symbol" in df.columns:
+            token_row = df[df["sem_trading_symbol"].str.upper() == raw_input_upper]
+        else:
+            return jsonify({"error": "❌ Column 'sem_trading_symbol' not found in CSV"}), 500
 
-        if "trading_symbol" not in df.columns or "security_id" not in df.columns:
-            return jsonify({"error": "❌ Required columns not found in CSV"}), 500
+        if not token_row.empty:
+            # Option-style input
+            print("✅ Option symbol detected:", raw_input_upper)
+            security_id = str(token_row["sem_smst_security_id"].values[0])
+            segment = str(token_row["sem_segment"].values[0])
+            symbol = raw_input_upper
+            print("🎯 Found Security ID:", security_id)
 
-        token_row = df[df["trading_symbol"].str.upper() == symbol]
-        if token_row.empty:
-            return jsonify({"error": f"❌ Token not found for symbol '{symbol}'"}), 404
+            result = apply_strategy(symbol=symbol, price=None, security_id=security_id, segment=segment)
+            return jsonify(result)
 
-        security_id = str(token_row["security_id"].values[0])
-        segment = "NSE_FNO"  # default fallback, update if needed
+        else:
+            # Handle live market input like: "Sensex 81700 BankNifty 55961"
+            import re
+
+            matches = re.findall(r"(SENSEX|BANKNIFTY)\s*(\d{4,6}\.?\d*)", raw_input.upper())
+            if not matches:
+                return jsonify({"error": "❌ Invalid input format"}), 400
+
+            market_data = {}
+            for label, value in matches:
+                market_data[label] = float(value)
+
+            print("📈 Parsed live values:", market_data)
+
+            # Use dummy logic or combined_trend() to process live input
+            result = combined_trend(market_data)
+            return jsonify(result)
 
     except Exception as e:
         return jsonify({
-            "error": "❌ Failed to fetch token from CSV",
-            "details": str(e)
-        }), 500
-
-    try:
-        # ✅ Use your actual strategy logic
-        result = apply_strategy(symbol, security_id, segment)
-        trend = combined_trend(symbol)
-
-        return jsonify({
-            "symbol": symbol,
-            "security_id": security_id,
-            "segment": segment,
-            "result": result,
-            "trend": trend
-        })
-
-    except Exception as e:
-        return jsonify({
-            "error": "❌ Strategy execution failed",
+            "error": "❌ Internal server error",
             "details": str(e)
         }), 500
 
