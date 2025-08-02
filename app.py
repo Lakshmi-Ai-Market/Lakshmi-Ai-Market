@@ -5,6 +5,7 @@ import os
 import requests
 import time
 from datetime import datetime, timedelta
+from dhan_data import get_fno_index_token, fetch_candle_data
 from tools.strategy_switcher import select_strategy
 import pandas as pd
 import re
@@ -586,59 +587,43 @@ def strategy_engine():
 def analyze_strategy():
     try:
         data = request.json
-        user_input = data.get("input", "").strip()
-        print(f"Received input: {user_input}")
+        print("📥 Received data:", data)
 
-        # Extract Sensex and BankNifty values
-        match = re.search(r'Sensex\s*(\d+(\.\d+)?)\s+BankNifty\s*(\d+(\.\d+)?)', user_input, re.IGNORECASE)
-        if not match:
-            return jsonify({"output": "❌ Invalid format. Use: Sensex 81250 BankNifty 55345.50"})
+        sensex = data.get("sensex")
+        banknifty = data.get("banknifty")
 
-        sensex = float(match.group(1))
-        banknifty = float(match.group(3))
-        print(f"📊 Sensex: {sensex} BankNifty: {banknifty}")
+        results = []
 
-        # Generate Option Symbol (nearest 100)
-        strike_price = round(banknifty / 100) * 100
-        today = datetime.today()
-        expiry_date = today + timedelta(days=(4 - today.weekday()) % 7 + 1)  # Next Thursday
-        expiry_str = expiry_date.strftime('%d%b').upper()
-        option_symbol = f"BANKNIFTY{expiry_str}{int(strike_price)}CE"
-        print(f"✅ Generated symbol: {option_symbol}")
+        # Analyze both indexes
+        for symbol, price in [("SENSEX", sensex), ("BANKNIFTY", banknifty)]:
+            print(f"\n🔍 Analyzing {symbol} @ {price}")
+            token = get_fno_index_token(symbol)
+            if token is None:
+                results.append({
+                    "symbol": symbol,
+                    "status": "Token not found"
+                })
+                continue
 
-        # Fetch candles from Dhan
-        candles = fetch_candle_data(option_symbol)
-        if not candles or len(candles) < 20:
-            return jsonify({"output": "⚠️ Not enough data for strategy analysis."})
+            candles = fetch_candle_data(token)
+            print(f"📊 Fetched {len(candles)} candles for {symbol}")
 
-        # Run strategies
-        rsi_signal = strategy_rsi(candles)
-        ema_signal = strategy_ema_crossover(candles)
-        pa_signal = strategy_price_action(candles)
+            rsi_result = strategy_rsi(candles)
+            ema_result = strategy_ema_crossover(candles)
+            pa_result = strategy_price_action(candles)
 
-        # Confidence Calculation
-        signals = [rsi_signal, ema_signal, pa_signal]
-        bullish_count = signals.count("Bullish")
-        bearish_count = signals.count("Bearish")
-        confidence = int((bullish_count / len(signals)) * 100)
+            results.append({
+                "symbol": symbol,
+                "rsi": rsi_result,
+                "ema": ema_result,
+                "price_action": pa_result
+            })
 
-        if bullish_count > bearish_count:
-            bias = "Bullish"
-        elif bearish_count > bullish_count:
-            bias = "Bearish"
-        else:
-            bias = "Neutral"
-
-        result = f"""✅ RSI Strategy: {rsi_signal}
-✅ EMA Crossover: {ema_signal}
-✅ Price Action: {pa_signal}
-📊 Overall Bias: {bias} (Confidence: {confidence}%)"""
-
-        return jsonify({"output": result})
+        return jsonify({"strategies": results})
 
     except Exception as e:
-        print(f"🔥 Strategy Engine Error: {e}")
-        return jsonify({"output": "❌ Strategy analysis failed. Please try again."})
+        print("🔥 Strategy Engine Error:", str(e))
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/strategy', methods=['POST'])
 def run_strategy_analysis():
