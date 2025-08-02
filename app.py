@@ -583,7 +583,7 @@ def strategy_engine():
     return render_template("strategy_engine.html", result=result)
 
 @app.route("/api/strategy", methods=["POST"])
-def get_strategy():
+def run_strategy_analysis():
     try:
         user_input = request.json.get("input", "")
         if not user_input:
