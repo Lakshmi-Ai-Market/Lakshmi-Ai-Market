@@ -583,24 +583,71 @@ def strategy_engine():
     return render_template("strategy_engine.html", result=result)
 
 @app.route("/api/strategy", methods=["POST"])
-def get_strategy():
+def strategy_api():
+    import pandas as pd
+    import requests
+    from strategies import apply_strategy  # make sure this exists and works
+
+    data = request.json
+    symbol = data.get("symbol", "").upper()
+
+    # ✅ Load CSV from Google Drive (convert to raw link)
     try:
-        data = request.get_json() or {}  # Safely get JSON dict
-        user_input = data.get("input", "").strip()
+        file_id = "1MYE4KAaxtshYi8OZcfM8rsQ5M4pSqwP0"  # your real file ID
+        raw_csv_url = f"https://drive.google.com/uc?id={file_id}&export=download"
 
-        if not user_input:
-            return jsonify({"reply": "Please enter valid input like: Sensex 81700 BankNifty 55961.95 😇"})
+        df = pd.read_csv(raw_csv_url)
+        token_row = df[df["TRADING_SYMBOL"].str.upper() == symbol]
 
-        # Pass user input to strategy analyzer
-        result = analyze_all_strategies(user_input)
+        if token_row.empty:
+            return jsonify({"error": f"❌ Token not found for {symbol}"}), 404
 
-        if not result or result.strip() == "":
-            return jsonify({"reply": "No strategy found 😢"})
-
-        return jsonify({"reply": result})
+        security_id = token_row["SECURITY_ID"].values[0]
 
     except Exception as e:
-        return jsonify({"reply": f"Server error: {str(e)}"})
+        return jsonify({"error": "❌ Failed to read token CSV", "details": str(e)}), 500
+
+    # ✅ Fetch market data from Dhan
+    try:
+        DHAN_BASE_URL = "https://api.dhan.co"
+        headers = {
+            "access-token": os.getenv("DHAN_ACCESS_TOKEN"),
+            "client-id": os.getenv("DHAN_CLIENT_ID")
+        }
+
+        payload = {
+            "securityId": str(security_id),
+            "exchangeSegment": "NSE_FNO",
+            "instrumentType": "FUTIDX"
+        }
+
+        response = requests.post(f"{DHAN_BASE_URL}/market-feed/real-time", json=payload, headers=headers)
+        market_data = response.json()
+
+        if "data" not in market_data:
+            return jsonify({"error": "❌ No live data received", "details": market_data}), 500
+
+        ltp = market_data["data"]["lastTradedPrice"] / 100.0
+        open_price = market_data["data"]["openPrice"] / 100.0
+        high = market_data["data"]["highPrice"] / 100.0
+        low = market_data["data"]["lowPrice"] / 100.0
+
+    except Exception as e:
+        return jsonify({"error": "❌ Failed to fetch live data", "details": str(e)}), 500
+
+    # ✅ Run the strategy logic (from your strategies.py)
+    result = apply_strategy(symbol, ltp, open_price, high, low)
+
+    return jsonify({
+        "symbol": symbol,
+        "ltp": ltp,
+        "open": open_price,
+        "high": high,
+        "low": low,
+        "bias": result.get("bias"),
+        "confidence": result.get("confidence"),
+        "token_used": security_id
+    })
 
 @app.route('/strategy', methods=['POST'])
 def run_strategy_analysis():
