@@ -585,6 +585,13 @@ def analyze_strategy_api():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/strategy', methods=['POST'])
+def strategy_engine():
+    user_input = request.form['symbol_input']
+    from advance_strategies import analyze_all_strategies
+    result = analyze_all_strategies(user_input)
+    return render_template('strategy.html', result=result)
+
 @app.route("/analyze")
 def analyze():
     symbol = request.args.get("symbol")
