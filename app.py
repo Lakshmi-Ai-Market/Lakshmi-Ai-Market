@@ -585,65 +585,65 @@ def strategy_engine():
 @app.route("/api/strategy", methods=["POST"])
 def strategy_api():
     import pandas as pd
+    import re
     from flask import request, jsonify
-    from strategies import apply_strategy, combined_trend
+    from datetime import datetime
+    from strategies import apply_strategy, combined_trend  # Must be defined in strategies.py
+
+    data = request.json
+    raw_input = data.get("input", "").upper()
 
     try:
-        # Accept plain text or JSON body
-        if request.is_json:
-            data = request.get_json()
-            raw_input = data.get("symbol", "").strip()
-        else:
-            raw_input = request.data.decode("utf-8").strip()
+        # ✅ Step 1: Extract BankNifty value from raw input
+        match = re.search(r"BANKNIFTY\s+(\d+(?:\.\d+)?)", raw_input)
+        if not match:
+            return jsonify({"error": "❌ BankNifty value not found in input"}), 400
 
-        if not raw_input:
-            return jsonify({"error": "❌ No input received"}), 400
+        banknifty_value = float(match.group(1))
+        strike = int(round(banknifty_value / 100.0)) * 100
 
-        print("📩 Received input:", raw_input)
+        # ✅ Step 2: Generate symbol
+        today = datetime.now()
+        expiry_month = today.strftime("%b").upper()
+        expiry_year = str(today.year)[2:]
+        symbol = f"BANKNIFTY{expiry_year}{expiry_month}{strike}CE"
 
-        # Load the token list
+        print("✅ Generated symbol:", symbol)
+
+        # ✅ Step 3: Load CSV
         df = pd.read_csv("api-scrip-master.csv", low_memory=False)
         df.columns = [col.strip().lower() for col in df.columns]
 
-        # Check symbol-style input (like BANKNIFTY24AUG55600PE)
-        raw_input_upper = raw_input.upper()
-        if "sem_trading_symbol" in df.columns:
-            token_row = df[df["sem_trading_symbol"].str.upper() == raw_input_upper]
-        else:
-            return jsonify({"error": "❌ Column 'sem_trading_symbol' not found in CSV"}), 500
+        if "trading_symbol" not in df.columns or "security_id" not in df.columns:
+            return jsonify({"error": "❌ Required columns not found in CSV"}), 500
 
-        if not token_row.empty:
-            # Option-style input
-            print("✅ Option symbol detected:", raw_input_upper)
-            security_id = str(token_row["sem_smst_security_id"].values[0])
-            segment = str(token_row["sem_segment"].values[0])
-            symbol = raw_input_upper
-            print("🎯 Found Security ID:", security_id)
+        token_row = df[df["trading_symbol"].str.upper() == symbol]
+        if token_row.empty:
+            return jsonify({"error": f"❌ Token not found for symbol '{symbol}'"}), 404
 
-            result = apply_strategy(symbol=symbol, price=None, security_id=security_id, segment=segment)
-            return jsonify(result)
-
-        else:
-            # Handle live market input like: "Sensex 81700 BankNifty 55961"
-            import re
-
-            matches = re.findall(r"(SENSEX|BANKNIFTY)\s*(\d{4,6}\.?\d*)", raw_input.upper())
-            if not matches:
-                return jsonify({"error": "❌ Invalid input format"}), 400
-
-            market_data = {}
-            for label, value in matches:
-                market_data[label] = float(value)
-
-            print("📈 Parsed live values:", market_data)
-
-            # Use dummy logic or combined_trend() to process live input
-            result = combined_trend(market_data)
-            return jsonify(result)
+        security_id = str(token_row["security_id"].values[0])
+        segment = "NSE_FNO"
 
     except Exception as e:
         return jsonify({
-            "error": "❌ Internal server error",
+            "error": "❌ Failed during symbol generation or CSV lookup",
+            "details": str(e)
+        }), 500
+
+    try:
+        result = apply_strategy(symbol, security_id, segment)
+        trend = combined_trend(symbol)
+
+        return jsonify({
+            "symbol": symbol,
+            "security_id": security_id,
+            "segment": segment,
+            "result": result,
+            "trend": trend
+        })
+    except Exception as e:
+        return jsonify({
+            "error": "❌ Strategy execution failed",
             "details": str(e)
         }), 500
 
