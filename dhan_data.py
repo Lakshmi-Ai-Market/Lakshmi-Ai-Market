@@ -2,6 +2,7 @@ import os
 import requests
 import pandas as pd
 from dotenv import load_dotenv
+from io import StringIO
 
 load_dotenv()
 
@@ -16,9 +17,14 @@ HEADERS = {
 def get_fno_index_token(symbol):
     try:
         url = "https://images.dhan.co/api-data/FNO.csv"
-        df = pd.read_csv(url)
+        headers = {
+            "User-Agent": "Mozilla/5.0"
+        }
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
 
-        # Filter rows
+        df = pd.read_csv(StringIO(response.text))
+
         df = df[
             (df['instrument_type'] == 'FUTIDX') &
             (df['exchange_segment'] == 'NSE_FNO') &
