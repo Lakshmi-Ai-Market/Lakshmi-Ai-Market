@@ -586,29 +586,32 @@ def strategy_engine():
 def strategy_api():
     import pandas as pd
     import requests
-    from strategies import apply_strategy, combined_trend  # ⬅️ added
     import os
+    from flask import request, jsonify
+    from strategies import apply_strategy, combined_trend  # Your functions must be here
 
     data = request.json
     symbol = data.get("symbol", "").upper()
 
-    # ✅ Load CSV from Google Drive
+    # ✅ Load Token CSV from Google Drive
     try:
         file_id = "1MYE4KAaxtshYi8OZcfM8rsQ5M4pSqwP0"
-        raw_csv_url = f"https://drive.google.com/uc?id={file_id}&export=download"
+        csv_url = f"https://drive.google.com/uc?id={file_id}&export=download"
+        df = pd.read_csv(csv_url, low_memory=False)
 
-        df = pd.read_csv(raw_csv_url, low_memory=False)
         token_row = df[df["TRADING_SYMBOL"].str.upper() == symbol]
-
         if token_row.empty:
-            return jsonify({"error": f"❌ Token not found for {symbol}"}), 404
+            return jsonify({"error": f"❌ Token not found for symbol '{symbol}'"}), 404
 
-        security_id = token_row["SECURITY_ID"].values[0]
+        security_id = str(token_row["SECURITY_ID"].values[0])
 
     except Exception as e:
-        return jsonify({"error": "❌ Failed to read token CSV", "details": str(e)}), 500
+        return jsonify({
+            "error": "❌ Failed to fetch token CSV",
+            "details": str(e)
+        }), 500
 
-    # ✅ Fetch real market data from Dhan API
+    # ✅ Fetch Live Market Data from Dhan
     try:
         DHAN_BASE_URL = "https://api.dhan.co"
         headers = {
@@ -617,7 +620,7 @@ def strategy_api():
         }
 
         payload = {
-            "securityId": str(security_id),
+            "securityId": security_id,
             "exchangeSegment": "NSE_FNO",
             "instrumentType": "FUTIDX"
         }
@@ -625,29 +628,43 @@ def strategy_api():
         response = requests.post(f"{DHAN_BASE_URL}/market-feed/real-time", json=payload, headers=headers)
         market_data = response.json()
 
-        ltp = market_data["data"]["lastTradedPrice"] / 100.0
-        open_price = market_data["data"]["openPrice"] / 100.0
-        high = market_data["data"]["highPrice"] / 100.0
-        low = market_data["data"]["lowPrice"] / 100.0
+        if "data" not in market_data:
+            return jsonify({"error": "❌ Invalid response from Dhan API"}), 500
+
+        data = market_data["data"]
+        ltp = data.get("lastTradedPrice", 0) / 100.0
+        open_price = data.get("openPrice", 0) / 100.0
+        high = data.get("highPrice", 0) / 100.0
+        low = data.get("lowPrice", 0) / 100.0
 
     except Exception as e:
-        return jsonify({"error": "❌ Failed to fetch live data", "details": str(e)}), 500
+        return jsonify({
+            "error": "❌ Failed to fetch live data from Dhan",
+            "details": str(e)
+        }), 500
 
-    # ✅ Combine all strategies
-    basic_result = apply_strategy(symbol, ltp, open_price, high, low)
-    trend_summary = combined_trend(symbol)
+    # ✅ Run Strategy Logic
+    try:
+        result = apply_strategy(symbol, ltp, open_price, high, low)
+        trend = combined_trend(symbol)
 
-    return jsonify({
-        "symbol": symbol,
-        "ltp": ltp,
-        "open": open_price,
-        "high": high,
-        "low": low,
-        "bias": basic_result.get("bias"),
-        "confidence": basic_result.get("confidence"),
-        "token_used": security_id,
-        "trend_summary": trend_summary
-    })
+        return jsonify({
+            "symbol": symbol,
+            "ltp": ltp,
+            "open": open_price,
+            "high": high,
+            "low": low,
+            "bias": result.get("bias", "Unknown"),
+            "confidence": result.get("confidence", "N/A"),
+            "token_used": security_id,
+            "trend_summary": trend
+        })
+
+    except Exception as e:
+        return jsonify({
+            "error": "❌ Strategy logic failed",
+            "details": str(e)
+        }), 500
 
 @app.route('/strategy', methods=['POST'])
 def run_strategy_analysis():
