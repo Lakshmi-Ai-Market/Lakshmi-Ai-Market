@@ -583,7 +583,7 @@ def strategy_engine():
     return render_template("strategy_engine.html", result=result)
 
 @app.route("/api/strategy", methods=["POST"])
-def run_strategy_analysis():
+def get_strategy():
     try:
         user_input = request.json.get("input", "")
         if not user_input:
@@ -602,7 +602,7 @@ def run_strategy_analysis():
 
 
 @app.route('/strategy', methods=['POST'])
-def strategy_engine():
+def run_strategy_analysis():
     user_input = request.form['symbol_input']
     from advance_strategies import analyze_all_strategies
     result = analyze_all_strategies(user_input)
