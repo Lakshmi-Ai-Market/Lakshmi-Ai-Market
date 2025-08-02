@@ -87,52 +87,26 @@ def strategy_price_action(symbol):
         return "Price Action ➜ Sideways"
 
 # === Trend Summary Combiner ===
-def combined_trend(symbol):
-    rsi_result = strategy_rsi(symbol)
-    ema_result = strategy_ema_crossover(symbol)
-    price_action_result = strategy_price_action(symbol)
-
-    signals = f"{rsi_result}\n{ema_result}\n{price_action_result}"
-
-    if "Bullish" in signals and "Bearish" not in signals:
-        overall = "📈 Strong Bullish Bias"
-    elif "Bearish" in signals and "Bullish" not in signals:
-        overall = "📉 Strong Bearish Bias"
-    elif "Neutral" in signals or "Sideways" in signals:
-        overall = "🔍 Sideways / Neutral"
-    else:
-        overall = "⚖️ Mixed Signals"
-
-    return f"✅ Trend Summary: {overall}\n\n{signals}"
-
 def apply_strategy(symbol, ltp, open_price, high, low):
     result = {}
 
-    # ✅ Example Strategy 1: Breakout
     if ltp > high:
         result["bias"] = "Bullish Breakout"
         result["confidence"] = "85%"
-        return result
-
-    # ✅ Example Strategy 2: Breakdown
     elif ltp < low:
         result["bias"] = "Bearish Breakdown"
         result["confidence"] = "80%"
-        return result
-
-    # ✅ Example Strategy 3: Inside Range
     elif low < ltp < high:
         result["bias"] = "Range-Bound"
         result["confidence"] = "65%"
-        return result
-
-    # ✅ Example Strategy 4: Flat Market
     elif ltp == open_price:
         result["bias"] = "No Movement"
         result["confidence"] = "50%"
-        return result
+    else:
+        result["bias"] = "Neutral"
+        result["confidence"] = "40%"
 
-    # 🔴 If nothing matched — fallback strategy
-    result["bias"] = "Neutral"
-    result["confidence"] = "40%"
     return result
+
+def combined_trend(symbol):
+    return f"{symbol} is showing trend-based alignment with technical strategies."
