@@ -11,7 +11,7 @@ HEADERS = {
     "client-id": os.getenv("DHAN_CLIENT_ID")
 }
 
-# ✅ Get F&O Index Futures Instrument Token
+# ✅ Get NSE_FNO Index Future Token
 def get_fno_index_token(symbol):
     try:
         url = f"{DHAN_BASE_URL}/instruments/fno"
@@ -19,20 +19,21 @@ def get_fno_index_token(symbol):
         instruments = response.json()
 
         for item in instruments:
-            if (symbol.upper() in item['trading_symbol'] and 
-                item['instrument_type'] == 'FUTIDX' and 
-                item['exchange_segment'] == 'NSE_FNO'):
+            if (
+                symbol.upper() in item['trading_symbol'] and
+                item['instrument_type'] == 'FUTIDX' and
+                item['exchange_segment'] == 'NSE_FNO'
+            ):
                 print(f"✅ Found: {item['trading_symbol']} -> {item['security_id']}")
                 return item['security_id']
-        
         print(f"❌ No matching F&O Index found for: {symbol}")
         return None
     except Exception as e:
-        print("❌ Instrument fetch error:", e)
+        print("❌ Error fetching instrument:", e)
         return None
 
-# ✅ Fetch 5-minute Candles
-def fetch_candle_data(security_id, limit=15):
+# ✅ Fetch 5-minute Candles (last N)
+def fetch_candle_data(security_id, limit=30):
     try:
         url = f"{DHAN_BASE_URL}/charts/india/advanced-candle"
         params = {
@@ -49,5 +50,5 @@ def fetch_candle_data(security_id, limit=15):
             print(f"⚠️ No candles returned for: {security_id}")
         return candles
     except Exception as e:
-        print("⚠️ Candle error:", e)
+        print("⚠️ Candle fetch error:", e)
         return []
