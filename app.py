@@ -557,11 +557,30 @@ def option_chain():
 
     return render_template("option_chain.html", option_data=mock_data, strike_filter=strike_filter, expiry=expiry)
 
-@app.route("/strategy-engine")
-def render_strategy_page():
+@app.route("/strategy-engine", methods=["GET", "POST"])
+def strategy_engine():
     if 'username' not in session:
         return redirect("/login")
-    return render_template("strategy_engine.html")
+
+    result = None
+    if request.method == "POST":
+        data = request.form.get("market_data", "")  # You’ll make this input in HTML
+
+        # Extract prices from user input
+        try:
+            sensex_price = float(data.split("Sensex")[1].split()[0])
+            banknifty_price = float(data.split("BankNifty")[1].split()[0])
+        except:
+            result = "⚠️ Invalid format. Please enter like: Sensex 81700 BankNifty 55961.95"
+            return render_template("strategy_engine.html", result=result)
+
+        # Import your analyzer function
+        from advance_strategies import analyze_all_strategies
+
+        # Run analysis
+        result = analyze_all_strategies(sensex_price, banknifty_price)
+
+    return render_template("strategy_engine.html", result=result)
 
 @app.route("/api/strategy", methods=["POST"])
 def analyze_strategy_api():
@@ -591,15 +610,6 @@ def strategy_engine():
     from advance_strategies import analyze_all_strategies
     result = analyze_all_strategies(user_input)
     return render_template('strategy.html', result=result)
-
-@app.route("/analyze")
-def analyze():
-    symbol = request.args.get("symbol")
-    if not symbol:
-        return jsonify({"error": "Symbol required"})
-    
-    result = analyze_all_strategies(symbol)
-    return jsonify(result)
 
 @app.route("/neuron", methods=["GET", "POST"])
 def neuron():
