@@ -597,7 +597,7 @@ def strategy_api():
         file_id = "1MYE4KAaxtshYi8OZcfM8rsQ5M4pSqwP0"
         raw_csv_url = f"https://drive.google.com/uc?id={file_id}&export=download"
 
-        df = pd.read_csv(raw_csv_url)
+        df = pd.read_csv(raw_csv_url, low_memory=False)
         token_row = df[df["TRADING_SYMBOL"].str.upper() == symbol]
 
         if token_row.empty:
