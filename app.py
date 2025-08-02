@@ -585,37 +585,35 @@ def strategy_engine():
 @app.route("/api/strategy", methods=["POST"])
 def strategy_api():
     import pandas as pd
-    import re
     from flask import request, jsonify
-    from datetime import datetime
-    from strategies import apply_strategy, combined_trend  # Must be defined in strategies.py
-
-    data = request.json
-    raw_input = data.get("input", "").upper()
+    import re
 
     try:
-        # ✅ Step 1: Extract BankNifty value from raw input
-        match = re.search(r"BANKNIFTY\s+(\d+(?:\.\d+)?)", raw_input)
+        # 🧠 Get user input like: "Sensex 81700 BankNifty 55961"
+        data = request.json
+        raw_input = data.get("input", "").strip()
+        print("📝 Received input:", raw_input)
+
+        # ✅ Extract numbers from input
+        match = re.search(r"Sensex\s*(\d+)[^\d]+BankNifty\s*(\d+)", raw_input, re.IGNORECASE)
         if not match:
-            return jsonify({"error": "❌ BankNifty value not found in input"}), 400
+            return jsonify({"error": "❌ Input must contain 'Sensex #### BankNifty ####' format."}), 400
 
-        banknifty_value = float(match.group(1))
-        strike = int(round(banknifty_value / 100.0)) * 100
+        sensex = int(match.group(1))
+        banknifty = int(match.group(2))
+        print("📊 Sensex:", sensex, "BankNifty:", banknifty)
 
-        # ✅ Step 2: Generate symbol
-        today = datetime.now()
-        expiry_month = today.strftime("%b").upper()
-        expiry_year = str(today.year)[2:]
-        symbol = f"BANKNIFTY{expiry_year}{expiry_month}{strike}CE"
-
+        # 🧠 Simple option logic for now: pick ATM CE strike
+        strike = round(banknifty / 100) * 100
+        expiry = "25AUG"  # You can dynamically generate expiry later
+        symbol = f"BANKNIFTY{expiry}{strike}CE"
         print("✅ Generated symbol:", symbol)
 
-        # ✅ Step 3: Load CSV
+        # ✅ Read token CSV
         df = pd.read_csv("api-scrip-master.csv", low_memory=False)
         df.columns = [col.strip().lower() for col in df.columns]
-
         if "trading_symbol" not in df.columns or "security_id" not in df.columns:
-            return jsonify({"error": "❌ Required columns not found in CSV"}), 500
+            return jsonify({"error": "❌ Required columns missing in CSV"}), 500
 
         token_row = df[df["trading_symbol"].str.upper() == symbol]
         if token_row.empty:
@@ -624,28 +622,21 @@ def strategy_api():
         security_id = str(token_row["security_id"].values[0])
         segment = "NSE_FNO"
 
-    except Exception as e:
-        return jsonify({
-            "error": "❌ Failed during symbol generation or CSV lookup",
-            "details": str(e)
-        }), 500
-
-    try:
-        result = apply_strategy(symbol, security_id, segment)
-        trend = combined_trend(symbol)
-
-        return jsonify({
+        # ✅ Simulate a basic strategy signal (for testing)
+        signal = {
             "symbol": symbol,
             "security_id": security_id,
             "segment": segment,
-            "result": result,
-            "trend": trend
-        })
+            "bias": "Bullish",
+            "confidence": "82%",
+            "suggestion": "BUY CALLS NEAR 56000. Add on dips till 55800. SL 55650."
+        }
+
+        return jsonify(signal)
+
     except Exception as e:
-        return jsonify({
-            "error": "❌ Strategy execution failed",
-            "details": str(e)
-        }), 500
+        print("❌ Error in strategy route:", str(e))
+        return jsonify({"error": "❌ Internal server error", "details": str(e)}), 500
 
 @app.route('/strategy', methods=['POST'])
 def run_strategy_analysis():
