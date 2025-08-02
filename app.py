@@ -583,60 +583,64 @@ def strategy_engine():
     return render_template("strategy_engine.html", result=result)
 
 @app.route("/api/strategy", methods=["POST"])
-def strategy_api():
-    import pandas as pd
-    from flask import request, jsonify
-    import re
-
+def get_strategy():
     try:
-        # 🧠 Get user input like: "Sensex 81700 BankNifty 55961"
         data = request.json
-        raw_input = data.get("input", "").strip()
-        print("📝 Received input:", raw_input)
+        print("Received input:", data)
 
-        # ✅ Extract numbers from input
-        match = re.search(r"Sensex\s*(\d+)[^\d]+BankNifty\s*(\d+)", raw_input, re.IGNORECASE)
-        if not match:
-            return jsonify({"error": "❌ Input must contain 'Sensex #### BankNifty ####' format."}), 400
+        user_input = data.get("input", "")
+        sensex_match = re.search(r"Sensex\s*(\d+)", user_input)
+        banknifty_match = re.search(r"BankNifty\s*(\d+)", user_input)
 
-        sensex = int(match.group(1))
-        banknifty = int(match.group(2))
-        print("📊 Sensex:", sensex, "BankNifty:", banknifty)
+        if not sensex_match or not banknifty_match:
+            return jsonify({"error": "❌ Invalid input. Format should be: Sensex 81700 BankNifty 55961.95"}), 400
 
-        # 🧠 Simple option logic for now: pick ATM CE strike
-        strike = round(banknifty / 100) * 100
-        expiry = "25AUG"  # You can dynamically generate expiry later
-        symbol = f"BANKNIFTY{expiry}{strike}CE"
+        sensex = float(sensex_match.group(1))
+        banknifty = float(banknifty_match.group(1))
+        print(f"📊 Sensex: {sensex} BankNifty: {banknifty}")
+
+        # === Symbol generation logic ===
+        rounded_strike = int(round(banknifty / 100.0) * 100)
+        expiry = datetime.date.today() + datetime.timedelta(days=(4 - datetime.date.today().weekday()) % 7 + 1)
+        expiry_str = expiry.strftime("%d%b").upper()
+        symbol = f"BANKNIFTY{expiry_str}{rounded_strike}CE"
         print("✅ Generated symbol:", symbol)
 
-        # ✅ Read token CSV
-        df = pd.read_csv("api-scrip-master.csv", low_memory=False)
-        df.columns = [col.strip().lower() for col in df.columns]
-        if "trading_symbol" not in df.columns or "security_id" not in df.columns:
-            return jsonify({"error": "❌ Required columns missing in CSV"}), 500
+        # === Read token CSV ===
+        csv_path = os.path.join(os.getcwd(), "api-scrip-master.csv")
+        df = pd.read_csv(csv_path)
 
-        token_row = df[df["trading_symbol"].str.upper() == symbol]
+        # === Token matching ===
+        token_row = df[df["trading_symbol"].str.upper() == symbol.upper()]
+
         if token_row.empty:
             return jsonify({"error": f"❌ Token not found for symbol '{symbol}'"}), 404
 
-        security_id = str(token_row["security_id"].values[0])
-        segment = "NSE_FNO"
+        security_id = str(token_row.iloc[0]["security_id"])
+        print("🔐 Found security ID:", security_id)
 
-        # ✅ Simulate a basic strategy signal (for testing)
-        signal = {
+        # === Strategy logic ===
+        bias = "Bullish" if banknifty > sensex * 0.68 else "Bearish"
+        confidence = abs((banknifty / (sensex * 0.68)) - 1) * 100
+        confidence_str = f"{confidence:.2f}%"
+
+        if bias == "Bullish":
+            suggestion = f"BUY CALLS NEAR {rounded_strike}. Add on dips till {rounded_strike - 200}. SL {rounded_strike - 350}."
+        else:
+            suggestion = f"BUY PUTS NEAR {rounded_strike}. Add on rise till {rounded_strike + 200}. SL {rounded_strike + 350}."
+
+        return jsonify({
             "symbol": symbol,
             "security_id": security_id,
-            "segment": segment,
-            "bias": "Bullish",
-            "confidence": "82%",
-            "suggestion": "BUY CALLS NEAR 56000. Add on dips till 55800. SL 55650."
-        }
-
-        return jsonify(signal)
+            "segment": "NSE_FNO",
+            "bias": bias,
+            "confidence": confidence_str,
+            "suggestion": suggestion
+        })
 
     except Exception as e:
-        print("❌ Error in strategy route:", str(e))
-        return jsonify({"error": "❌ Internal server error", "details": str(e)}), 500
+        print("🔥 Strategy Engine Error:", str(e))
+        return jsonify({"error": "❌ Internal server error"}), 500
 
 @app.route('/strategy', methods=['POST'])
 def run_strategy_analysis():
