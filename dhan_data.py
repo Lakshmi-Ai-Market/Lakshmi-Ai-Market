@@ -19,6 +19,23 @@ def fetch_dhan_price(symbol):
         print("⚠️ LTP Error:", e)
         return None
 
+def fetch_latest_data(symbol):
+    token = os.getenv("DHAN_ACCESS_TOKEN")
+    client_id = os.getenv("DHAN_CLIENT_ID")
+    headers = {
+        "access-token": token,
+        "client-id": client_id
+    }
+
+    url = f"https://api.dhan.co/market/quotes/intraday/{symbol}"
+    response = requests.get(url, headers=headers)
+    data = response.json()
+    
+    try:
+        return float(data["lastTradedPrice"])
+    except:
+        return 0.0
+
 def fetch_candle_data(symbol):
     try:
         url = f"{DHAN_BASE_URL}/charts/india/advanced-candle"
