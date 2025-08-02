@@ -592,19 +592,25 @@ def strategy_api():
     symbol = data.get("symbol", "").upper()
 
     try:
-        # ✅ Load compressed token CSV from local root directory
-        df = pd.read_csv("api-scrip-master-detailed.csv", low_memory=False)
+        # ✅ Load COMPRESSED token CSV file
+        df = pd.read_csv("api-scrip-master.csv", low_memory=False)
 
-        # Make column names consistent
+        # Normalize column names
         df.columns = [col.strip().lower() for col in df.columns]
 
-        # Match by TRADING_SYMBOL (assuming column name in compressed file)
+        # ✅ Debug print to verify symbol exists
+        print("📊 Checking symbol:", symbol)
+        print("🧾 Columns:", df.columns.tolist())
+
+        if "trading_symbol" not in df.columns or "security_id" not in df.columns:
+            return jsonify({"error": "❌ Required columns not found in CSV"}), 500
+
         token_row = df[df["trading_symbol"].str.upper() == symbol]
         if token_row.empty:
             return jsonify({"error": f"❌ Token not found for symbol '{symbol}'"}), 404
 
         security_id = str(token_row["security_id"].values[0])
-        segment = str(token_row["segment"].values[0]) if "segment" in token_row else "NSE_FNO"
+        segment = "NSE_FNO"  # default fallback, update if needed
 
     except Exception as e:
         return jsonify({
@@ -613,7 +619,7 @@ def strategy_api():
         }), 500
 
     try:
-        # ✅ Apply strategy logic using your own functions
+        # ✅ Use your actual strategy logic
         result = apply_strategy(symbol, security_id, segment)
         trend = combined_trend(symbol)
 
@@ -624,6 +630,7 @@ def strategy_api():
             "result": result,
             "trend": trend
         })
+
     except Exception as e:
         return jsonify({
             "error": "❌ Strategy execution failed",
