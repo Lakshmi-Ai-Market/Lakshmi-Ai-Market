@@ -583,26 +583,23 @@ def strategy_engine():
     return render_template("strategy_engine.html", result=result)
 
 @app.route("/api/strategy", methods=["POST"])
-def analyze_strategy_api():
+def get_strategy():
     try:
-        symbol = request.data.decode("utf-8").strip().upper()
-        if not symbol:
-            return jsonify({"error": "Symbol is required"}), 400
-        
-        result = analyze_all_strategies(symbol)
-        response_text = (
-            f"📈 Symbol: {result['symbol']}\n"
-            f"🧠 Bias: {result['bias']}\n"
-            f"📊 Confidence: {result['confidence']}%\n"
-            f"🧮 Summary: {result['summary']}\n\n"
-            + "\n".join([
-                f"✅ {s['strategy']} → {s['confidence']}%" for s in result["strategies"]
-            ])
-        )
-        return jsonify({"reply": response_text})
-    
+        user_input = request.json.get("input", "")
+        if not user_input:
+            return jsonify({"reply": "Please enter valid input like: Sensex 81700 BankNifty 55961.95 😇"})
+
+        # Pass user input to strategy analyzer
+        result = analyze_all_strategies(user_input)
+
+        if not result or result.strip() == "":
+            return jsonify({"reply": "No strategy found 😢"})
+
+        return jsonify({"reply": result})
+
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"reply": f"Server error: {str(e)}"})
+
 
 @app.route('/strategy', methods=['POST'])
 def strategy_engine():
