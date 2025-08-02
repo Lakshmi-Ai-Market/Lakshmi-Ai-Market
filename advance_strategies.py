@@ -188,34 +188,61 @@ def tweezers_top(c): a,b=c[-2],c[-1]; return {"strategy":"🍡 Tweezers Top","co
 
 # === Final Analyzer ===
 def analyze_all_strategies(user_input):
-    if "banknifty" not in user_input.lower():
-        return "❌ BankNifty symbol missing in input."
-
-    symbol = "BANKNIFTY"  # Just the name; futures token fetched dynamically
-
     try:
-        rsi_result = strategy_rsi(symbol)
-        ema_result = strategy_ema_crossover(symbol)
-        price_result = strategy_price_action(symbol)
+        entries = extract_symbol_and_price(user_input)
+        if not entries:
+            return "⚠️ Could not extract any symbols or prices."
 
-        results = [rsi_result, ema_result, price_result]
+        final_results = []
 
-        # Determine overall trend
-        bullish = sum(1 for r in results if "Bullish" in r)
-        bearish = sum(1 for r in results if "Bearish" in r)
+        for symbol, ltp in entries:
+            candles = fetch_candles(symbol)
+            if not candles or len(candles) < 5:
+                final_results.append(f"❌ Not enough data for {symbol}")
+                continue
 
-        if bullish == 3:
-            trend = "📈 Strong Bullish"
-        elif bullish == 2:
-            trend = "📊 Mild Bullish"
-        elif bearish == 3:
-            trend = "📉 Strong Bearish"
-        elif bearish == 2:
-            trend = "🔻 Mild Bearish"
-        else:
-            trend = "🔍 Sideways / Neutral"
+            strategies = [
+                ema_crossover,
+                rsi_reversal,
+                macd_strategy,
+                breakout_strategy,
+                pullback_strategy,
+                volume_surge,
+                supertrend,
+                bollinger_band_squeeze,
+                marubozu_bullish,
+                marubozu_bearish,
+                bullish_engulfing,
+                bearish_engulfing,
+                morning_star,
+                evening_star,
+                hammer_candle,
+                inverted_hammer,
+                spinning_top,
+                harami_bullish,
+                harami_bearish,
+                three_white_soldiers,
+                three_black_crows,
+                piercing_pattern,
+                dark_cloud_cover,
+                doji_star_bullish,
+                doji_star_bearish,
+                tweezers_bottom,
+                tweezers_top
+            ]
 
-        return f"✅ Trend Summary: {trend}\n\n" + "\n".join(results)
+            matched = []
+            for s in strategies:
+                result = s(candles)
+                if result:
+                    matched.append(f"{result['strategy']} ({result['confidence']}%)")
+
+            if matched:
+                final_results.append(f"📊 {symbol} Analysis:\n" + "\n".join(matched))
+            else:
+                final_results.append(f"🤷 No strong signals detected for {symbol}.")
+
+        return "\n\n".join(final_results)
 
     except Exception as e:
         return f"❌ Error during analysis: {e}"
