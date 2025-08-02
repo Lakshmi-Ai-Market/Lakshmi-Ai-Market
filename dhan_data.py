@@ -1,53 +1,53 @@
-import requests
 import os
+import requests
+from dotenv import load_dotenv
+
+load_dotenv()
 
 DHAN_BASE_URL = "https://api.dhan.co"
-
 HEADERS = {
     "accept": "application/json",
     "access-token": os.getenv("DHAN_ACCESS_TOKEN"),
     "client-id": os.getenv("DHAN_CLIENT_ID")
 }
 
-def fetch_dhan_price(symbol):
+# ✅ Get F&O Index Futures Instrument Token
+def get_fno_index_token(symbol):
     try:
-        url = f"{DHAN_BASE_URL}/market/feed/iex/{symbol}"
+        url = f"{DHAN_BASE_URL}/instruments/fno"
         response = requests.get(url, headers=HEADERS)
-        data = response.json()
-        return float(data['last_traded_price']) if 'last_traded_price' in data else None
+        instruments = response.json()
+
+        for item in instruments:
+            if (symbol.upper() in item['trading_symbol'] and 
+                item['instrument_type'] == 'FUTIDX' and 
+                item['exchange_segment'] == 'NSE_FNO'):
+                print(f"✅ Found: {item['trading_symbol']} -> {item['security_id']}")
+                return item['security_id']
+        
+        print(f"❌ No matching F&O Index found for: {symbol}")
+        return None
     except Exception as e:
-        print("⚠️ LTP Error:", e)
+        print("❌ Instrument fetch error:", e)
         return None
 
-def fetch_latest_data(symbol):
-    token = os.getenv("DHAN_ACCESS_TOKEN")
-    client_id = os.getenv("DHAN_CLIENT_ID")
-    headers = {
-        "access-token": token,
-        "client-id": client_id
-    }
-
-    url = f"https://api.dhan.co/market/quotes/intraday/{symbol}"
-    response = requests.get(url, headers=headers)
-    data = response.json()
-    
-    try:
-        return float(data["lastTradedPrice"])
-    except:
-        return 0.0
-
-def fetch_candle_data(symbol):
+# ✅ Fetch 5-minute Candles
+def fetch_candle_data(security_id, limit=15):
     try:
         url = f"{DHAN_BASE_URL}/charts/india/advanced-candle"
         params = {
-            "securityId": symbol,
+            "securityId": security_id,
             "exchangeSegment": "NSE_FNO",
             "instrument": "FUTIDX",
             "interval": "5m",
-            "limit": 15
+            "limit": limit
         }
         response = requests.get(url, headers=HEADERS, params=params)
-        return response.json().get("candles", [])
+        data = response.json()
+        candles = data.get("candles", [])
+        if not candles:
+            print(f"⚠️ No candles returned for: {security_id}")
+        return candles
     except Exception as e:
-        print("⚠️ Candle Error:", e)
+        print("⚠️ Candle error:", e)
         return []
