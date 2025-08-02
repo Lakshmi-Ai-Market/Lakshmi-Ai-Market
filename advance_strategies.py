@@ -189,50 +189,30 @@ def tweezers_bottom(c): a,b=c[-2],c[-1]; return {"strategy":"🍥 Tweezers Botto
 def tweezers_top(c): a,b=c[-2],c[-1]; return {"strategy":"🍡 Tweezers Top","confidence":76} if a['high']==b['high'] and a['close']>a['open'] and b['close']<b['open'] else None
 
 # ✅ Final Analyzer
-from dhan_data import fetch_candle_data, fetch_latest_data
-
-def calculate_ema(candles, period):
-    prices = [float(c[4]) for c in candles]  # close prices
-    k = 2 / (period + 1)
-    ema = prices[0]
-    for price in prices[1:]:
-        ema = price * k + ema * (1 - k)
-    return ema
-
-def calculate_rsi(candles, period=14):
-    closes = [float(c[4]) for c in candles]
-    if len(closes) < period + 1:
-        return 0
-
-    gains = []
-    losses = []
-    for i in range(1, period + 1):
-        diff = closes[i] - closes[i - 1]
-        if diff >= 0:
-            gains.append(diff)
-        else:
-            losses.append(abs(diff))
-
-    avg_gain = sum(gains) / period
-    avg_loss = sum(losses) / period
-    if avg_loss == 0:
-        return 100
-
-    rs = avg_gain / avg_loss
-    rsi = 100 - (100 / (1 + rs))
-    return rsi
-
 def analyze_all_strategies(user_input):
-    user_input = user_input.lower()
-    reply = ""
-    if "banknifty" in user_input:
-        reply += strategy_ema_crossover("BANKNIFTY") + "\n"
-        reply += strategy_rsi("BANKNIFTY") + "\n"
-        reply += strategy_price_action("BANKNIFTY") + "\n"
+    if "banknifty" not in user_input.lower():
+        return "BankNifty data missing."
 
-    if "sensex" in user_input:
-        reply += strategy_ema_crossover("SENSEX") + "\n"
-        reply += strategy_rsi("SENSEX") + "\n"
-        reply += strategy_price_action("SENSEX") + "\n"
+    symbol = "BANKNIFTY23AUGFUT"  # Change if your symbol differs on Dhan
+    results = []
 
-    return reply.strip()
+    try:
+        rsi_result = strategy_rsi(symbol)
+        ema_result = strategy_ema_crossover(symbol)
+        price_result = strategy_price_action(symbol)
+
+        results.append(rsi_result)
+        results.append(ema_result)
+        results.append(price_result)
+
+        if any("Bullish" in res for res in results):
+            trend = "Strong Bullish" if all("Bullish" in res for res in results) else "Mild Bullish"
+        elif any("Bearish" in res for res in results):
+            trend = "Strong Bearish" if all("Bearish" in res for res in results) else "Mild Bearish"
+        else:
+            trend = "Sideways"
+
+        return f"✅ Trend: {trend}\n\n" + "\n".join(results)
+
+    except Exception as e:
+        return f"Error analyzing strategy: {e}"
