@@ -2,6 +2,27 @@ from dhan_data import fetch_candle_data
 import datetime
 from dhan_data import fetch_dhan_price, fetch_candle_data
 
+def strategy_rsi(symbol, ltp):
+    # Your RSI logic here
+    return {
+        "strategy": "RSI",
+        "description": "RSI indicates potential bullish momentum"
+    }
+
+def strategy_ema_crossover(symbol, ltp):
+    # Your EMA logic here
+    return {
+        "strategy": "EMA Crossover",
+        "description": "EMA crossover signals trend direction"
+    }
+
+def strategy_price_action(symbol, ltp):
+    # Your price action logic here
+    return {
+        "strategy": "Price Action",
+        "description": "Strong breakout identified"
+    }
+    
 def strategy_trend_bias(symbol):
     data = fetch_dhan_candles(symbol, "5m", 20)  # last 20 five-minute candles
     if not data or len(data) < 5:
