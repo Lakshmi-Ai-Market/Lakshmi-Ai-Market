@@ -1,4 +1,3 @@
-from dhan_data import fetch_candle_data
 import datetime
 from dhan_data import fetch_dhan_price, fetch_candle_data
 
