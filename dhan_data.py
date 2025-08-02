@@ -16,21 +16,32 @@ def get_fno_index_token(symbol):
     try:
         url = f"{DHAN_BASE_URL}/instruments/fno"
         response = requests.get(url, headers=HEADERS)
+        
+        # Confirm we got JSON and it's a list
         instruments = response.json()
+        if not isinstance(instruments, list):
+            print("❌ Unexpected API format: instruments is not a list.")
+            return None
 
         for item in instruments:
+            if not isinstance(item, dict):
+                continue  # skip non-dict entries safely
+
             if (
-                symbol.upper() in item['trading_symbol'] and
-                item['instrument_type'] == 'FUTIDX' and
-                item['exchange_segment'] == 'NSE_FNO'
+                symbol.upper() in item.get('trading_symbol', '') and
+                item.get('instrument_type') == 'FUTIDX' and
+                item.get('exchange_segment') == 'NSE_FNO'
             ):
                 print(f"✅ Found: {item['trading_symbol']} -> {item['security_id']}")
                 return item['security_id']
+
         print(f"❌ No matching F&O Index found for: {symbol}")
         return None
+
     except Exception as e:
-        print("❌ Error fetching instrument:", e)
+        print("❌ Error fetching instrument:", str(e))
         return None
+
 
 # ✅ Fetch 5-minute Candles (last N)
 def fetch_candle_data(security_id, limit=30):
