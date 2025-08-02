@@ -224,50 +224,15 @@ def calculate_rsi(candles, period=14):
 
 def analyze_all_strategies(user_input):
     user_input = user_input.lower()
-
-    symbol_map = {
-        "sensex": "11536",  # Replace with correct Dhan ID
-        "banknifty": "23252"  # Replace with correct Dhan ID
-    }
-
+    reply = ""
     if "banknifty" in user_input:
-        symbol = symbol_map["banknifty"]
-        candles = fetch_candle_data(symbol)
+        reply += strategy_ema_crossover("BANKNIFTY") + "\n"
+        reply += strategy_rsi("BANKNIFTY") + "\n"
+        reply += strategy_price_action("BANKNIFTY") + "\n"
 
-        if not candles:
-            return "No candle data found from Dhan 😢"
+    if "sensex" in user_input:
+        reply += strategy_ema_crossover("SENSEX") + "\n"
+        reply += strategy_rsi("SENSEX") + "\n"
+        reply += strategy_price_action("SENSEX") + "\n"
 
-        ema10 = calculate_ema(candles[-10:], 10)
-        ema20 = calculate_ema(candles[-15:], 20)
-        rsi = calculate_rsi(candles)
-
-        ltp = fetch_latest_data(symbol)
-
-        if ema10 > ema20 and rsi > 55:
-            trend = "Strong Bullish"
-            entry = round(ltp + 50, 2)
-            sl = round(ltp - 100, 2)
-            confidence = 90.3
-            strategy = "EMA Crossover + RSI"
-        elif ema10 < ema20 and rsi < 45:
-            trend = "Bearish"
-            entry = round(ltp - 50, 2)
-            sl = round(ltp + 100, 2)
-            confidence = 81.6
-            strategy = "EMA Crossunder + RSI"
-        else:
-            trend = "Sideways"
-            entry = round(ltp, 2)
-            sl = round(ltp - 50, 2)
-            confidence = 65.2
-            strategy = "Neutral Consolidation"
-
-        return f"""📈 *Lakshmi Strategy Output* ✅
-Trend: {trend}
-🎯 Entry Price: {entry}
-🛑 Stop Loss: {sl}
-📊 Confidence: {confidence}%
-✨ Strategy: {strategy}"""
-
-    else:
-        return "No strategy found for input. Try mentioning BankNifty or Sensex 🙏"
+    return reply.strip()
