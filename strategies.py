@@ -104,3 +104,35 @@ def combined_trend(symbol):
         overall = "⚖️ Mixed Signals"
 
     return f"✅ Trend Summary: {overall}\n\n{signals}"
+
+def apply_strategy(symbol, ltp, open_price, high, low):
+    result = {}
+
+    # ✅ Example Strategy 1: Breakout
+    if ltp > high:
+        result["bias"] = "Bullish Breakout"
+        result["confidence"] = "85%"
+        return result
+
+    # ✅ Example Strategy 2: Breakdown
+    elif ltp < low:
+        result["bias"] = "Bearish Breakdown"
+        result["confidence"] = "80%"
+        return result
+
+    # ✅ Example Strategy 3: Inside Range
+    elif low < ltp < high:
+        result["bias"] = "Range-Bound"
+        result["confidence"] = "65%"
+        return result
+
+    # ✅ Example Strategy 4: Flat Market
+    elif ltp == open_price:
+        result["bias"] = "No Movement"
+        result["confidence"] = "50%"
+        return result
+
+    # 🔴 If nothing matched — fallback strategy
+    result["bias"] = "Neutral"
+    result["confidence"] = "40%"
+    return result
