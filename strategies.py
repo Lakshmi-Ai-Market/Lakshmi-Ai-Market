@@ -1,3 +1,5 @@
+# strategies.py
+
 from dhan_data import fetch_candle_data
 
 def fetch_dhan_candles(symbol, interval="5m", limit=30):
@@ -6,19 +8,20 @@ def fetch_dhan_candles(symbol, interval="5m", limit=30):
         print(f"⚠️ Not enough candles ({len(candles) if candles else 0}) for symbol: {symbol}")
         return []
     print(f"✅ Fetched {len(candles)} candles for {symbol}")
-    return candles[-limit:]  # Return latest candles
+    return candles[-limit:]  # Return only latest candles
 
+# === Strategy 1: RSI Trend Analyzer ===
 def strategy_rsi(symbol):
     candles = fetch_dhan_candles(symbol, limit=20)
     if len(candles) < 15:
         return "Not enough data for RSI"
 
-    closes = [float(c[4]) for c in candles[-15:]]  # Last 15 close prices
+    closes = [float(c[4]) for c in candles[-15:]]  # Last 15 closing prices
     gains = []
     losses = []
 
     for i in range(1, len(closes)):
-        change = closes[i] - closes[i-1]
+        change = closes[i] - closes[i - 1]
         if change >= 0:
             gains.append(change)
             losses.append(0)
@@ -34,6 +37,7 @@ def strategy_rsi(symbol):
     trend = "Bullish" if rsi > 60 else "Bearish" if rsi < 40 else "Neutral"
     return f"RSI = {rsi:.2f} ➜ {trend}"
 
+# === Strategy 2: EMA Crossover ===
 def strategy_ema_crossover(symbol):
     candles = fetch_dhan_candles(symbol, limit=40)
     if len(candles) < 30:
@@ -63,6 +67,7 @@ def strategy_ema_crossover(symbol):
     else:
         return "EMA crossover ➜ Sideways"
 
+# === Strategy 3: Price Action (Engulfing Patterns) ===
 def strategy_price_action(symbol):
     candles = fetch_dhan_candles(symbol, limit=5)
     if len(candles) < 3:
