@@ -4,7 +4,7 @@ import csv
 import os
 import requests
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from tools.strategy_switcher import select_strategy
 import pandas as pd
 import re
@@ -582,65 +582,63 @@ def strategy_engine():
 
     return render_template("strategy_engine.html", result=result)
 
-@app.route("/api/strategy", methods=["POST"])
-def get_strategy():
+@app.route('/api/strategy', methods=['POST'])
+def analyze_strategy():
     try:
         data = request.json
-        print("Received input:", data)
+        user_input = data.get("input", "").strip()
+        print(f"Received input: {user_input}")
 
-        user_input = data.get("input", "")
-        sensex_match = re.search(r"Sensex\s*(\d+)", user_input)
-        banknifty_match = re.search(r"BankNifty\s*(\d+)", user_input)
+        # Extract Sensex and BankNifty values
+        match = re.search(r'Sensex\s*(\d+(\.\d+)?)\s+BankNifty\s*(\d+(\.\d+)?)', user_input, re.IGNORECASE)
+        if not match:
+            return jsonify({"output": "❌ Invalid format. Use: Sensex 81250 BankNifty 55345.50"})
 
-        if not sensex_match or not banknifty_match:
-            return jsonify({"error": "❌ Invalid input. Format should be: Sensex 81700 BankNifty 55961.95"}), 400
-
-        sensex = float(sensex_match.group(1))
-        banknifty = float(banknifty_match.group(1))
+        sensex = float(match.group(1))
+        banknifty = float(match.group(3))
         print(f"📊 Sensex: {sensex} BankNifty: {banknifty}")
 
-        # === Symbol generation logic ===
-        rounded_strike = int(round(banknifty / 100.0) * 100)
-        expiry = datetime.date.today() + datetime.timedelta(days=(4 - datetime.date.today().weekday()) % 7 + 1)
-        expiry_str = expiry.strftime("%d%b").upper()
-        symbol = f"BANKNIFTY{expiry_str}{rounded_strike}CE"
-        print("✅ Generated symbol:", symbol)
+        # Generate Option Symbol (nearest 100)
+        strike_price = round(banknifty / 100) * 100
+        today = datetime.today()
+        expiry_date = today + timedelta(days=(4 - today.weekday()) % 7 + 1)  # Next Thursday
+        expiry_str = expiry_date.strftime('%d%b').upper()
+        option_symbol = f"BANKNIFTY{expiry_str}{int(strike_price)}CE"
+        print(f"✅ Generated symbol: {option_symbol}")
 
-        # === Read token CSV ===
-        csv_path = os.path.join(os.getcwd(), "api-scrip-master.csv")
-        df = pd.read_csv(csv_path)
+        # Fetch candles from Dhan
+        candles = fetch_candle_data(option_symbol)
+        if not candles or len(candles) < 20:
+            return jsonify({"output": "⚠️ Not enough data for strategy analysis."})
 
-        # === Token matching ===
-        token_row = df[df["trading_symbol"].str.upper() == symbol.upper()]
+        # Run strategies
+        rsi_signal = strategy_rsi(candles)
+        ema_signal = strategy_ema_crossover(candles)
+        pa_signal = strategy_price_action(candles)
 
-        if token_row.empty:
-            return jsonify({"error": f"❌ Token not found for symbol '{symbol}'"}), 404
+        # Confidence Calculation
+        signals = [rsi_signal, ema_signal, pa_signal]
+        bullish_count = signals.count("Bullish")
+        bearish_count = signals.count("Bearish")
+        confidence = int((bullish_count / len(signals)) * 100)
 
-        security_id = str(token_row.iloc[0]["security_id"])
-        print("🔐 Found security ID:", security_id)
-
-        # === Strategy logic ===
-        bias = "Bullish" if banknifty > sensex * 0.68 else "Bearish"
-        confidence = abs((banknifty / (sensex * 0.68)) - 1) * 100
-        confidence_str = f"{confidence:.2f}%"
-
-        if bias == "Bullish":
-            suggestion = f"BUY CALLS NEAR {rounded_strike}. Add on dips till {rounded_strike - 200}. SL {rounded_strike - 350}."
+        if bullish_count > bearish_count:
+            bias = "Bullish"
+        elif bearish_count > bullish_count:
+            bias = "Bearish"
         else:
-            suggestion = f"BUY PUTS NEAR {rounded_strike}. Add on rise till {rounded_strike + 200}. SL {rounded_strike + 350}."
+            bias = "Neutral"
 
-        return jsonify({
-            "symbol": symbol,
-            "security_id": security_id,
-            "segment": "NSE_FNO",
-            "bias": bias,
-            "confidence": confidence_str,
-            "suggestion": suggestion
-        })
+        result = f"""✅ RSI Strategy: {rsi_signal}
+✅ EMA Crossover: {ema_signal}
+✅ Price Action: {pa_signal}
+📊 Overall Bias: {bias} (Confidence: {confidence}%)"""
+
+        return jsonify({"output": result})
 
     except Exception as e:
-        print("🔥 Strategy Engine Error:", str(e))
-        return jsonify({"error": "❌ Internal server error"}), 500
+        print(f"🔥 Strategy Engine Error: {e}")
+        return jsonify({"output": "❌ Strategy analysis failed. Please try again."})
 
 @app.route('/strategy', methods=['POST'])
 def run_strategy_analysis():
