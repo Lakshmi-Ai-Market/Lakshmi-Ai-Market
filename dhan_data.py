@@ -22,19 +22,20 @@ def get_fno_index_token(symbol):
         csv_data = response.text
         df = pd.read_csv(StringIO(csv_data), low_memory=False)
 
-        # ✅ Confirm actual columns
+        # Normalize column names
         df.columns = df.columns.str.strip().str.lower()
 
-        # 🧠 Check available columns
-        if 'segment' not in df.columns or 'tradingsymbol' not in df.columns:
-            raise ValueError("Expected columns not found in Dhan CSV")
+        # Debug print to confirm columns (optional)
+        # print(df.columns.tolist())
 
-        # ✅ Now filter correctly
-        match = df[(df['segment'].str.contains("FNO", na=False)) & 
-                   (df['tradingsymbol'].str.contains(symbol.upper(), na=False))]
+        # Filter for FNO symbols
+        match = df[
+            df['exchange_segment'].str.contains("NSE_FNO", na=False) &
+            df['trading_symbol'].str.upper().str.contains(symbol.upper(), na=False)
+        ]
 
         if not match.empty:
-            token = match.iloc[0]['instrumenttoken']
+            token = match.iloc[0]['instrument_token']
             print(f"✅ Found token for {symbol}: {token}")
             return token
         else:
