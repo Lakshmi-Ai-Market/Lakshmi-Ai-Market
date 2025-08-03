@@ -9,7 +9,7 @@ from tools.strategy_switcher import select_strategy
 import pandas as pd
 import re
 from urllib.parse import urlencode
-from dotenv import load_dotenv 
+from dotenv import load_dotenv
 from pathlib import Path
 
 # Load environment variables safely
