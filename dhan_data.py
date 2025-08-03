@@ -25,17 +25,14 @@ def get_fno_index_token(symbol):
         # Normalize column names
         df.columns = df.columns.str.strip().str.lower()
 
-        # Debug print to confirm columns (optional)
-        # print(df.columns.tolist())
-
         # Filter for FNO symbols
         match = df[
-            df['exchange_segment'].str.contains("NSE_FNO", na=False) &
-            df['trading_symbol'].str.upper().str.contains(symbol.upper(), na=False)
+            df['exchange segment'].str.contains("NSE_FNO", na=False) &
+            df['trading symbol'].str.upper().str.contains(symbol.upper(), na=False)
         ]
 
         if not match.empty:
-            token = match.iloc[0]['instrument_token']
+            token = match.iloc[0]['instrument token']
             print(f"✅ Found token for {symbol}: {token}")
             return token
         else:
