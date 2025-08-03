@@ -13,34 +13,30 @@ HEADERS = {
     "client-id": os.getenv("DHAN_CLIENT_ID")
 }
 
-def get_fno_index_token(symbol):
+# Load CSV once during app start (ensure correct path)
+FNO_CSV_PATH = "fno-indices.csv"
+try:
+    fno_data = pd.read_csv(FNO_CSV_PATH)
+    print("✅ fno-indices.csv loaded with columns:", fno_data.columns.tolist())
+except Exception as e:
+    print(f"❌ Failed to load CSV: {e}")
+    fno_data = pd.DataFrame()
+
+def get_index_token(index_name):
+    """
+    Returns the security_id (token) for a given index (BANKNIFTY, SENSEX) from the CSV.
+    """
     try:
-        url = "https://images.dhan.co/api-data/api-scrip-master.csv"
-        response = requests.get(url)
-        response.raise_for_status()
-        csv_data = response.text
-
-        df = pd.read_csv(StringIO(csv_data), low_memory=False)
-        df.columns = df.columns.str.strip().str.lower()
-
-        print("📊 Available columns:", df.columns.tolist())
-
-        # Fixed column names: sem_segment instead of exchange_segment
-        match = df[
-            df['sem_segment'].str.contains("NSE_FNO", na=False) &
-            df['sem_trading_symbol'].str.upper().str.contains(symbol.upper(), na=False)
-        ]
-
-        if not match.empty:
-            token = match.iloc[0]['sem_smst_security_id']
-            print(f"✅ Found token for {symbol}: {token}")
+        row = fno_data[fno_data['dhan_symbol'].str.upper() == index_name.upper()]
+        if not row.empty:
+            token = int(row.iloc[0]['security_id'])
+            print(f"✅ Token for {index_name}: {token}")
             return token
         else:
-            print(f"⚠️ No token found for {symbol}")
+            print(f"❌ {index_name} not found in dhan_symbol column")
             return None
-
     except Exception as e:
-        print(f"❌ Error fetching instrument from Dhan CSV: {e}")
+        print(f"❌ Error fetching token for {index_name}: {e}")
         return None
 
 
