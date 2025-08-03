@@ -13,30 +13,32 @@ HEADERS = {
     "client-id": os.getenv("DHAN_CLIENT_ID")
 }
 
-# Load CSV once during app start (ensure correct path)
-FNO_CSV_PATH = "fno-indices.csv"
-try:
-    fno_data = pd.read_csv(FNO_CSV_PATH)
-    print("✅ fno-indices.csv loaded with columns:", fno_data.columns.tolist())
-except Exception as e:
-    print(f"❌ Failed to load CSV: {e}")
-    fno_data = pd.DataFrame()
+# ✅ Path to Dhan's actual CSV
+CSV_PATH = os.path.join(os.path.dirname(__file__), 'api-scrip-master.csv')
 
-def get_index_token(index_name):
-    """
-    Returns the security_id (token) for a given index (BANKNIFTY, SENSEX) from the CSV.
-    """
+# ✅ Load the CSV once
+try:
+    dhan_df = pd.read_csv(CSV_PATH)
+    print("✅ Dhan CSV loaded.")
+    print("📊 Available columns:", list(dhan_df.columns))
+except Exception as e:
+    print("❌ Failed to load CSV:", e)
+    dhan_df = pd.DataFrame()
+
+# ✅ Function to get token using 'sm_symbol_name'
+def get_fno_index_token(symbol_name):
+    if dhan_df.empty:
+        return None
+
     try:
-        row = fno_data[fno_data['dhan_symbol'].str.upper() == index_name.upper()]
-        if not row.empty:
-            token = int(row.iloc[0]['security_id'])
-            print(f"✅ Token for {index_name}: {token}")
-            return token
-        else:
-            print(f"❌ {index_name} not found in dhan_symbol column")
-            return None
+        row = dhan_df[
+            (dhan_df['sem_exch_instrument_type'] == 'INDEX') &
+            (dhan_df['sm_symbol_name'].str.upper().str.strip() == symbol_name.upper().strip())
+        ].iloc[0]
+
+        return str(row['sem_smst_security_id'])
     except Exception as e:
-        print(f"❌ Error fetching token for {index_name}: {e}")
+        print(f"❌ Error fetching token for {symbol_name}:", e)
         return None
 
 
