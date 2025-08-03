@@ -75,6 +75,101 @@ def analyze_strategy(index_price):
     else:
         return "NEUTRAL: Avoid trades"
 
+def analyze_nifty(ltp):
+    if ltp < 24000:
+        return {
+            "symbol": "NIFTY",
+            "bias": "Bullish",
+            "confidence": 78.2,
+            "summary": "NIFTY is near major support. Buying interest expected."
+        }
+    elif ltp > 24700:
+        return {
+            "symbol": "NIFTY",
+            "bias": "Bearish",
+            "confidence": 70.5,
+            "summary": "NIFTY is in overbought zone. Caution advised."
+        }
+    else:
+        return {
+            "symbol": "NIFTY",
+            "bias": "Neutral",
+            "confidence": 50.0,
+            "summary": "NIFTY is in range. No clear bias."
+        }
+
+
+def analyze_banknifty(ltp):
+    if ltp < 55000:
+        return {
+            "symbol": "BANKNIFTY",
+            "bias": "Bullish",
+            "confidence": 81.1,
+            "summary": "BANKNIFTY is close to support. Potential upward move."
+        }
+    elif ltp > 56500:
+        return {
+            "symbol": "BANKNIFTY",
+            "bias": "Bearish",
+            "confidence": 74.3,
+            "summary": "BANKNIFTY is at resistance. Downside risk increasing."
+        }
+    else:
+        return {
+            "symbol": "BANKNIFTY",
+            "bias": "Neutral",
+            "confidence": 49.0,
+            "summary": "BANKNIFTY showing no strong directional trend."
+        }
+
+
+def analyze_sensex(ltp):
+    if ltp < 80000:
+        return {
+            "symbol": "SENSEX",
+            "bias": "Bullish",
+            "confidence": 75.6,
+            "summary": "SENSEX below 80K is historically strong buying zone."
+        }
+    elif ltp > 81200:
+        return {
+            "symbol": "SENSEX",
+            "bias": "Bearish",
+            "confidence": 69.7,
+            "summary": "SENSEX appears overextended. Pullback possible."
+        }
+    else:
+        return {
+            "symbol": "SENSEX",
+            "bias": "Neutral",
+            "confidence": 51.0,
+            "summary": "SENSEX is consolidating in a narrow range."
+        }
+
+
+def analyze_finnifty(ltp):
+    if ltp < 20500:
+        return {
+            "symbol": "FINNIFTY",
+            "bias": "Bullish",
+            "confidence": 77.9,
+            "summary": "FINNIFTY approaching demand zone. Bullish bias."
+        }
+    elif ltp > 21000:
+        return {
+            "symbol": "FINNIFTY",
+            "bias": "Bearish",
+            "confidence": 73.4,
+            "summary": "FINNIFTY hitting resistance. Possible decline."
+        }
+    else:
+        return {
+            "symbol": "FINNIFTY",
+            "bias": "Neutral",
+            "confidence": 48.8,
+            "summary": "FINNIFTY in no-trade zone. Wait for breakout."
+        }
+
 
 # ✅ Fetch 5-minute Candles (last N)
 def fetch_candle_data(security_id, limit=30):
