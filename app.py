@@ -590,72 +590,83 @@ def strategy():
         raw_input = data.get("input", "").strip()
         print("📩 Received input:", data)
 
-        # Extract Sensex and BankNifty values
+        # Extract Sensex and BankNifty prices
         sensex_match = re.search(r"Sensex\s+([\d.]+)", raw_input, re.IGNORECASE)
         banknifty_match = re.search(r"BankNifty\s+([\d.]+)", raw_input, re.IGNORECASE)
 
         sensex_value = float(sensex_match.group(1)) if sensex_match else None
         banknifty_value = float(banknifty_match.group(1)) if banknifty_match else None
 
-        print("🔍 Analyzing SENSEX @", sensex_value)
-        print("🔍 Analyzing BANKNIFTY @", banknifty_value)
+        print(f"🔍 Analyzing SENSEX @ {sensex_value}")
+        print(f"🔍 Analyzing BANKNIFTY @ {banknifty_value}")
 
-        # Load the CSV
-        csv_path = "api-scrip-master.csv"
-        df = pd.read_csv(csv_path, low_memory=False)  # avoid dtype warning
+        # Load CSV (path must be correct relative to app)
+        df = pd.read_csv("api-scrip-master.csv", low_memory=False)
+        print("📊 Columns available:", df.columns.tolist())
 
-        print("📊 Columns found:", list(df.columns))
-
+        # Token fetch helper
         def get_token(symbol):
             symbol = symbol.upper()
             match = df[df["SM_SYMBOL_NAME"].str.upper() == symbol]
             if not match.empty:
-                token = match.iloc[0]["SEM_SMST_SECURITY_ID"]
-                print(f"✅ Found token for {symbol}: {token}")
+                token = str(match.iloc[0]["SEM_SMST_SECURITY_ID"])
+                print(f"✅ Token for {symbol}: {token}")
                 return token
             else:
-                print(f"❌ Token not found for {symbol}")
+                print(f"❌ No token found for {symbol}")
                 return None
 
-        # Get tokens from the correct column names
+        # Get tokens
         sensex_token = get_token("SENSEX")
         banknifty_token = get_token("BANKNIFTY")
 
-        # Define dummy strategies
+        # Strategy logic (You can plug real logic here later)
         strategies = {
-            str(banknifty_token): "output = {'bias': 'Bullish', 'confidence': '78%'}",
-            str(sensex_token): "output = {'bias': 'Neutral', 'confidence': '64%'}"
+            str(sensex_token): {
+                "bias": "Neutral",
+                "confidence": "64%",
+                "explanation": "Market is consolidating"
+            },
+            str(banknifty_token): {
+                "bias": "Bullish",
+                "confidence": "78%",
+                "explanation": "Strong uptrend with high momentum"
+            }
         }
 
+        # Collect results
         results = []
-
-        for symbol, value, token in [
+        for symbol, ltp, token in [
             ("SENSEX", sensex_value, sensex_token),
             ("BANKNIFTY", banknifty_value, banknifty_token)
         ]:
-            if value is None or token is None:
-                results.append({"symbol": symbol, "message": "❌ Data missing or token not found"})
+            if ltp is None or token is None:
+                results.append({
+                    "symbol": symbol,
+                    "ltp": ltp,
+                    "message": "❌ Missing LTP or token"
+                })
                 continue
 
-            strategy_code = strategies.get(str(token))
-            if not strategy_code:
-                results.append({"symbol": symbol, "message": "❌ No strategy found for token"})
-                continue
-
-            try:
-                local_vars = {}
-                exec(strategy_code, {}, local_vars)
-                result = local_vars.get("output", {})
-                result["symbol"] = symbol
-                result["ltp"] = value
+            strategy = strategies.get(str(token))
+            if strategy:
+                result = {
+                    "symbol": symbol,
+                    "ltp": ltp,
+                    **strategy
+                }
                 results.append(result)
-            except Exception as e:
-                results.append({"symbol": symbol, "message": f"🔥 Strategy error: {str(e)}"})
+            else:
+                results.append({
+                    "symbol": symbol,
+                    "ltp": ltp,
+                    "message": "😢 No strategy found for token"
+                })
 
         return jsonify({"strategies": results})
 
     except Exception as e:
-        print("🔥 Internal server error:", str(e))
+        print("🔥 Server error:", str(e))
         return jsonify({"error": "Internal server error"}), 500
 
 @app.route('/strategy', methods=['POST'])
