@@ -11,6 +11,13 @@ import pandas as pd
 import re
 from urllib.parse import urlencode
 from advance_strategies import analyze_all_strategies
+from advance_strategies import (
+    analyze_all_strategies,
+    analyze_sensex,
+    analyze_banknifty,
+    analyze_nifty,
+    analyze_finnifty
+)
 from datetime import datetime, timedelta 
 from dotenv import load_dotenv 
 from pathlib import Path
