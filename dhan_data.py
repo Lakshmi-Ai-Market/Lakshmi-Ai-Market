@@ -15,31 +15,46 @@ HEADERS = {
 
 def get_fno_index_token(index_name):
     try:
-        # Load CSV directly from URL
+        # Load CSV from Dhan's URL
         url = "https://images.dhan.co/api-data/api-scrip-master.csv"
         response = requests.get(url)
         response.raise_for_status()
 
         df = pd.read_csv(StringIO(response.text))
 
-        print("📊 Available columns:", df.columns.tolist())
-
-        # Normalize the symbol name
-        index_name = index_name.upper().strip()
-        match = df[df['sm_symbol_name'].str.upper().str.contains(index_name)]
-
-        if match.empty:
-            print(f"❌ No match found for {index_name}")
+        # Check required columns
+        required_cols = ['sm_symbol_name', 'sem_smst_security_id', 'sem_segment', 'sem_exch_instrument_type']
+        if not all(col in df.columns for col in required_cols):
+            print("❌ Required columns missing in CSV!")
             return None
 
-        # Print matched rows (for debugging)
-        print(f"✅ Match found for {index_name}:\n", match[['sm_symbol_name', 'sem_smst_security_id']].head())
+        # Normalize column values
+        df = df.dropna(subset=['sm_symbol_name'])  # Drop rows with NaN in symbol name
+        df['sm_symbol_name'] = df['sm_symbol_name'].str.upper()
+        df['sem_segment'] = df['sem_segment'].astype(str).str.upper()
+        df['sem_exch_instrument_type'] = df['sem_exch_instrument_type'].astype(str).str.upper()
 
-        # Return the first matching token
-        return match.iloc[0]['sem_smst_security_id']
+        # Clean input
+        index_name = index_name.upper().strip()
+
+        # Filter only for index derivatives (like BANKNIFTY, SENSEX)
+        fno_df = df[
+            (df['sem_segment'] == 'D') &  # Derivatives segment
+            (df['sem_exch_instrument_type'] == 'IDX') &  # Index
+            (df['sm_symbol_name'].str.contains(index_name, na=False))
+        ]
+
+        if fno_df.empty:
+            print(f"❌ No token found for {index_name}")
+            return None
+
+        print(f"✅ Found token for {index_name}:")
+        print(fno_df[['sm_symbol_name', 'sem_smst_security_id']].head())
+
+        return fno_df.iloc[0]['sem_smst_security_id']
 
     except Exception as e:
-        print(f"❌ Error fetching instrument from Dhan CSV: {e}")
+        print(f"❌ Exception while fetching token: {e}")
         return None
 
 
