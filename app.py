@@ -11,9 +11,9 @@ import pandas as pd
 import re
 from urllib.parse import urlencode
 from advance_strategies import analyze_all_strategies
-from dotenv import load_dotenv
+from datetime import datetime, timedelta 
+from dotenv import load_dotenv 
 from pathlib import Path
-
 
 # Load environment variables safely
 env_path = Path(__file__).parent / ".env"
@@ -589,6 +589,10 @@ def strategy():
         data = request.get_json()
         raw_input = data.get("input", "").strip()
         print("📩 Received input:", raw_input)
+        # Inside strategy()
+        today = datetime.today()
+        expiry_date = today + timedelta(days=7)
+        expiry_str = expiry_date.strftime('%d%b').upper()  # e.g., 03AUG
 
         # Extract symbols and prices
         matches = re.findall(r'(SENSEX|BANKNIFTY|NIFTY|FINNIFTY)\s*([\d.]+)', raw_input.upper())
