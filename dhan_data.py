@@ -13,36 +13,47 @@ HEADERS = {
     "client-id": os.getenv("DHAN_CLIENT_ID")
 }
 
+from io import StringIO
+import pandas as pd
+import requests
+
 def get_fno_index_token(index_name):
     try:
         url = "https://images.dhan.co/api-data/api-scrip-master.csv"
         response = requests.get(url)
         response.raise_for_status()
 
-        # Load CSV with proper dtype handling
+        # Load CSV into DataFrame
         df = pd.read_csv(StringIO(response.text), low_memory=False)
 
         # Debug: Print column names
         print("📊 Columns found:", df.columns.tolist())
 
-        # Normalize search
+        # Clean the index_name
         index_name = index_name.upper().strip()
-        match = df[df['SM_SYMBOL_NAME'].str.upper().str.contains(index_name)]
 
-        if match.empty:
-            print(f"❌ No match found for {index_name}")
-            return None
+        # Ensure SM_SYMBOL_NAME has no NaNs
+        df = df[df['SM_SYMBOL_NAME'].notnull()]
+        df['SM_SYMBOL_NAME'] = df['SM_SYMBOL_NAME'].astype(str)
 
-        # Debug: Show top matches
-        print(f"✅ Match found for {index_name}:\n", match[['SM_SYMBOL_NAME', 'SEM_SMST_SECURITY_ID']].head())
+        # Try exact match first
+        exact_match = df[df['SM_SYMBOL_NAME'].str.upper().str.strip() == index_name]
+        if not exact_match.empty:
+            print(f"✅ Exact match for {index_name}:\n", exact_match[['SM_SYMBOL_NAME', 'SEM_SMST_SECURITY_ID']].head())
+            return exact_match.iloc[0]['SEM_SMST_SECURITY_ID']
 
-        # Return token ID
-        return match.iloc[0]['SEM_SMST_SECURITY_ID']
+        # Fallback to partial match
+        contains_match = df[df['SM_SYMBOL_NAME'].str.upper().str.contains(index_name, na=False)]
+        if not contains_match.empty:
+            print(f"🔍 Partial match for {index_name}:\n", contains_match[['SM_SYMBOL_NAME', 'SEM_SMST_SECURITY_ID']].head())
+            return contains_match.iloc[0]['SEM_SMST_SECURITY_ID']
+
+        print(f"❌ No match found for {index_name}")
+        return None
 
     except Exception as e:
         print(f"❌ Error fetching instrument token: {e}")
         return None
-
 
 # ✅ Candle fetch (mock or skip if not used now)
 def fetch_candle_data(security_id, limit=30):
