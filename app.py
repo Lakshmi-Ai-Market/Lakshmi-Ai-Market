@@ -5,14 +5,10 @@ import os
 import requests
 import time
 from datetime import datetime, timedelta
-from dhan_data import get_fno_index_token, fetch_candle_data
 from tools.strategy_switcher import select_strategy
 import pandas as pd
 import re
 from urllib.parse import urlencode
-from advance_strategies import analyze_all_strategies
-from dhan_data import analyze_sensex, analyze_banknifty, analyze_nifty, analyze_finnifty
-from datetime import datetime, timedelta 
 from dotenv import load_dotenv 
 from pathlib import Path
 
@@ -72,6 +68,69 @@ def save_user(username, password):
         if not file_exists:
             writer.writerow(["username", "password"])
         writer.writerow([username, password])
+
+def extract_symbol_from_text(user_input):
+    input_lower = user_input.lower()
+    if "banknifty" in input_lower:
+        return "BANKNIFTY"
+    elif "nifty" in input_lower:
+        return "NIFTY"
+    elif "sensex" in input_lower:
+        return "SENSEX"
+    return None
+
+# === Fetch candles from Dhan ===
+def fetch_dhan_candles(symbol, interval="1m", count=20):
+    url = f"https://api.dhan.co/market/candles?security_id={symbol}&interval={interval}&limit={count}"
+    headers = {
+        "accept": "application/json",
+        "access-token": os.getenv("DHAN_API_KEY")
+    }
+    response = requests.get(url, headers=headers)
+    return response.json() if response.status_code == 200 else None
+
+# === Ask OpenRouter v3 AI for strategy ===
+def ask_openrouter_strategy(candle_data, current_price, symbol):
+    prompt = f"""
+You are an advanced trading AI.
+
+Symbol: {symbol}
+Current Price: {current_price}
+Last 20 candles (OHLC): {candle_data}
+
+Analyze using:
+- EMA crossover (20/50/200)
+- RSI levels
+- MACD divergence
+- SuperTrend
+- Breakout/pullback patterns
+- Volume spikes
+
+Return in clean JSON:
+- Direction (Bullish/Bearish/Neutral)
+- Strategy used
+- Entry, Stoploss, Target
+- Confidence %
+- Bullet-point explanation
+"""
+
+    response = requests.post(
+        "https://openrouter.ai/api/v1/chat/completions",
+        headers={
+            "Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY')}",
+            "Content-Type": "application/json"
+        },
+        json={
+            "model": os.getenv("MODEL_NAME"),
+            "messages": [
+                {"role": "system", "content": "You are a trading strategy expert."},
+                {"role": "user", "content": prompt}
+            ]
+        }
+    )
+
+    data = response.json()
+    return data["choices"][0]["message"]["content"]
 
 # --- Routes ---
 @app.route("/")
@@ -584,75 +643,35 @@ def strategy_engine():
 
     return render_template("strategy_engine.html", result=result)
 
-@app.route('/api/strategy', methods=['POST'])
-def strategy():
+@app.route("/api/strategy", methods=["POST"])
+def ai_strategy():
     try:
-        data = request.get_json()
-        raw_input = data.get("input", "").strip()
-        print("📩 Received input:", raw_input)
-        # Inside strategy()
-        today = datetime.today()
-        expiry_date = today + timedelta(days=7)
-        expiry_str = expiry_date.strftime('%d%b').upper()  # e.g., 03AUG
+        if request.is_json:
+            user_input = request.json.get("message", "")
+        else:
+            user_input = request.form.get("message", "")
 
-        # Extract symbols and prices
-        matches = re.findall(r'(SENSEX|BANKNIFTY|NIFTY|FINNIFTY)\s*([\d.]+)', raw_input.upper())
-        if not matches:
-            return jsonify({"error": "❌ No valid index and price found"}), 400
+        symbol = extract_symbol_from_text(user_input)
+        if not symbol:
+            return jsonify({"error": "❌ Could not detect symbol. Try 'banknifty 45600'"})
 
-        results = []
+        candles = fetch_dhan_candles(symbol)
+        if not candles or "data" not in candles:
+            return jsonify({"error": "⚠️ Failed to fetch candle data from Dhan."})
 
-        for symbol, price_str in matches:
-            ltp = float(price_str)
+        current_price = candles["data"][-1]["close"]
+        strategy = ask_openrouter_strategy(candles["data"], current_price, symbol)
 
-            # Token fetch for strategy engine
-            option_symbol = f"{symbol}{expiry_str}{int(round(ltp / 100.0) * 100)}CE"
-            token = get_fno_index_token(option_symbol)
-            print(f"🔍 Symbol: {symbol}, LTP: {ltp}, Token: {token}")
-
-            # Analyze basic bias
-            if symbol == "SENSEX":
-                basic = analyze_sensex(ltp)
-            elif symbol == "BANKNIFTY":
-                basic = analyze_banknifty(ltp)
-            elif symbol == "NIFTY":
-                basic = analyze_nifty(ltp)
-            elif symbol == "FINNIFTY":
-                basic = analyze_finnifty(ltp)
-            else:
-                basic = {"symbol": symbol, "bias": "Unknown", "confidence": 0, "summary": "Not recognized"}
-
-            summary = {
-                "symbol": symbol,
-                "ltp": ltp,
-                "bias": basic["bias"],
-                "confidence": f"{basic['confidence']}%",
-                "summary": basic["summary"]
-            }
-
-            # Add strategy engine output only if token available
-            if token:
-                candles = fetch_candle_data(token)
-                if candles and len(candles) >= 20:
-                    summary["RSI"] = strategy_rsi(option_symbol)
-                    summary["EMA"] = strategy_ema_crossover(option_symbol)
-                    summary["PriceAction"] = strategy_price_action(option_symbol)
-                else:
-                    summary["RSI"] = "⚠️ Not enough candle data"
-                    summary["EMA"] = "⚠️ Not enough candle data"
-                    summary["PriceAction"] = "⚠️ Not enough candle data"
-            else:
-                summary["RSI"] = "❌ Token not found"
-                summary["EMA"] = "❌ Token not found"
-                summary["PriceAction"] = "❌ Token not found"
-
-            results.append(summary)
-
-        return jsonify({"strategies": results})
+        return jsonify({"strategy": strategy})
 
     except Exception as e:
-        print("🔥 Server error:", str(e))
-        return jsonify({"error": "Internal error"}), 500
+        return jsonify({"error": str(e)})
+
+# === Health check route ===
+@app.route("/")
+def index():
+    return "✅ Lakshmi AI Strategy Engine v2 running safely."
+
 
 @app.route('/strategy', methods=['POST'])
 def run_strategy_analysis():
