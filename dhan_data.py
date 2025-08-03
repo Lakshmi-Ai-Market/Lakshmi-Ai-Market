@@ -13,39 +13,30 @@ HEADERS = {
     "client-id": os.getenv("DHAN_CLIENT_ID")
 }
 
-from io import StringIO
-import pandas as pd
-import requests
-
 def get_fno_index_token(index_name):
     try:
         url = "https://images.dhan.co/api-data/api-scrip-master.csv"
         response = requests.get(url)
         response.raise_for_status()
 
-        # Load CSV into DataFrame
         df = pd.read_csv(StringIO(response.text), low_memory=False)
 
-        # Debug: Print column names
-        print("📊 Columns found:", df.columns.tolist())
+        print("\U0001F4CA Columns found:", df.columns.tolist())
 
-        # Clean the index_name
         index_name = index_name.upper().strip()
-
-        # Ensure SM_SYMBOL_NAME has no NaNs
         df = df[df['SM_SYMBOL_NAME'].notnull()]
         df['SM_SYMBOL_NAME'] = df['SM_SYMBOL_NAME'].astype(str)
 
-        # Try exact match first
+        # Exact match
         exact_match = df[df['SM_SYMBOL_NAME'].str.upper().str.strip() == index_name]
         if not exact_match.empty:
-            print(f"✅ Exact match for {index_name}:\n", exact_match[['SM_SYMBOL_NAME', 'SEM_SMST_SECURITY_ID']].head())
+            print(f"✅ Exact match for {index_name}:", exact_match[['SM_SYMBOL_NAME', 'SEM_SMST_SECURITY_ID']].head())
             return exact_match.iloc[0]['SEM_SMST_SECURITY_ID']
 
-        # Fallback to partial match
+        # Partial match
         contains_match = df[df['SM_SYMBOL_NAME'].str.upper().str.contains(index_name, na=False)]
         if not contains_match.empty:
-            print(f"🔍 Partial match for {index_name}:\n", contains_match[['SM_SYMBOL_NAME', 'SEM_SMST_SECURITY_ID']].head())
+            print(f"🔍 Partial match for {index_name}:", contains_match[['SM_SYMBOL_NAME', 'SEM_SMST_SECURITY_ID']].head())
             return contains_match.iloc[0]['SEM_SMST_SECURITY_ID']
 
         print(f"❌ No match found for {index_name}")
