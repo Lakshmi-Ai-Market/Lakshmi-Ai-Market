@@ -590,84 +590,75 @@ def strategy():
         raw_input = data.get("input", "").strip()
         print("📩 Received input:", data)
 
-        # Extract Sensex and BankNifty prices
+        # Extract prices
         sensex_match = re.search(r"Sensex\s+([\d.]+)", raw_input, re.IGNORECASE)
         banknifty_match = re.search(r"BankNifty\s+([\d.]+)", raw_input, re.IGNORECASE)
 
         sensex_value = float(sensex_match.group(1)) if sensex_match else None
         banknifty_value = float(banknifty_match.group(1)) if banknifty_match else None
 
-        print(f"🔍 Analyzing SENSEX @ {sensex_value}")
-        print(f"🔍 Analyzing BANKNIFTY @ {banknifty_value}")
+        print("🔍 SENSEX LTP:", sensex_value)
+        print("🔍 BANKNIFTY LTP:", banknifty_value)
 
-        # Load CSV (path must be correct relative to app)
-        df = pd.read_csv("api-scrip-master.csv", low_memory=False)
-        print("📊 Columns available:", df.columns.tolist())
+        # Load CSV and normalize
+        csv_path = "api-scrip-master.csv"
+        df = pd.read_csv(csv_path, low_memory=False)
+        df["SM_SYMBOL_NAME"] = df["SM_SYMBOL_NAME"].astype(str).str.strip().str.upper()
 
-        # Token fetch helper
         def get_token(symbol):
-            symbol = symbol.upper()
-            match = df[df["SM_SYMBOL_NAME"].str.upper() == symbol]
+            symbol = symbol.upper().strip()
+            match = df[df["SM_SYMBOL_NAME"] == symbol]
             if not match.empty:
                 token = str(match.iloc[0]["SEM_SMST_SECURITY_ID"])
-                print(f"✅ Token for {symbol}: {token}")
+                print(f"✅ Found token for {symbol}: {token}")
                 return token
             else:
-                print(f"❌ No token found for {symbol}")
+                print(f"❌ Token not found for {symbol}")
                 return None
 
-        # Get tokens
         sensex_token = get_token("SENSEX")
         banknifty_token = get_token("BANKNIFTY")
 
-        # Strategy logic (You can plug real logic here later)
+        # Dummy strategy logic (you can later replace this)
         strategies = {
-            str(sensex_token): {
-                "bias": "Neutral",
-                "confidence": "64%",
-                "explanation": "Market is consolidating"
-            },
-            str(banknifty_token): {
-                "bias": "Bullish",
-                "confidence": "78%",
-                "explanation": "Strong uptrend with high momentum"
-            }
+            str(sensex_token): "output = {'bias': 'Neutral', 'confidence': '65%'}",
+            str(banknifty_token): "output = {'bias': 'Bullish', 'confidence': '79%'}"
         }
 
-        # Collect results
         results = []
-        for symbol, ltp, token in [
+
+        for symbol, value, token in [
             ("SENSEX", sensex_value, sensex_token),
             ("BANKNIFTY", banknifty_value, banknifty_token)
         ]:
-            if ltp is None or token is None:
-                results.append({
-                    "symbol": symbol,
-                    "ltp": ltp,
-                    "message": "❌ Missing LTP or token"
-                })
+            if value is None:
+                results.append({"symbol": symbol, "message": "❌ Price missing"})
                 continue
 
-            strategy = strategies.get(str(token))
-            if strategy:
-                result = {
-                    "symbol": symbol,
-                    "ltp": ltp,
-                    **strategy
-                }
+            if not token:
+                results.append({"symbol": symbol, "message": "❌ Token not found"})
+                continue
+
+            strategy_code = strategies.get(str(token))
+            if not strategy_code:
+                # fallback dummy
+                strategy_code = "output = {'bias': 'Unknown', 'confidence': '0%'}"
+
+            try:
+                local_vars = {}
+                exec(strategy_code, {}, local_vars)
+                result = local_vars.get("output", {})
+                result["symbol"] = symbol
+                result["ltp"] = value
                 results.append(result)
-            else:
-                results.append({
-                    "symbol": symbol,
-                    "ltp": ltp,
-                    "message": "😢 No strategy found for token"
-                })
+            except Exception as e:
+                results.append({"symbol": symbol, "message": f"🔥 Strategy error: {str(e)}"})
 
         return jsonify({"strategies": results})
 
     except Exception as e:
-        print("🔥 Server error:", str(e))
-        return jsonify({"error": "Internal server error"}), 500
+        print("🔥 Server crash:", str(e))
+        return jsonify({"error": "Internal error"}), 500
 
 @app.route('/strategy', methods=['POST'])
 def run_strategy_analysis():
