@@ -588,9 +588,9 @@ def strategy():
     try:
         data = request.get_json()
         raw_input = data.get("input", "").strip()
-        print("Received data:", data)
+        print("📩 Received input:", raw_input)
 
-        # Sample input: "Sensex 81000 BankNifty 56000"
+        # Extract index values from input
         sensex_match = re.search(r"Sensex\s+([\d.]+)", raw_input, re.IGNORECASE)
         banknifty_match = re.search(r"BankNifty\s+([\d.]+)", raw_input, re.IGNORECASE)
 
@@ -600,52 +600,60 @@ def strategy():
         print("🔍 Analyzing SENSEX @", sensex_value)
         print("🔍 Analyzing BANKNIFTY @", banknifty_value)
 
-        # Load correct CSV (uploaded by you)
+        # Load your uploaded CSV
         csv_path = "api-scrip-master.csv"
+        if not os.path.exists(csv_path):
+            return jsonify({"error": "❌ CSV file not found"}), 500
+
         df = pd.read_csv(csv_path)
+        df.columns = df.columns.str.strip()  # Clean column names
+        print("📊 Columns found:", list(df.columns))
 
-        print("📊 Available columns:", list(df.columns))
+        # Check required columns
+        if 'sm_symbol_name' not in df.columns or 'sem_smst_security_id' not in df.columns:
+            return jsonify({"error": "❌ Required columns missing in CSV"}), 500
 
+        # Function to get token for a symbol
         def get_token(symbol):
-            symbol = symbol.upper()
-            match = df[df["sm_symbol_name"].str.upper() == symbol]
-            if not match.empty:
-                token = match.iloc[0]["sem_smst_security_id"]
-                print(f"✅ Found token for {symbol}: {token}")
+            symbol = symbol.upper().strip()
+            matches = df[df['sm_symbol_name'].str.upper().str.strip() == symbol]
+            if not matches.empty:
+                token = matches.iloc[0]['sem_smst_security_id']
+                print(f"✅ Token for {symbol}: {token}")
                 return token
-            else:
-                print(f"❌ Token not found for {symbol}")
-                return None
+            print(f"❌ Token not found for {symbol}")
+            return None
 
+        # Get tokens
         sensex_token = get_token("SENSEX")
         banknifty_token = get_token("BANKNIFTY")
 
+        # Strategy logic (you can change it later)
         strategies = {
             str(banknifty_token): "output = {'bias': 'Bullish', 'confidence': '78%'}",
             str(sensex_token): "output = {'bias': 'Neutral', 'confidence': '64%'}"
         }
 
+        # Result list
         results = []
-
         for symbol, value, token in [
             ("SENSEX", sensex_value, sensex_token),
             ("BANKNIFTY", banknifty_value, banknifty_token)
         ]:
             if value is None or token is None:
-                results.append({"symbol": symbol, "message": "❌ Data missing"})
+                results.append({"symbol": symbol, "message": "❌ Incomplete input or token missing"})
                 continue
 
-            strategy_code = strategies.get(str(token))
-            if not strategy_code:
-                results.append({"symbol": symbol, "message": "No strategy found 😢"})
+            code = strategies.get(str(token))
+            if not code:
+                results.append({"symbol": symbol, "message": "❌ Strategy not found"})
                 continue
 
             try:
                 local_vars = {}
-                exec(strategy_code, {}, local_vars)
+                exec(code, {}, local_vars)
                 result = local_vars.get("output", {})
-                result["symbol"] = symbol
-                result["ltp"] = value
+                result.update({"symbol": symbol, "ltp": value})
                 results.append(result)
             except Exception as e:
                 results.append({"symbol": symbol, "message": f"❌ Strategy error: {str(e)}"})
@@ -653,7 +661,7 @@ def strategy():
         return jsonify({"strategies": results})
 
     except Exception as e:
-        print("🔥 Internal server error:", str(e))
+        print("🔥 Server error:", str(e))
         return jsonify({"error": "Internal server error"}), 500
 
 @app.route('/strategy', methods=['POST'])
