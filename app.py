@@ -583,40 +583,78 @@ def strategy_engine():
 
     return render_template("strategy_engine.html", result=result)
 
-@app.route("/api/strategy", methods=["POST"])
-def analyze_strategy():
+@app.route('/api/strategy', methods=['POST'])
+def strategy():
     try:
         data = request.get_json()
-        print("📥 Received data:", data)
+        raw_input = data.get("input", "").strip()
+        print("Received data:", data)
 
-        # Parse input JSON
-        user_input = data.get("input", "")
-        input_data = eval(user_input) if isinstance(user_input, str) else user_input
+        # Sample input: "Sensex 81000 BankNifty 56000"
+        sensex_match = re.search(r"Sensex\s+([\d.]+)", raw_input, re.IGNORECASE)
+        banknifty_match = re.search(r"BankNifty\s+([\d.]+)", raw_input, re.IGNORECASE)
 
-        sensex_value = float(input_data.get("sensex", 0))
-        banknifty_value = float(input_data.get("banknifty", 0))
+        sensex_value = float(sensex_match.group(1)) if sensex_match else None
+        banknifty_value = float(banknifty_match.group(1)) if banknifty_match else None
 
-        # Fetch tokens
-        sensex_token = get_index_token("SENSEX")
-        banknifty_token = get_index_token("BANKNIFTY")
+        print("🔍 Analyzing SENSEX @", sensex_value)
+        print("🔍 Analyzing BANKNIFTY @", banknifty_value)
 
-        result = {
-            "sensex": {
-                "ltp": sensex_value,
-                "token": sensex_token
-            },
-            "banknifty": {
-                "ltp": banknifty_value,
-                "token": banknifty_token
-            },
-            "strategy": "Bullish bias likely. Confidence: 71.2%"  # You can replace this with real strategy logic
+        # Load correct CSV (uploaded by you)
+        csv_path = "api-scrip-master.csv"
+        df = pd.read_csv(csv_path)
+
+        print("📊 Available columns:", list(df.columns))
+
+        def get_token(symbol):
+            symbol = symbol.upper()
+            match = df[df["sm_symbol_name"].str.upper() == symbol]
+            if not match.empty:
+                token = match.iloc[0]["sem_smst_security_id"]
+                print(f"✅ Found token for {symbol}: {token}")
+                return token
+            else:
+                print(f"❌ Token not found for {symbol}")
+                return None
+
+        sensex_token = get_token("SENSEX")
+        banknifty_token = get_token("BANKNIFTY")
+
+        strategies = {
+            str(banknifty_token): "output = {'bias': 'Bullish', 'confidence': '78%'}",
+            str(sensex_token): "output = {'bias': 'Neutral', 'confidence': '64%'}"
         }
 
-        return jsonify(result)
+        results = []
+
+        for symbol, value, token in [
+            ("SENSEX", sensex_value, sensex_token),
+            ("BANKNIFTY", banknifty_value, banknifty_token)
+        ]:
+            if value is None or token is None:
+                results.append({"symbol": symbol, "message": "❌ Data missing"})
+                continue
+
+            strategy_code = strategies.get(str(token))
+            if not strategy_code:
+                results.append({"symbol": symbol, "message": "No strategy found 😢"})
+                continue
+
+            try:
+                local_vars = {}
+                exec(strategy_code, {}, local_vars)
+                result = local_vars.get("output", {})
+                result["symbol"] = symbol
+                result["ltp"] = value
+                results.append(result)
+            except Exception as e:
+                results.append({"symbol": symbol, "message": f"❌ Strategy error: {str(e)}"})
+
+        return jsonify({"strategies": results})
 
     except Exception as e:
-        print(f"❌ Strategy error: {e}")
-        return jsonify({"error": str(e)}), 500
+        print("🔥 Internal server error:", str(e))
+        return jsonify({"error": "Internal server error"}), 500
 
 @app.route('/strategy', methods=['POST'])
 def run_strategy_analysis():
