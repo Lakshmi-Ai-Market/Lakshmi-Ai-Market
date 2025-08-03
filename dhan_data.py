@@ -19,21 +19,20 @@ def get_fno_index_token(symbol):
         response = requests.get(url)
         response.raise_for_status()
 
-        csv_data = response.text
-        df = pd.read_csv(StringIO(csv_data), low_memory=False)
+        df = pd.read_csv(StringIO(response.text), low_memory=False)
+        df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
 
-        # Normalize column names
-        df.columns = df.columns.str.strip().str.lower()
+        print("📊 Available columns:", df.columns.tolist())  # Optional debug
 
-        # Filter for FNO symbols
+        # Filter for FNO Index Instruments
         match = df[
-            df['exchange segment'].str.contains("NSE_FNO", na=False) &
-            df['trading symbol'].str.upper().str.contains(symbol.upper(), na=False)
+            df['exchange_segment'].str.upper().str.contains("NSE_FNO", na=False) &
+            df['trading_symbol'].str.upper().str.contains(symbol.upper(), na=False)
         ]
 
         if not match.empty:
-            token = match.iloc[0]['instrument token']
-            print(f"✅ Found token for {symbol}: {token}")
+            token = match.iloc[0]['scrip_code']  # ✅ use scrip_code instead
+            print(f"✅ Found scrip_code for {symbol}: {token}")
             return token
         else:
             print(f"⚠️ No token found for {symbol}")
