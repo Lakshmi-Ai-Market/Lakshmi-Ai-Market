@@ -11,6 +11,7 @@ import pandas as pd
 import re
 from urllib.parse import urlencode
 from advance_strategies import analyze_all_strategies
+from advanced_strategies import analyze_sensex, analyze_banknifty, analyze_nifty, analyze_finnifty
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -588,76 +589,65 @@ def strategy():
     try:
         data = request.get_json()
         raw_input = data.get("input", "").strip()
-        print("📩 Received input:", data)
+        print("📩 Received input:", raw_input)
 
-        # Extract prices
-        sensex_match = re.search(r"Sensex\s+([\d.]+)", raw_input, re.IGNORECASE)
-        banknifty_match = re.search(r"BankNifty\s+([\d.]+)", raw_input, re.IGNORECASE)
-
-        sensex_value = float(sensex_match.group(1)) if sensex_match else None
-        banknifty_value = float(banknifty_match.group(1)) if banknifty_match else None
-
-        print("🔍 SENSEX LTP:", sensex_value)
-        print("🔍 BANKNIFTY LTP:", banknifty_value)
-
-        # Load CSV and normalize
-        csv_path = "api-scrip-master.csv"
-        df = pd.read_csv(csv_path, low_memory=False)
-        df["SM_SYMBOL_NAME"] = df["SM_SYMBOL_NAME"].astype(str).str.strip().str.upper()
-
-        def get_token(symbol):
-            symbol = symbol.upper().strip()
-            match = df[df["SM_SYMBOL_NAME"] == symbol]
-            if not match.empty:
-                token = str(match.iloc[0]["SEM_SMST_SECURITY_ID"])
-                print(f"✅ Found token for {symbol}: {token}")
-                return token
-            else:
-                print(f"❌ Token not found for {symbol}")
-                return None
-
-        sensex_token = get_token("SENSEX")
-        banknifty_token = get_token("BANKNIFTY")
-
-        # Dummy strategy logic (you can later replace this)
-        strategies = {
-            str(sensex_token): "output = {'bias': 'Neutral', 'confidence': '65%'}",
-            str(banknifty_token): "output = {'bias': 'Bullish', 'confidence': '79%'}"
-        }
+        # Extract symbols and prices
+        matches = re.findall(r'(SENSEX|BANKNIFTY|NIFTY|FINNIFTY)\s*([\d.]+)', raw_input.upper())
+        if not matches:
+            return jsonify({"error": "❌ No valid index and price found"}), 400
 
         results = []
 
-        for symbol, value, token in [
-            ("SENSEX", sensex_value, sensex_token),
-            ("BANKNIFTY", banknifty_value, banknifty_token)
-        ]:
-            if value is None:
-                results.append({"symbol": symbol, "message": "❌ Price missing"})
-                continue
+        for symbol, price_str in matches:
+            ltp = float(price_str)
 
-            if not token:
-                results.append({"symbol": symbol, "message": "❌ Token not found"})
-                continue
+            # Token fetch for strategy engine
+            option_symbol = f"{symbol}{expiry_str}{int(round(ltp / 100.0) * 100)}CE"
+            token = get_fno_index_token(option_symbol)
+            print(f"🔍 Symbol: {symbol}, LTP: {ltp}, Token: {token}")
 
-            strategy_code = strategies.get(str(token))
-            if not strategy_code:
-                # fallback dummy
-                strategy_code = "output = {'bias': 'Unknown', 'confidence': '0%'}"
+            # Analyze basic bias
+            if symbol == "SENSEX":
+                basic = analyze_sensex(ltp)
+            elif symbol == "BANKNIFTY":
+                basic = analyze_banknifty(ltp)
+            elif symbol == "NIFTY":
+                basic = analyze_nifty(ltp)
+            elif symbol == "FINNIFTY":
+                basic = analyze_finnifty(ltp)
+            else:
+                basic = {"symbol": symbol, "bias": "Unknown", "confidence": 0, "summary": "Not recognized"}
 
-            try:
-                local_vars = {}
-                exec(strategy_code, {}, local_vars)
-                result = local_vars.get("output", {})
-                result["symbol"] = symbol
-                result["ltp"] = value
-                results.append(result)
-            except Exception as e:
-                results.append({"symbol": symbol, "message": f"🔥 Strategy error: {str(e)}"})
+            summary = {
+                "symbol": symbol,
+                "ltp": ltp,
+                "bias": basic["bias"],
+                "confidence": f"{basic['confidence']}%",
+                "summary": basic["summary"]
+            }
+
+            # Add strategy engine output only if token available
+            if token:
+                candles = fetch_candle_data(token)
+                if candles and len(candles) >= 20:
+                    summary["RSI"] = strategy_rsi(option_symbol)
+                    summary["EMA"] = strategy_ema_crossover(option_symbol)
+                    summary["PriceAction"] = strategy_price_action(option_symbol)
+                else:
+                    summary["RSI"] = "⚠️ Not enough candle data"
+                    summary["EMA"] = "⚠️ Not enough candle data"
+                    summary["PriceAction"] = "⚠️ Not enough candle data"
+            else:
+                summary["RSI"] = "❌ Token not found"
+                summary["EMA"] = "❌ Token not found"
+                summary["PriceAction"] = "❌ Token not found"
+
+            results.append(summary)
 
         return jsonify({"strategies": results})
 
     except Exception as e:
-        print("🔥 Server crash:", str(e))
+        print("🔥 Server error:", str(e))
         return jsonify({"error": "Internal error"}), 500
 
 @app.route('/strategy', methods=['POST'])
