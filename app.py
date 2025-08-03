@@ -11,7 +11,7 @@ import pandas as pd
 import re
 from urllib.parse import urlencode
 from advance_strategies import analyze_all_strategies
-from advance_strategies import (
+from dhan_data import (
     analyze_all_strategies,
     analyze_sensex,
     analyze_banknifty,
