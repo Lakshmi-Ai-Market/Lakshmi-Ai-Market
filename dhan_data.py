@@ -13,32 +13,33 @@ HEADERS = {
     "client-id": os.getenv("DHAN_CLIENT_ID")
 }
 
-# ✅ Path to Dhan's actual CSV
-CSV_PATH = os.path.join(os.path.dirname(__file__), 'api-scrip-master.csv')
-
-# ✅ Load the CSV once
-try:
-    dhan_df = pd.read_csv(CSV_PATH)
-    print("✅ Dhan CSV loaded.")
-    print("📊 Available columns:", list(dhan_df.columns))
-except Exception as e:
-    print("❌ Failed to load CSV:", e)
-    dhan_df = pd.DataFrame()
-
-# ✅ Function to get token using 'sm_symbol_name'
-def get_fno_index_token(symbol_name):
-    if dhan_df.empty:
-        return None
-
+def get_fno_index_token(index_name):
     try:
-        row = dhan_df[
-            (dhan_df['sem_exch_instrument_type'] == 'INDEX') &
-            (dhan_df['sm_symbol_name'].str.upper().str.strip() == symbol_name.upper().strip())
-        ].iloc[0]
+        # Load CSV directly from URL
+        url = "https://images.dhan.co/api-data/api-scrip-master.csv"
+        response = requests.get(url)
+        response.raise_for_status()
 
-        return str(row['sem_smst_security_id'])
+        df = pd.read_csv(StringIO(response.text))
+
+        print("📊 Available columns:", df.columns.tolist())
+
+        # Normalize the symbol name
+        index_name = index_name.upper().strip()
+        match = df[df['sm_symbol_name'].str.upper().str.contains(index_name)]
+
+        if match.empty:
+            print(f"❌ No match found for {index_name}")
+            return None
+
+        # Print matched rows (for debugging)
+        print(f"✅ Match found for {index_name}:\n", match[['sm_symbol_name', 'sem_smst_security_id']].head())
+
+        # Return the first matching token
+        return match.iloc[0]['sem_smst_security_id']
+
     except Exception as e:
-        print(f"❌ Error fetching token for {symbol_name}:", e)
+        print(f"❌ Error fetching instrument from Dhan CSV: {e}")
         return None
 
 
