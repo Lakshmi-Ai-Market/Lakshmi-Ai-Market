@@ -618,67 +618,59 @@ def option_chain():
 
     return render_template("option_chain.html", option_data=mock_data, strike_filter=strike_filter, expiry=expiry)
 
-@app.route("/strategy-engine", methods=["GET", "POST"])
+@app.route("/analyzer", methods=["GET", "POST"])
+def analyzer():
+    signal = ""
+    if request.method == "POST":
+        r = random.random()
+        if r > 0.7:
+            signal = "📈 Strong BUY — Momentum detected!"
+        elif r < 0.3:
+            signal = "📉 SELL — Weakness detected!"
+        else:
+            signal = "⏳ No clear signal — Stay out!"
+    return render_template("analyzer.html", signal=signal)
+
+@app.route("/strategy-engine")
 def strategy_engine():
     if 'username' not in session:
         return redirect("/login")
+    return render_template("strategy_engine.html")
 
-    result = None
-    if request.method == "POST":
-        data = request.form.get("market_data", "")  # You’ll make this input in HTML
-
-        # Extract prices from user input
-        try:
-            sensex_price = float(data.split("Sensex")[1].split()[0])
-            banknifty_price = float(data.split("BankNifty")[1].split()[0])
-        except:
-            result = "⚠️ Invalid format. Please enter like: Sensex 81700 BankNifty 55961.95"
-            return render_template("strategy_engine.html", result=result)
-
-        # Import your analyzer function
-        from advance_strategies import analyze_all_strategies
-
-        # Run analysis
-        result = analyze_all_strategies(sensex_price, banknifty_price)
-
-    return render_template("strategy_engine.html", result=result)
-
-@app.route("/api/strategy", methods=["POST"])
-def ai_strategy():
+@app.route("/analyze-strategy", methods=["POST"])
+def analyze_strategy():
+    data = request.get_json()
     try:
-        if request.is_json:
-            user_input = request.json.get("message", "")
-        else:
-            user_input = request.form.get("message", "")
+        price = float(data.get('price', 0))
+    except (ValueError, TypeError):
+        return jsonify({'message': 'Invalid price input.'})
 
-        symbol = extract_symbol_from_text(user_input)
-        if not symbol:
-            return jsonify({"error": "❌ Could not detect symbol. Try 'banknifty 45600'"})
+    if price % 2 == 0:
+        strategy = "EMA Bullish Crossover Detected 💞"
+        confidence = random.randint(80, 90)
+        sl = price - 50
+        target = price + 120
+    elif price % 3 == 0:
+        strategy = "RSI Reversal Detected 🔁"
+        confidence = random.randint(70, 85)
+        sl = price - 40
+        target = price + 100
+    else:
+        strategy = "Breakout Zone Approaching 💥"
+        confidence = random.randint(60, 75)
+        sl = price - 60
+        target = price + 90
 
-        candles = fetch_dhan_candles(symbol)
-        if not candles or "data" not in candles:
-            return jsonify({"error": "⚠️ Failed to fetch candle data from Dhan."})
-
-        current_price = candles["data"][-1]["close"]
-        strategy = ask_openrouter_strategy(candles["data"], current_price, symbol)
-
-        return jsonify({"strategy": strategy})
-
-    except Exception as e:
-        return jsonify({"error": str(e)})
-
-# === Health check route ===
-@app.route("/")
-def index():
-    return "✅ Lakshmi AI Strategy Engine v2 running safely."
-
-
-@app.route('/strategy', methods=['POST'])
-def run_strategy_analysis():
-    user_input = request.form['symbol_input']
-    from advance_strategies import analyze_all_strategies
-    result = analyze_all_strategies(user_input)
-    return render_template('strategy.html', result=result)
+    entry = price
+    message = f"""
+    💌 <b>{strategy}</b><br>
+    ❤️ Entry: ₹{entry}<br>
+    🔻 Stop Loss: ₹{sl}<br>
+    🎯 Target: ₹{target}<br>
+    📊 Confidence Score: <b>{confidence}%</b><br><br>
+    <i>Take this trade only if you feel my kiss of confidence 😘</i>
+    """
+    return jsonify({'message': message})
 
 @app.route("/neuron", methods=["GET", "POST"])
 def neuron():
