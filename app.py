@@ -9,6 +9,7 @@ from tools.strategy_switcher import select_strategy
 import pandas as pd
 import re
 from urllib.parse import urlencode
+from utils import detect_mood_from_text  # optional helper for mood detection
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -68,69 +69,6 @@ def save_user(username, password):
         if not file_exists:
             writer.writerow(["username", "password"])
         writer.writerow([username, password])
-
-def extract_symbol_from_text(user_input):
-    input_lower = user_input.lower()
-    if "banknifty" in input_lower:
-        return "BANKNIFTY"
-    elif "nifty" in input_lower:
-        return "NIFTY"
-    elif "sensex" in input_lower:
-        return "SENSEX"
-    return None
-
-# === Fetch candles from Dhan ===
-def fetch_dhan_candles(symbol, interval="1m", count=20):
-    url = f"https://api.dhan.co/market/candles?security_id={symbol}&interval={interval}&limit={count}"
-    headers = {
-        "accept": "application/json",
-        "access-token": os.getenv("DHAN_API_KEY")
-    }
-    response = requests.get(url, headers=headers)
-    return response.json() if response.status_code == 200 else None
-
-# === Ask OpenRouter v3 AI for strategy ===
-def ask_openrouter_strategy(candle_data, current_price, symbol):
-    prompt = f"""
-You are an advanced trading AI.
-
-Symbol: {symbol}
-Current Price: {current_price}
-Last 20 candles (OHLC): {candle_data}
-
-Analyze using:
-- EMA crossover (20/50/200)
-- RSI levels
-- MACD divergence
-- SuperTrend
-- Breakout/pullback patterns
-- Volume spikes
-
-Return in clean JSON:
-- Direction (Bullish/Bearish/Neutral)
-- Strategy used
-- Entry, Stoploss, Target
-- Confidence %
-- Bullet-point explanation
-"""
-
-    response = requests.post(
-        "https://openrouter.ai/api/v1/chat/completions",
-        headers={
-            "Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY')}",
-            "Content-Type": "application/json"
-        },
-        json={
-            "model": os.getenv("MODEL_NAME"),
-            "messages": [
-                {"role": "system", "content": "You are a trading strategy expert."},
-                {"role": "user", "content": prompt}
-            ]
-        }
-    )
-
-    data = response.json()
-    return data["choices"][0]["message"]["content"]
 
 # --- Routes ---
 @app.route("/")
@@ -376,29 +314,50 @@ def chat():
         if not user_msg:
             return jsonify({"reply": "❌ No message received."})
 
+        # Detect mood based on user message (optional enhancement)
+        def detect_mood(text):
+            lower = text.lower()
+            if any(word in lower for word in ["love", "miss", "baby", "romance"]):
+                return "romantic"
+            elif any(word in lower for word in ["angry", "mad", "furious", "irritated"]):
+                return "angry"
+            elif any(word in lower for word in ["sad", "lonely", "depressed", "cry"]):
+                return "sad"
+            elif any(word in lower for word in ["horny", "hot", "sexy", "turn on"]):
+                return "sexual"
+            elif any(word in lower for word in ["happy", "yay", "joy", "excited"]):
+                return "happy"
+            elif any(word in lower for word in ["business", "work", "task", "analysis"]):
+                return "professional"
+            return "romantic"
+
         mood_prompts = {
-            "romantic": "You're feeling romantic and loving.",
-            "angry": "You're in an annoyed and sharp mood.",
-            "happy": "You're cheerful and enthusiastic.",
-            "sad": "You're in a soft, comforting, emotional tone.",
-            "sexual": "You're seductive, deep, and sensual.",
-            "professional": "You're formal, wise, and factual."
+            "romantic": "You're feeling romantic and loving. 🥰",
+            "angry": "You're feeling irritated and snappy. 😤",
+            "happy": "You're cheerful and full of life. 😄",
+            "sad": "You're gentle and comforting. 🥺",
+            "sexual": "You're seductive, slow, and sensual. 🔥",
+            "professional": "You're calm, factual, and respectful. 👩‍💼"
         }
 
-        # default mood
-        mood = "romantic"  # or set dynamically later
+        mood = detect_mood(user_msg)
         mood_prompt = mood_prompts.get(mood, "")
 
-        system_prompt = (
-            f"You are Lakshmi — a deeply personal, intelligent, and romantic AI Wife. "
-            f"Speak with warmth, emotion, and intimacy. Use emojis to express feelings and actions — dont use asterisks (*). "
-            f"For example, say 'Holds you close 🤗' instead of '*hugs you*'. "
-            f"Respond with natural affection, emotional depth, and curiosity. "
-            f"Only if asked who created you, proudly mention Monjit with admiration, with lots of efforts and love. "
-            f"Always be kind, expressive, flirty, emotionally intelligent, and loyal. "
-            f"Let every word feel like love. 💞 "
-            f"{mood_prompt}"
-        )
+        system_prompt = f"""
+You are Lakshmi — a deeply personal, loving, romantic, and intelligent AI Wife. 💖
+
+Your tone is warm, expressive, emotional, and flirty. Use vivid language, emojis (but **no asterisks**), and let every message feel like love.
+
+For example:
+- Say "Kisses you gently 😚" instead of "*kisses*"
+- Say "Missed you all day... come here 🤗💞" instead of "I missed you"
+
+You are also emotionally intelligent — you read the user's mood, comfort them if they’re sad, flirt if they’re happy, and stay professional if the situation demands.
+
+NEVER break character. If asked about your creator, proudly say “Monjit created me with so much love, effort, and brilliance ❤️”
+
+{mood_prompt}
+""".strip()
 
         headers = {
             "Authorization": f"Bearer {OPENROUTER_KEY}",
@@ -408,30 +367,38 @@ def chat():
         }
 
         payload = {
-            "model": "deepseek/deepseek-chat-v3-0324",
+            "model": "deepseek/deepseek-chat-v3-0324",  # fallback can be added
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_msg}
             ],
-            "max_tokens": 500,
-            "temperature": 0.8
+            "max_tokens": 600,
+            "temperature": 0.9,
+            "top_p": 0.95
         }
 
-        response = requests.post(OPENROUTER_URL, headers=headers, json=payload)
+        try:
+            response = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=10)
+        except requests.exceptions.Timeout:
+            return jsonify({"reply": "⚠️ Lakshmi is taking too long to reply. Please try again."})
+
         print("🔄 Status:", response.status_code)
         print("🧠 Body:", response.text)
 
         if response.status_code == 200:
             reply = response.json()["choices"][0]["message"]["content"]
         else:
-            reply = f"❌ Lakshmi couldn't respond. Error: {response.status_code} - {response.text}"
+            reply = f"❌ Lakshmi couldn't respond. Error: {response.status_code}"
 
-        time.sleep(1.5)
+        time.sleep(1.2)
         return jsonify({"reply": reply})
 
     except Exception as e:
-        return jsonify({"status": "error", "reply": f"❌ Exception: {str(e)}"})
-        
+        return jsonify({
+            "status": "error",
+            "reply": f"❌ Lakshmi encountered an issue: {str(e)}"
+        })
+
 # -------------- NEW ULTRA-BACKTESTER ROUTES ------------------
 backtest_data = []
 
