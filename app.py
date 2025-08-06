@@ -10,6 +10,7 @@ import pandas as pd
 import re
 from urllib.parse import urlencode
 from utils import detect_mood_from_text  # optional helper for mood detection
+import yfinance as yf
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -154,6 +155,75 @@ Explain reasoning in 1 line
             "entry": extract_field(reply, "entry"),
             "sl": extract_field(reply, "stoploss"),
             "target": extract_field(reply, "target"),
+# === Detect F&O symbol from user input ===
+def extract_symbol_from_text(user_input):
+    input_lower = user_input.lower()
+    if "banknifty" in input_lower:
+        return "BANKNIFTY"
+    elif "nifty" in input_lower:
+        return "NIFTY"
+    elif "sensex" in input_lower:
+        return "SENSEX"
+    return None
+
+# === Get live LTP from Yahoo Finance ===
+def get_yfinance_ltp(symbol):
+    symbol_map = {
+        "NIFTY": "^NSEI",
+        "BANKNIFTY": "^NSEBANK",
+        "SENSEX": "^BSESN"
+    }
+
+    yf_symbol = symbol_map.get(symbol.upper())
+    if not yf_symbol:
+        return 0
+
+    try:
+        data = yf.Ticker(yf_symbol)
+        price = data.history(period="1d")["Close"].iloc[-1]
+        return round(price, 2)
+    except Exception as e:
+        print(f"[ERROR] Yahoo Finance fetch failed: {e}")
+        return 0
+
+# === Extract fields from Lakshmi AI response ===
+def extract_field(text, field):
+    match = re.search(f"{field}[:：]?\s*([\w.%-]+)", text, re.IGNORECASE)
+    return match.group(1) if match else "N/A"
+
+# === Lakshmi AI Analysis ===
+def analyze_with_neuron(price, symbol):
+    try:
+        prompt = f"""
+You are Lakshmi AI, an expert technical analyst.
+
+Symbol: {symbol}
+Live Price: ₹{price}
+
+Based on this, give:
+Signal (Bullish / Bearish / Reversal / Volatile)
+Confidence (0–100%)
+Entry
+Stoploss
+Target
+Explain reasoning in 1 line
+"""
+
+        response = requests.post(
+            "https://lakshmi-ai-trades.onrender.com/chat",
+            json={"message": prompt}
+        )
+
+        reply = response.json().get("reply", "No response")
+
+        return {
+            "symbol": symbol,
+            "price": price,
+            "signal": extract_field(reply, "signal"),
+            "confidence": extract_field(reply, "confidence"),
+            "entry": extract_field(reply, "entry"),
+            "sl": extract_field(reply, "stoploss"),
+            "target": extract_field(reply, "target"),
             "lakshmi_reply": reply,
             "time": time.strftime("%Y-%m-%d %H:%M:%S")
         }
@@ -167,7 +237,7 @@ Explain reasoning in 1 line
             "target": 0,
             "lakshmi_reply": str(e),
             "time": time.strftime("%Y-%m-%d %H:%M:%S")
-                                  }
+        }
 
 # --- Routes ---
 @app.route("/")
@@ -758,7 +828,7 @@ def neuron():
         if not symbol:
             return jsonify({"reply": "❌ Could not detect any valid symbol (like NIFTY, BANKNIFTY, SENSEX)."})
 
-        price = get_dhan_ltp(symbol)
+        price = get_yfinance_ltp(symbol)
         if price == 0:
             return jsonify({"reply": f"⚠️ Could not fetch real price for {symbol}. Try again later."})
 
