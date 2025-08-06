@@ -82,25 +82,38 @@ def extract_symbol_from_text(user_input):
         return "SENSEX"
     return None
 
-# === Get live LTP from Dhan API ===
+# === Get live LTP from Dhan using correct instrument token ===
 def get_dhan_ltp(symbol):
-    dhan_url = "https://api.dhan.co/market/live/quote"
-    headers = {
-        "access-token": "YOUR_DHAN_API_KEY",  # Replace with your real token
-        "Content-Type": "application/json"
+    dhan_tokens = {
+        "BANKNIFTY": "26009",  # Replace with correct token from Dhan Master List
+        "NIFTY": "26000",
+        "SENSEX": "1"
     }
-    payload = {"symbol": symbol}
+
+    instrument_token = dhan_tokens.get(symbol.upper())
+    if not instrument_token:
+        return 0
 
     try:
-        response = requests.post(dhan_url, json=payload, headers=headers)
+        url = f"https://api.dhan.co/market/live/{instrument_token}/quote"  # ✅ Corrected endpoint
+        headers = {
+            "access-token": "YOUR_DHAN_API_KEY",  # Replace with actual key
+            "Content-Type": "application/json"
+        }
+
+        response = requests.get(url, headers=headers)  # ✅ GET instead of POST
+
         if response.status_code == 200:
             data = response.json()
-            return float(data.get("ltp") or data.get("last_price") or 0)
+            # Adjust field based on actual Dhan response structure
+            return float(data.get("last_price") or data.get("ltp") or 0)
+
         else:
             print(f"[ERROR] Dhan API response {response.status_code}: {response.text}")
             return 0
+
     except Exception as e:
-        print(f"Error fetching LTP from Dhan: {e}")
+        print(f"[ERROR] Failed to fetch LTP: {e}")
         return 0
 
 # === Extract fields from Lakshmi AI response ===
