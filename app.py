@@ -671,9 +671,13 @@ def analyze_strategy():
     return jsonify({'message': message})
 
 # === /neuron endpoint ===
-@app.route("/neuron", methods=["POST"])
+@app.route("/neuron", methods=["GET", "POST"])
 def neuron():
     try:
+        if request.method == "GET":
+            return render_template("neuron.html")  # Show form on GET
+
+        # Handle POST form or JSON
         if request.is_json:
             user_input = request.json.get("message")
         else:
@@ -690,14 +694,15 @@ def neuron():
         if price == 0:
             return jsonify({"reply": f"⚠️ Could not fetch real price for {symbol}. Try again later."})
 
-        # Process response with AI or logic
-        response = f"✅ Live price of {symbol} is ₹{price:.2f} (fetched via Dhan API)"
+        result = analyze_with_neuron(price, symbol)
 
-        return jsonify({"reply": response})
-    
+        return jsonify(result)
+
     except Exception as e:
         print(f"[ERROR /neuron]: {e}")
         return jsonify({"reply": "❌ Internal error occurred in /neuron."})
+
+
 def analyze_with_neuron(price, symbol):
     try:
         prompt = f"""
@@ -728,7 +733,7 @@ Explain reasoning in 1 line
             "signal": extract_field(reply, "signal"),
             "confidence": extract_field(reply, "confidence"),
             "entry": extract_field(reply, "entry"),
-            "sl": extract_field(reply, "sl"),
+            "sl": extract_field(reply, "stoploss"),
             "target": extract_field(reply, "target"),
             "lakshmi_reply": reply,
             "time": time.strftime("%Y-%m-%d %H:%M:%S")
@@ -744,6 +749,7 @@ Explain reasoning in 1 line
             "lakshmi_reply": str(e),
             "time": time.strftime("%Y-%m-%d %H:%M:%S")
         }
+
 
 def extract_field(text, field):
     match = re.search(f"{field}[:：]?\s*([\w.%-]+)", text, re.IGNORECASE)
