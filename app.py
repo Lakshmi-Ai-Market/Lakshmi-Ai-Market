@@ -70,32 +70,56 @@ def save_user(username, password):
             writer.writerow(["username", "password"])
         writer.writerow([username, password])
 
+
 # === Detect F&O symbol from user input ===
 def extract_symbol_from_text(user_input):
     input_lower = user_input.lower()
     if "banknifty" in input_lower:
         return "BANKNIFTY"
-    elif "nifty" in input_lower:
+    elif "nifty" in input_lower and "bank" not in input_lower:
         return "NIFTY"
     elif "sensex" in input_lower:
         return "SENSEX"
     return None
 
+
 # === Get live LTP from Dhan API ===
 def get_dhan_ltp(symbol):
-    dhan_url = "https://api.dhan.co/market/live/quote"  # Update this if needed
+    # Mapping known index symbols to Dhan's internal token format
+    dhan_symbol_map = {
+        "NIFTY": "NSE_INDEX|NIFTY 50",
+        "BANKNIFTY": "NSE_INDEX|NIFTY BANK",
+        "SENSEX": "BSE_INDEX|SENSEX"
+    }
+
+    dhan_token = dhan_symbol_map.get(symbol.upper())
+    if not dhan_token:
+        return 0  # Symbol not mapped
+
+    url = f"https://api.dhan.co/market/feed/quotes/{dhan_token}"
     headers = {
-        "access-token": "YOUR_DHAN_API_KEY",  # Replace with your key if hardcoded
+        "access-token": "YOUR_DHAN_API_KEY",  # Replace with your actual Dhan token
+        "client-id": "YOUR_DHAN_CLIENT_ID",   # Replace with your actual Dhan client ID
         "Content-Type": "application/json"
     }
-    payload = {"symbol": symbol}
 
     try:
-        response = requests.post(dhan_url, json=payload, headers=headers)
+        response = requests.get(url, headers=headers)
         if response.status_code == 200:
             data = response.json()
-            return float(data.get("ltp") or data.get("last_price") or 0)
+
+            # Print raw response for debugging
+            print("Dhan API response:", data)
+
+            # Try different possible keys for LTP
+            ltp = (
+                data.get("dhan", {}).get("ltp") or
+                data.get("ltp") or
+                data.get("last_price")
+            )
+            return float(ltp or 0)
         else:
+            print("Dhan API failed:", response.status_code, response.text)
             return 0
     except Exception as e:
         print(f"Error fetching LTP: {e}")
