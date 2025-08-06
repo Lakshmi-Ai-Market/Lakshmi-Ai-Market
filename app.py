@@ -83,108 +83,25 @@ def extract_symbol_from_text(user_input):
         return "SENSEX"
     return None
 
-# === Get live LTP from Dhan using correct instrument token ===
-def get_dhan_ltp(symbol):
-    dhan_tokens = {
-        "BANKNIFTY": "26009",  # Replace with correct token from Dhan Master List
-        "NIFTY": "26000",
-        "SENSEX": "1"
-    }
-
-    instrument_token = dhan_tokens.get(symbol.upper())
-    if not instrument_token:
-        return 0
-
+# === Get live LTP using yfinance ===
+def get_yfinance_ltp(symbol):
     try:
-        url = f"https://api.dhan.co/market/live/{instrument_token}/quote"  # ✅ Corrected endpoint
-        headers = {
-            "access-token": "YOUR_DHAN_API_KEY",  # Replace with actual key
-            "Content-Type": "application/json"
+        yf_symbols = {
+            "BANKNIFTY": "^NSEBANK",
+            "NIFTY": "^NSEI",
+            "SENSEX": "^BSESN"
         }
 
-        response = requests.get(url, headers=headers)  # ✅ GET instead of POST
-
-        if response.status_code == 200:
-            data = response.json()
-            # Adjust field based on actual Dhan response structure
-            return float(data.get("last_price") or data.get("ltp") or 0)
-
-        else:
-            print(f"[ERROR] Dhan API response {response.status_code}: {response.text}")
+        yf_symbol = yf_symbols.get(symbol.upper())
+        if not yf_symbol:
             return 0
 
-    except Exception as e:
-        print(f"[ERROR] Failed to fetch LTP: {e}")
-        return 0
-
-# === Extract fields from Lakshmi AI response ===
-def extract_field(text, field):
-    match = re.search(f"{field}[:：]?\s*([\w.%-]+)", text, re.IGNORECASE)
-    return match.group(1) if match else "N/A"
-
-# === Lakshmi AI Analysis ===
-def analyze_with_neuron(price, symbol):
-    try:
-        prompt = f"""
-You are Lakshmi AI, an expert technical analyst.
-
-Symbol: {symbol}
-Live Price: ₹{price}
-
-Based on this, give:
-Signal (Bullish / Bearish / Reversal / Volatile)
-Confidence (0–100%)
-Entry
-Stoploss
-Target
-Explain reasoning in 1 line
-"""
-
-        response = requests.post(
-            "https://lakshmi-ai-trades.onrender.com/chat",
-            json={"message": prompt}
-        )
-
-        reply = response.json().get("reply", "No response")
-
-        return {
-            "symbol": symbol,
-            "price": price,
-            "signal": extract_field(reply, "signal"),
-            "confidence": extract_field(reply, "confidence"),
-            "entry": extract_field(reply, "entry"),
-            "sl": extract_field(reply, "stoploss"),
-            "target": extract_field(reply, "target"),
-        }
-# === Detect F&O symbol from user input ===
-def extract_symbol_from_text(user_input):
-    input_lower = user_input.lower()
-    if "banknifty" in input_lower:
-        return "BANKNIFTY"
-    elif "nifty" in input_lower:
-        return "NIFTY"
-    elif "sensex" in input_lower:
-        return "SENSEX"
-    return None
-
-# === Get live LTP from Yahoo Finance ===
-def get_yfinance_ltp(symbol):
-    symbol_map = {
-        "NIFTY": "^NSEI",
-        "BANKNIFTY": "^NSEBANK",
-        "SENSEX": "^BSESN"
-    }
-
-    yf_symbol = symbol_map.get(symbol.upper())
-    if not yf_symbol:
-        return 0
-
-    try:
         data = yf.Ticker(yf_symbol)
-        price = data.history(period="1d")["Close"].iloc[-1]
-        return round(price, 2)
+        price = data.fast_info["last_price"]
+        return float(price)
+
     except Exception as e:
-        print(f"[ERROR] Yahoo Finance fetch failed: {e}")
+        print(f"[ERROR] Failed to fetch LTP from yfinance: {e}")
         return 0
 
 # === Extract fields from Lakshmi AI response ===
