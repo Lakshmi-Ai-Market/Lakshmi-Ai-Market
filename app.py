@@ -70,6 +70,17 @@ def save_user(username, password):
             writer.writerow(["username", "password"])
         writer.writerow([username, password])
 
+# === Auto symbol detection from user text ===
+def extract_symbol_from_text(text):
+    text = text.lower()
+    if "banknifty" in text:
+        return "BANKNIFTY"
+    elif "nifty" in text:
+        return "NIFTY"
+    elif "sensex" in text:
+        return "SENSEX"
+    return None
+
 # --- Routes ---
 @app.route("/")
 def home():
@@ -643,47 +654,71 @@ def analyze_strategy():
 def neuron():
     if request.method == "POST":
         data = request.get_json(silent=True) or {}
-        try:
-            price = float(data.get("price", 0))
-        except (TypeError, ValueError):
-            return jsonify({"error": "Invalid price"}), 400
-        result = analyze_with_neuron(price)
+        user_input = data.get("symbol", "").strip()
+
+        symbol = extract_symbol_from_text(user_input)
+        if not symbol:
+            return jsonify({"error": "❌ No valid symbol found in input"}), 400
+
+        price = get_dhan_ltp(symbol)  # Your Dhan LTP fetcher
+        if price is None:
+            return jsonify({"error": f"❌ Failed to fetch live price for {symbol}"}), 500
+
+        result = analyze_with_neuron(price, symbol)
         return jsonify(result)
+
     return render_template("neuron.html")
-def analyze_with_neuron(price):
+
+def analyze_with_neuron(price, symbol):
     try:
-        if price % 7 == 0:
-            return {
-                "signal": "🔁 Reversal likely",
-                "confidence": 88,
-                "entry": price,
-                "sl": price - 50,
-                "target": price + 130
-            }
-        elif price % 2 == 0:
-            return {
-                "signal": "📈 Bullish",
-                "confidence": 92,
-                "entry": price,
-                "sl": price - 40,
-                "target": price + 100
-            }
-        else:
-            return {
-                "signal": "⚠️ Volatile Zone",
-                "confidence": 70,
-                "entry": price,
-                "sl": price - 60,
-                "target": price + 60
-            }
-    except:
+        prompt = f"""
+You are Lakshmi AI, an expert technical analyst.
+
+Symbol: {symbol}
+Live Price: ₹{price}
+
+Based on this, give:
+Signal (Bullish / Bearish / Reversal / Volatile)
+Confidence (0–100%)
+Entry
+Stoploss
+Target
+Explain reasoning in 1 line
+"""
+
+        response = requests.post(
+            "https://lakshmi-ai-trades.onrender.com/chat",
+            json={"message": prompt}
+        )
+
+        reply = response.json().get("reply", "No response")
+
         return {
-            "signal": "Error",
-            "confidence": 0,
-            "entry": price,
-            "sl": 0,
-            "target": 0
+            "symbol": symbol,
+            "price": price,
+            "signal": extract_field(reply, "signal"),
+            "confidence": extract_field(reply, "confidence"),
+            "entry": extract_field(reply, "entry"),
+            "sl": extract_field(reply, "sl"),
+            "target": extract_field(reply, "target"),
+            "lakshmi_reply": reply,
+            "time": time.strftime("%Y-%m-%d %H:%M:%S")
         }
+
+    except Exception as e:
+        return {
+            "signal": "❌ Error",
+            "confidence": 0,
+            "entry": 0,
+            "sl": 0,
+            "target": 0,
+            "lakshmi_reply": str(e),
+            "time": time.strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+def extract_field(text, field):
+    match = re.search(f"{field}[:：]?\s*([\w.%-]+)", text, re.IGNORECASE)
+    return match.group(1) if match else "N/A"
 
 @app.route("/strategy-switcher", methods=["GET"])
 def strategy_switcher_page():
