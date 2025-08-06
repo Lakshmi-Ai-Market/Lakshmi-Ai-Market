@@ -70,26 +70,36 @@ def save_user(username, password):
             writer.writerow(["username", "password"])
         writer.writerow([username, password])
 
-# === Auto symbol detection from user text ===
+# === Detect F&O symbol from user input ===
+def extract_symbol_from_text(user_input):
+    input_lower = user_input.lower()
+    if "banknifty" in input_lower:
+        return "BANKNIFTY"
+    elif "nifty" in input_lower:
+        return "NIFTY"
+    elif "sensex" in input_lower:
+        return "SENSEX"
+    return None
+
+# === Get live LTP from Dhan API ===
 def get_dhan_ltp(symbol):
+    dhan_url = "https://api.dhan.co/market/live/quote"  # Update this if needed
+    headers = {
+        "access-token": "YOUR_DHAN_API_KEY",  # Replace with your key if hardcoded
+        "Content-Type": "application/json"
+    }
+    payload = {"symbol": symbol}
+
     try:
-        headers = {
-            "accept": "application/json",
-            "access-token": "YOUR_DHAN_API_KEY"  # Replace with your token
-        }
-
-        url = f"https://api.dhan.co/market/feed/quote/{symbol}/NSE"  # or /BSE if needed
-        res = requests.get(url, headers=headers)
-
-        if res.status_code == 200:
-            data = res.json()
-            return float(data["last_traded_price"])
+        response = requests.post(dhan_url, json=payload, headers=headers)
+        if response.status_code == 200:
+            data = response.json()
+            return float(data.get("ltp") or data.get("last_price") or 0)
         else:
-            print("Dhan API error:", res.status_code, res.text)
-            return None
+            return 0
     except Exception as e:
-        print("Dhan fetch error:", e)
-        return None
+        print(f"Error fetching LTP: {e}")
+        return 0
 
 # --- Routes ---
 @app.route("/")
@@ -660,25 +670,34 @@ def analyze_strategy():
     """
     return jsonify({'message': message})
 
-@app.route("/neuron", methods=["GET", "POST"])
+# === /neuron endpoint ===
+@app.route("/neuron", methods=["POST"])
 def neuron():
-    if request.method == "POST":
-        data = request.get_json(silent=True) or {}
-        user_input = data.get("symbol", "").strip()
+    try:
+        if request.is_json:
+            user_input = request.json.get("message")
+        else:
+            user_input = request.form.get("message")
+
+        if not user_input:
+            return jsonify({"reply": "❌ No input received."})
 
         symbol = extract_symbol_from_text(user_input)
         if not symbol:
-            return jsonify({"error": "❌ No valid symbol found in input"}), 400
+            return jsonify({"reply": "❌ Could not detect any valid symbol (like NIFTY, BANKNIFTY, SENSEX)."})
 
-        price = get_dhan_ltp(symbol)  # Your Dhan LTP fetcher
-        if price is None:
-            return jsonify({"error": f"❌ Failed to fetch live price for {symbol}"}), 500
+        price = get_dhan_ltp(symbol)
+        if price == 0:
+            return jsonify({"reply": f"⚠️ Could not fetch real price for {symbol}. Try again later."})
 
-        result = analyze_with_neuron(price, symbol)
-        return jsonify(result)
+        # Process response with AI or logic
+        response = f"✅ Live price of {symbol} is ₹{price:.2f} (fetched via Dhan API)"
 
-    return render_template("neuron.html")
-
+        return jsonify({"reply": response})
+    
+    except Exception as e:
+        print(f"[ERROR /neuron]: {e}")
+        return jsonify({"reply": "❌ Internal error occurred in /neuron."})
 def analyze_with_neuron(price, symbol):
     try:
         prompt = f"""
