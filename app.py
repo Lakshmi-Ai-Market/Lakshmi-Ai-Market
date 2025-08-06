@@ -71,15 +71,25 @@ def save_user(username, password):
         writer.writerow([username, password])
 
 # === Auto symbol detection from user text ===
-def extract_symbol_from_text(text):
-    text = text.lower()
-    if "banknifty" in text:
-        return "BANKNIFTY"
-    elif "nifty" in text:
-        return "NIFTY"
-    elif "sensex" in text:
-        return "SENSEX"
-    return None
+def get_dhan_ltp(symbol):
+    try:
+        headers = {
+            "accept": "application/json",
+            "access-token": "YOUR_DHAN_API_KEY"  # Replace with your token
+        }
+
+        url = f"https://api.dhan.co/market/feed/quote/{symbol}/NSE"  # or /BSE if needed
+        res = requests.get(url, headers=headers)
+
+        if res.status_code == 200:
+            data = res.json()
+            return float(data["last_traded_price"])
+        else:
+            print("Dhan API error:", res.status_code, res.text)
+            return None
+    except Exception as e:
+        print("Dhan fetch error:", e)
+        return None
 
 # --- Routes ---
 @app.route("/")
