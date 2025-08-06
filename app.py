@@ -155,6 +155,7 @@ Explain reasoning in 1 line
             "entry": extract_field(reply, "entry"),
             "sl": extract_field(reply, "stoploss"),
             "target": extract_field(reply, "target"),
+        }
 # === Detect F&O symbol from user input ===
 def extract_symbol_from_text(user_input):
     input_lower = user_input.lower()
