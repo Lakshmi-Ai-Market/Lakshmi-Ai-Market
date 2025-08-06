@@ -29,7 +29,7 @@
 </head>
 <body>
   <h1>🧠 NEURON-EX MACHINA</h1>
-  <p>Enter any text (e.g. "banknifty", "nifty 19800"). Lakshmi will fetch live price and analyze:</p>
+  <p>Enter any symbol or text (e.g. <code>banknifty</code>, <code>sensex 71500</code>) and Lakshmi will do live analysis:</p>
   <input type="text" id="symbolInput" placeholder="e.g. BANKNIFTY" />
   <button onclick="submitSymbol()">🧠 Analyze</button>
 
@@ -37,33 +37,44 @@
 
   <script>
     async function submitSymbol() {
-      const symbol = document.getElementById("symbolInput").value;
-      const res = await fetch("/neuron", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ symbol: symbol })
-      });
-
-      const data = await res.json();
-
-      if (data.error) {
-        document.getElementById("resultBox").innerText = "❌ " + data.error;
+      const symbol = document.getElementById("symbolInput").value.trim();
+      if (!symbol) {
+        document.getElementById("resultBox").innerText = "❌ Please enter a symbol or text.";
         return;
       }
 
-      document.getElementById("resultBox").innerHTML = `
+      document.getElementById("resultBox").innerText = "⏳ Analyzing...";
+
+      try {
+        const res = await fetch("/neuron", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: symbol })
+        });
+
+        const data = await res.json();
+
+        if (data.reply && !data.symbol) {
+          document.getElementById("resultBox").innerText = data.reply;
+          return;
+        }
+
+        document.getElementById("resultBox").innerText = `
 Symbol: ${data.symbol}
 Live Price (LTP): ₹${data.price}
 Signal: ${data.signal}
-Confidence: ${data.confidence}%
+Confidence: ${data.confidence}
 Entry: ₹${data.entry}
-SL: ₹${data.sl}
+Stoploss: ₹${data.sl}
 Target: ₹${data.target}
 Time: ${data.time}
 
 Lakshmi says:
 ${data.lakshmi_reply}
-      `;
+        `.trim();
+      } catch (err) {
+        document.getElementById("resultBox").innerText = "❌ Failed to analyze. Please try again.";
+      }
     }
   </script>
 </body>
