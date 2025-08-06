@@ -23,33 +23,48 @@
       background: #000;
       padding: 15px;
       border: 1px solid #0f0;
+      white-space: pre-wrap;
     }
   </style>
 </head>
 <body>
   <h1>🧠 NEURON-EX MACHINA</h1>
-  <p>Enter any price. The neural AI will process, evolve, and remember it.</p>
-  <input type="number" id="priceInput" placeholder="Enter price" />
-  <button onclick="submitPrice()">Analyze</button>
+  <p>Enter any text (e.g. "banknifty", "nifty 19800"). Lakshmi will fetch live price and analyze:</p>
+  <input type="text" id="symbolInput" placeholder="e.g. BANKNIFTY" />
+  <button onclick="submitSymbol()">🧠 Analyze</button>
 
   <div class="result" id="resultBox">Awaiting input...</div>
 
   <script>
-    async function submitPrice() {
-      const price = document.getElementById("priceInput").value;
+    async function submitSymbol() {
+      const symbol = document.getElementById("symbolInput").value;
       const res = await fetch("/neuron", {
         method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ price: price })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ symbol: symbol })
       });
+
       const data = await res.json();
+
+      if (data.error) {
+        document.getElementById("resultBox").innerText = "❌ " + data.error;
+        return;
+      }
+
       document.getElementById("resultBox").innerHTML = `
-        <strong>Signal:</strong> ${data.signal}<br>
-        <strong>Confidence:</strong> ${data.confidence}%<br>
-        <strong>Memory Size:</strong> ${data.memory_size}<br>
-        <strong>Timestamp:</strong> ${data.time}
+Symbol: ${data.symbol}
+Live Price (LTP): ₹${data.price}
+Signal: ${data.signal}
+Confidence: ${data.confidence}%
+Entry: ₹${data.entry}
+SL: ₹${data.sl}
+Target: ₹${data.target}
+Time: ${data.time}
+
+Lakshmi says:
+${data.lakshmi_reply}
       `;
     }
   </script>
 </body>
-</html
+</html>
