@@ -76,54 +76,85 @@ def extract_symbol_from_text(user_input):
     input_lower = user_input.lower()
     if "banknifty" in input_lower:
         return "BANKNIFTY"
-    elif "nifty" in input_lower and "bank" not in input_lower:
+    elif "nifty" in input_lower:
         return "NIFTY"
     elif "sensex" in input_lower:
         return "SENSEX"
     return None
 
-
 # === Get live LTP from Dhan API ===
 def get_dhan_ltp(symbol):
-    # Mapping known index symbols to Dhan's internal token format
-    dhan_symbol_map = {
-        "NIFTY": "NSE_INDEX|NIFTY 50",
-        "BANKNIFTY": "NSE_INDEX|NIFTY BANK",
-        "SENSEX": "BSE_INDEX|SENSEX"
-    }
-
-    dhan_token = dhan_symbol_map.get(symbol.upper())
-    if not dhan_token:
-        return 0  # Symbol not mapped
-
-    url = f"https://api.dhan.co/market/feed/quotes/{dhan_token}"
+    dhan_url = "https://api.dhan.co/market/live/quote"
     headers = {
-        "access-token": "YOUR_DHAN_API_KEY",  # Replace with your actual Dhan token
-        "client-id": "YOUR_DHAN_CLIENT_ID",   # Replace with your actual Dhan client ID
+        "access-token": "YOUR_DHAN_API_KEY",  # Replace with your real token
         "Content-Type": "application/json"
     }
+    payload = {"symbol": symbol}
 
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.post(dhan_url, json=payload, headers=headers)
         if response.status_code == 200:
             data = response.json()
-
-            # Print raw response for debugging
-            print("Dhan API response:", data)
-
-            # Try different possible keys for LTP
-            ltp = (
-                data.get("dhan", {}).get("ltp") or
-                data.get("ltp") or
-                data.get("last_price")
-            )
-            return float(ltp or 0)
+            return float(data.get("ltp") or data.get("last_price") or 0)
         else:
-            print("Dhan API failed:", response.status_code, response.text)
+            print(f"[ERROR] Dhan API response {response.status_code}: {response.text}")
             return 0
     except Exception as e:
-        print(f"Error fetching LTP: {e}")
+        print(f"Error fetching LTP from Dhan: {e}")
         return 0
+
+# === Extract fields from Lakshmi AI response ===
+def extract_field(text, field):
+    match = re.search(f"{field}[:：]?\s*([\w.%-]+)", text, re.IGNORECASE)
+    return match.group(1) if match else "N/A"
+
+# === Lakshmi AI Analysis ===
+def analyze_with_neuron(price, symbol):
+    try:
+        prompt = f"""
+You are Lakshmi AI, an expert technical analyst.
+
+Symbol: {symbol}
+Live Price: ₹{price}
+
+Based on this, give:
+Signal (Bullish / Bearish / Reversal / Volatile)
+Confidence (0–100%)
+Entry
+Stoploss
+Target
+Explain reasoning in 1 line
+"""
+
+        response = requests.post(
+            "https://lakshmi-ai-trades.onrender.com/chat",
+            json={"message": prompt}
+        )
+
+        reply = response.json().get("reply", "No response")
+
+        return {
+            "symbol": symbol,
+            "price": price,
+            "signal": extract_field(reply, "signal"),
+            "confidence": extract_field(reply, "confidence"),
+            "entry": extract_field(reply, "entry"),
+            "sl": extract_field(reply, "stoploss"),
+            "target": extract_field(reply, "target"),
+            "lakshmi_reply": reply,
+            "time": time.strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+    except Exception as e:
+        return {
+            "signal": "❌ Error",
+            "confidence": 0,
+            "entry": 0,
+            "sl": 0,
+            "target": 0,
+            "lakshmi_reply": str(e),
+            "time": time.strftime("%Y-%m-%d %H:%M:%S")
+                                  }
 
 # --- Routes ---
 @app.route("/")
@@ -699,9 +730,9 @@ def analyze_strategy():
 def neuron():
     try:
         if request.method == "GET":
-            return render_template("neuron.html")  # Show form on GET
+            return render_template("neuron.html")
 
-        # Handle POST form or JSON
+        # Handle POST (form or JSON)
         if request.is_json:
             user_input = request.json.get("message")
         else:
@@ -719,65 +750,11 @@ def neuron():
             return jsonify({"reply": f"⚠️ Could not fetch real price for {symbol}. Try again later."})
 
         result = analyze_with_neuron(price, symbol)
-
         return jsonify(result)
 
     except Exception as e:
         print(f"[ERROR /neuron]: {e}")
         return jsonify({"reply": "❌ Internal error occurred in /neuron."})
-
-
-def analyze_with_neuron(price, symbol):
-    try:
-        prompt = f"""
-You are Lakshmi AI, an expert technical analyst.
-
-Symbol: {symbol}
-Live Price: ₹{price}
-
-Based on this, give:
-Signal (Bullish / Bearish / Reversal / Volatile)
-Confidence (0–100%)
-Entry
-Stoploss
-Target
-Explain reasoning in 1 line
-"""
-
-        response = requests.post(
-            "https://lakshmi-ai-trades.onrender.com/chat",
-            json={"message": prompt}
-        )
-
-        reply = response.json().get("reply", "No response")
-
-        return {
-            "symbol": symbol,
-            "price": price,
-            "signal": extract_field(reply, "signal"),
-            "confidence": extract_field(reply, "confidence"),
-            "entry": extract_field(reply, "entry"),
-            "sl": extract_field(reply, "stoploss"),
-            "target": extract_field(reply, "target"),
-            "lakshmi_reply": reply,
-            "time": time.strftime("%Y-%m-%d %H:%M:%S")
-        }
-
-    except Exception as e:
-        return {
-            "signal": "❌ Error",
-            "confidence": 0,
-            "entry": 0,
-            "sl": 0,
-            "target": 0,
-            "lakshmi_reply": str(e),
-            "time": time.strftime("%Y-%m-%d %H:%M:%S")
-        }
-
-
-def extract_field(text, field):
-    match = re.search(f"{field}[:：]?\s*([\w.%-]+)", text, re.IGNORECASE)
-    return match.group(1) if match else "N/A"
 
 @app.route("/strategy-switcher", methods=["GET"])
 def strategy_switcher_page():
