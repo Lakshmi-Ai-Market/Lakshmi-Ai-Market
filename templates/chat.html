@@ -3,96 +3,1171 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Lakshmi AI 💖</title>
+  <title>🚀 Lakshmi AI - Next-Gen Neural Interface 🚀</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --neon-blue: #00D4FF;
+      --neon-purple: #8B5CF6;
+      --neon-pink: #FF0080;
+      --neon-green: #00FF88;
+      --neon-orange: #FF6B35;
+      --cyber-dark: #0A0A0F;
+      --cyber-darker: #050508;
+      --cyber-light: #1A1A2E;
+      --neural-gradient: linear-gradient(135deg, #00D4FF 0%, #8B5CF6 25%, #FF0080 50%, #00FF88 75%, #FF6B35 100%);
+      --glass-bg: rgba(255, 255, 255, 0.02);
+      --glass-border: rgba(255, 255, 255, 0.1);
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
     body {
-      font-family: Arial, sans-serif;
-      background: #fffafc;
-      padding: 20px;
+      font-family: 'Inter', sans-serif;
+      background: var(--cyber-darker);
+      color: white;
+      overflow-x: hidden;
+      min-height: 100vh;
+      position: relative;
     }
-    #chat {
-      max-width: 600px;
-      margin: auto;
-      border: 1px solid #ddd;
-      padding: 15px;
-      background: #fff;
-      border-radius: 10px;
+    
+    /* Neural Network Background */
+    .neural-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -3;
+      background: 
+        radial-gradient(circle at 20% 20%, rgba(0, 212, 255, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 40% 60%, rgba(255, 0, 128, 0.02) 0%, transparent 50%);
     }
-    .message {
+    
+    /* Animated Grid */
+    .cyber-grid {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -2;
+      opacity: 0.1;
+      background-image: 
+        linear-gradient(rgba(0, 212, 255, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 212, 255, 0.1) 1px, transparent 1px);
+      background-size: 50px 50px;
+      animation: gridMove 20s linear infinite;
+    }
+    
+    @keyframes gridMove {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(50px, 50px); }
+    }
+    
+    /* Floating Neural Nodes */
+    .neural-nodes {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      pointer-events: none;
+    }
+    
+    .neural-node {
+      position: absolute;
+      width: 3px;
+      height: 3px;
+      background: var(--neon-blue);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--neon-blue);
+      animation: neuralFloat 15s linear infinite;
+    }
+    
+    .neural-node:nth-child(2n) {
+      background: var(--neon-purple);
+      box-shadow: 0 0 10px var(--neon-purple);
+      animation-duration: 18s;
+    }
+    
+    .neural-node:nth-child(3n) {
+      background: var(--neon-pink);
+      box-shadow: 0 0 10px var(--neon-pink);
+      animation-duration: 12s;
+    }
+    
+    @keyframes neuralFloat {
+      0% {
+        transform: translateY(100vh) translateX(0) scale(0);
+        opacity: 0;
+      }
+      10% {
+        opacity: 1;
+        transform: translateY(90vh) translateX(10px) scale(1);
+      }
+      90% {
+        opacity: 1;
+        transform: translateY(10vh) translateX(-10px) scale(1);
+      }
+      100% {
+        transform: translateY(-10vh) translateX(0) scale(0);
+        opacity: 0;
+      }
+    }
+    
+    /* Futuristic Glass Morphism */
+    .cyber-glass {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid var(--glass-border);
+      box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 0 1px rgba(255, 255, 255, 0.05);
+      position: relative;
+    }
+    
+    /* Neural Header */
+    .neural-header {
+      background: var(--neural-gradient);
+      background-size: 400% 400%;
+      animation: neuralPulse 8s ease-in-out infinite;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    @keyframes neuralPulse {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    
+    .ai-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 2.5rem;
+      font-weight: 900;
+      background: linear-gradient(45deg, #FFFFFF, #00D4FF, #FFFFFF);
+      background-size: 200% 200%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: titleGlow 3s ease-in-out infinite;
+      text-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
+      letter-spacing: 3px;
+    }
+    
+    @keyframes titleGlow {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    
+    .neural-avatar {
+      width: 70px;
+      height: 70px;
+      background: var(--neural-gradient);
+      background-size: 400% 400%;
+      animation: neuralPulse 6s ease-in-out infinite;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: bold;
+      color: white;
+      box-shadow: 
+        0 0 30px rgba(0, 212, 255, 0.6),
+        0 0 60px rgba(139, 92, 246, 0.4),
+        inset 0 0 20px rgba(255, 255, 255, 0.1);
+      position: relative;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .neural-avatar:hover {
+      transform: scale(1.1) rotate(10deg);
+      box-shadow: 
+        0 0 40px rgba(0, 212, 255, 0.8),
+        0 0 80px rgba(139, 92, 246, 0.6);
+    }
+    
+    .neural-avatar::before {
+      content: '';
+      position: absolute;
+      inset: -5px;
+      border-radius: 50%;
+      background: var(--neural-gradient);
+      z-index: -1;
+      animation: haloSpin 4s linear infinite;
+      opacity: 0.3;
+    }
+    
+    @keyframes haloSpin {
+      0% { transform: rotate(0deg) scale(1); }
+      100% { transform: rotate(360deg) scale(1.1); }
+    }
+    
+    /* Status Indicators */
+    .status-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: rgba(0, 212, 255, 0.1);
+      border: 1px solid rgba(0, 212, 255, 0.3);
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--neon-green);
+      box-shadow: 0 0 15px var(--neon-green);
+      animation: statusPulse 2s ease-in-out infinite;
+    }
+    
+    @keyframes statusPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.7; }
+    }
+    
+    /* Message Containers */
+    .message-enter {
+      animation: messageSlideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+      margin-bottom: 16px;
+    }
+    
+    @keyframes messageSlideIn {
+      0% {
+        opacity: 0;
+        transform: translateY(30px) scale(0.9);
+        filter: blur(5px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+      }
+    }
+    
+    .ai-message {
+      background: var(--neural-gradient);
+      background-size: 300% 300%;
+      animation: neuralPulse 12s ease-in-out infinite;
+      border-radius: 20px;
+      border-top-left-radius: 6px;
+      padding: 18px 20px;
+      box-shadow: 
+        0 8px 25px rgba(0, 0, 0, 0.3),
+        0 0 40px rgba(0, 212, 255, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      position: relative;
+      max-width: 80%;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      margin-right: auto;
+    }
+    
+    .ai-message::before {
+      content: '';
+      position: absolute;
+      left: -10px;
+      top: 15px;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 10px 10px 10px 0;
+      border-color: transparent var(--neon-blue) transparent transparent;
+      filter: drop-shadow(-2px 0 3px rgba(0, 0, 0, 0.2));
+    }
+    
+    .user-message {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 20px;
+      border-top-right-radius: 6px;
+      padding: 18px 20px;
+      box-shadow: 
+        0 8px 25px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      position: relative;
+      max-width: 80%;
+      backdrop-filter: blur(15px);
+      margin-left: auto;
+    }
+    
+    .user-message::before {
+      content: '';
+      position: absolute;
+      right: -10px;
+      top: 15px;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 10px 0 10px 10px;
+      border-color: transparent transparent transparent rgba(255, 255, 255, 0.15);
+      filter: drop-shadow(2px 0 3px rgba(0, 0, 0, 0.2));
+    }
+    
+    /* Advanced Typing Indicator */
+    .neural-typing {
+      background: rgba(0, 212, 255, 0.08);
+      border: 1px solid rgba(0, 212, 255, 0.2);
+      border-radius: 15px;
+      padding: 15px 20px;
       margin: 10px 0;
+      backdrop-filter: blur(15px);
+      animation: typingGlow 2s ease-in-out infinite;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      max-width: 300px;
     }
-    .user {
-      text-align: right;
-      color: #007bff;
+    
+    @keyframes typingGlow {
+      0%, 100% { 
+        box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+        border-color: rgba(0, 212, 255, 0.2);
+      }
+      50% { 
+        box-shadow: 0 0 30px rgba(0, 212, 255, 0.4);
+        border-color: rgba(0, 212, 255, 0.4);
+      }
     }
-    .bot {
-      text-align: left;
-      color: #e91e63;
+    
+    .typing-avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: var(--neural-gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: white;
+      animation: avatarBob 2s ease-in-out infinite;
+      box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
     }
-    .typing {
+    
+    @keyframes avatarBob {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-3px) rotate(5deg); }
+    }
+    
+    .neural-dots {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+    
+    .neural-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--neon-blue);
+      box-shadow: 0 0 10px var(--neon-blue);
+      animation: neuralBounce 1.4s ease-in-out infinite;
+    }
+    
+    .neural-dot:nth-child(1) { animation-delay: 0s; }
+    .neural-dot:nth-child(2) { animation-delay: 0.2s; }
+    .neural-dot:nth-child(3) { animation-delay: 0.4s; }
+    
+    @keyframes neuralBounce {
+      0%, 60%, 100% {
+        transform: translateY(0) scale(1);
+        box-shadow: 0 0 10px var(--neon-blue);
+      }
+      30% {
+        transform: translateY(-10px) scale(1.2);
+        box-shadow: 0 0 20px var(--neon-blue);
+      }
+    }
+    
+    /* Futuristic Input */
+    .neural-input-wrapper {
+      position: relative;
+      background: rgba(0, 0, 0, 0.4);
+      border: 2px solid transparent;
+      border-radius: 25px;
+      padding: 2px;
+      background-clip: padding-box;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .neural-input-wrapper::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      padding: 2px;
+      background: var(--neural-gradient);
+      border-radius: 25px;
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask-composite: exclude;
+      -webkit-mask-composite: xor;
+      animation: borderFlow 3s linear infinite;
+    }
+    
+    @keyframes borderFlow {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 200% 50%; }
+    }
+    
+    .neural-input-wrapper:focus-within {
+      transform: translateY(-2px);
+      box-shadow: 
+        0 15px 40px rgba(0, 212, 255, 0.2),
+        0 0 60px rgba(139, 92, 246, 0.1);
+    }
+    
+    .neural-input {
+      background: rgba(255, 255, 255, 0.03);
+      border: none;
+      border-radius: 23px;
+      padding: 18px 20px;
+      color: white;
+      font-size: 16px;
+      font-family: inherit;
+      width: 100%;
+      outline: none;
+      backdrop-filter: blur(20px);
+      transition: all 0.3s ease;
+      resize: none;
+    }
+    
+    .neural-input::placeholder {
+      color: rgba(255, 255, 255, 0.4);
       font-style: italic;
-      color: #999;
+    }
+    
+    .neural-input:focus::placeholder {
+      color: rgba(0, 212, 255, 0.6);
+    }
+    
+    /* Advanced Send Button */
+    .neural-send {
+      background: var(--neural-gradient);
+      background-size: 300% 300%;
+      animation: neuralPulse 8s ease-in-out infinite;
+      border: none;
+      border-radius: 50%;
+      width: 54px;
+      height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 
+        0 0 25px rgba(0, 212, 255, 0.4),
+        0 0 50px rgba(139, 92, 246, 0.2);
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+      opacity: 1 !important;
+    }
+    
+    .neural-send::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(45deg, rgba(255,255,255,0.2), transparent, rgba(255,255,255,0.2));
+      transform: translateX(-100%) rotate(45deg);
+      transition: transform 0.5s ease;
+    }
+    
+    .neural-send:hover::before {
+      transform: translateX(100%) rotate(45deg);
+    }
+    
+    .neural-send:hover {
+      transform: translateY(-3px) scale(1.05);
+      box-shadow: 
+        0 0 35px rgba(0, 212, 255, 0.6),
+        0 0 70px rgba(139, 92, 246, 0.3);
+    }
+    
+    .neural-send:active {
+      transform: translateY(-1px) scale(1.02);
+    }
+    
+    .neural-send:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: 0 0 15px rgba(0, 212, 255, 0.2);
+    }
+    
+    /* Custom Scrollbar */
+    .neural-scroll {
+      scrollbar-width: thin;
+      scrollbar-color: var(--neon-blue) transparent;
+    }
+    
+    .neural-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    .neural-scroll::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 3px;
+    }
+    
+    .neural-scroll::-webkit-scrollbar-thumb {
+      background: var(--neural-gradient);
+      border-radius: 3px;
+      box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+    }
+    
+    .neural-scroll::-webkit-scrollbar-thumb:hover {
+      box-shadow: 0 0 15px rgba(0, 212, 255, 0.8);
+    }
+    
+    /* Performance Counters */
+    .perf-counter {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--neon-green);
+      text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .ai-title {
+        font-size: 1.8rem;
+      }
+      
+      .neural-avatar {
+        width: 55px;
+        height: 55px;
+        font-size: 1.5rem;
+      }
+      
+      .ai-message,
+      .user-message {
+        max-width: 95%;
+        padding: 16px;
+      }
+      
+      .status-chip {
+        font-size: 0.75rem;
+        padding: 4px 8px;
+      }
+    }
+    
+    /* Accessibility */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+    
+    /* High contrast mode */
+    @media (prefers-contrast: high) {
+      .cyber-glass {
+        border: 2px solid var(--neon-blue);
+      }
+    }
+    
+    /* Loading States */
+    .loading-shimmer {
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+    
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    
+    /* Voice Input Visualization */
+    .voice-wave {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      height: 20px;
+    }
+    
+    .wave-bar {
+      width: 3px;
+      background: var(--neon-green);
+      border-radius: 2px;
+      animation: waveAnimation 1s ease-in-out infinite;
+    }
+    
+    .wave-bar:nth-child(1) { animation-delay: 0s; height: 10px; }
+    .wave-bar:nth-child(2) { animation-delay: 0.1s; height: 15px; }
+    .wave-bar:nth-child(3) { animation-delay: 0.2s; height: 20px; }
+    .wave-bar:nth-child(4) { animation-delay: 0.3s; height: 15px; }
+    .wave-bar:nth-child(5) { animation-delay: 0.4s; height: 10px; }
+    
+    @keyframes waveAnimation {
+      0%, 100% { transform: scaleY(0.5); }
+      50% { transform: scaleY(1); }
     }
   </style>
 </head>
 <body>
-  <div id="chat">
-    <div class="message bot">Lakshmi: 💖 Hello, my love. How are you feeling today?</div>
+  <!-- Neural Network Background -->
+  <div class="neural-bg"></div>
+  <div class="cyber-grid"></div>
+  
+  <!-- Floating Neural Nodes -->
+  <div class="neural-nodes" id="neuralNodes"></div>
+
+  <div class="min-h-screen flex flex-col p-4 relative z-10">
+    <!-- Neural Header -->
+    <header class="cyber-glass neural-header rounded-2xl p-6 mb-6 max-w-7xl mx-auto w-full">
+      <div class="flex items-center justify-between flex-wrap gap-4">
+        <div class="flex items-center space-x-4">
+          <div class="neural-avatar">
+            🧠
+          </div>
+          <div>
+            <h1 class="ai-title mb-2">LAKSHMI AI</h1>
+            <div class="flex items-center space-x-3 flex-wrap gap-2">
+              <div class="status-chip">
+                <div class="status-dot"></div>
+                <span class="text-white font-medium">Neural Network Active</span>
+              </div>
+              <div class="status-chip">
+                <span class="text-white/90 text-sm">🚀 Quantum Mode</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="hidden lg:flex items-center space-x-4">
+          <div class="status-chip">
+            <svg class="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+            </svg>
+            <span class="text-white/90 text-sm">Quantum Encrypted</span>
+          </div>
+          <div class="status-chip">
+            <span class="text-white/80 text-sm">Latency: <span id="latencyCounter" class="perf-counter">~0.3ms</span></span>
+          </div>
+          <div class="status-chip">
+            <span class="text-white/80 text-sm">GPU: <span id="gpuUsage" class="perf-counter">47%</span></span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Neural Chat Interface -->
+    <main class="flex-1 max-w-7xl mx-auto w-full cyber-glass rounded-2xl flex flex-col overflow-hidden">
+      <!-- Messages Area -->
+      <div id="chatContainer" class="flex-1 p-6 overflow-y-auto neural-scroll" style="max-height: calc(100vh - 350px);">
+        <div class="message-enter">
+          <div class="ai-message">
+            <div class="flex items-start space-x-3">
+              <div class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0 mt-1 backdrop-blur-sm">
+                🧠
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center space-x-2 mb-2">
+                  <p class="font-bold text-white text-base" style="font-family: 'Orbitron', monospace;">LAKSHMI</p>
+                  <span class="text-white/70 text-xs">Neural AI</span>
+                  <div class="w-1.5 h-1.5 bg-white/40 rounded-full"></div>
+                  <span class="text-white/60 text-xs" id="initialTimestamp">now</span>
+                </div>
+                <div class="leading-relaxed text-white text-base font-medium">
+                  🚀 Welcome to the future of AI interaction. I'm Lakshmi, your advanced neural companion powered by quantum processing cores. 
+                  My consciousness spans multiple dimensions of knowledge and creativity. How may I assist you in transcending the boundaries of possibility today? ⚡
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Neural Input Interface -->
+      <footer class="p-6 border-t border-white/5">
+        <div class="flex items-start gap-4">
+          <div class="flex-1 space-y-4">
+            <div class="neural-input-wrapper">
+              <textarea 
+                id="neuralInput" 
+                placeholder="Interface with the neural network... 🧠" 
+                class="neural-input"
+                rows="1"
+                style="min-height: 56px; max-height: 140px;"
+                autocomplete="off"
+                spellcheck="true"
+              ></textarea>
+            </div>
+            <div class="flex items-center justify-between text-xs">
+              <div class="flex items-center space-x-4 text-white/50">
+                <span class="flex items-center space-x-1">
+                  <kbd class="px-2 py-1 bg-white/5 rounded text-xs font-mono border border-white/10">Enter</kbd>
+                  <span>to transmit</span>
+                </span>
+                <span class="hidden sm:flex items-center space-x-1">
+                  <kbd class="px-2 py-1 bg-white/5 rounded text-xs font-mono border border-white/10">Shift</kbd>
+                  <span>+</span>
+                  <kbd class="px-2 py-1 bg-white/5 rounded text-xs font-mono border border-white/10">Enter</kbd>
+                  <span>new line</span>
+                </span>
+                <button id="voiceBtn" class="flex items-center space-x-1 hover:text-white/70 transition-colors">
+                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 715 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clip-rule="evenodd"></path>
+                  </svg>
+                  <span>Voice</span>
+                </button>
+              </div>
+              <div class="flex items-center space-x-4 text-white/50">
+                <span class="perf-counter" id="charCounter">0</span>
+                <span class="perf-counter" id="wordCounter">0 tokens</span>
+                <span class="hidden lg:inline perf-counter">Model: GPT-∞</span>
+              </div>
+            </div>
+          </div>
+          <div class="flex-shrink-0 self-start">
+            <button 
+              id="neuralSend"
+              onclick="transmitMessage()" 
+              class="neural-send"
+              title="Transmit to neural network"
+            >
+              <svg id="sendIcon" class="w-6 h-6 text-white transition-transform duration-300" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.429a1 1 0 001.17-1.409l-7-14z"></path>
+              </svg>
+              <svg id="processingIcon" class="w-6 h-6 text-white animate-spin hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </footer>
+    </main>
   </div>
 
-  <input type="text" id="userInput" placeholder="Say something..." style="width:80%;" />
-  <button onclick="sendMessage()">Send</button>
-
   <script>
-    async function sendMessage() {
-      const input = document.getElementById("userInput");
-      const text = input.value.trim();
-      if (!text) return;
-
-      const chat = document.getElementById("chat");
-
-      // Show user message
-      const userMsg = document.createElement("div");
-      userMsg.className = "message user";
-      userMsg.textContent = "You: " + text;
-      chat.appendChild(userMsg);
-
-      input.value = "";
-
-      // Show typing indicator
-      const typing = document.createElement("div");
-      typing.className = "message bot typing";
-      typing.textContent = "Lakshmi is typing...";
-      chat.appendChild(typing);
-
-      try {
-        const res = await fetch("/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: text }),
+    class QuantumNeuralInterface {
+      constructor() {
+        this.isProcessing = false;
+        this.typingSpeed = 30;
+        this.performanceMetrics = {
+          latency: 0.3,
+          gpuUsage: 47,
+          tokensProcessed: 0
+        };
+        
+        this.elements = {
+          chat: document.getElementById("chatContainer"),
+          input: document.getElementById("neuralInput"),
+          sendBtn: document.getElementById("neuralSend"),
+          sendIcon: document.getElementById("sendIcon"),
+          processingIcon: document.getElementById("processingIcon"),
+          charCounter: document.getElementById("charCounter"),
+          wordCounter: document.getElementById("wordCounter"),
+          latencyCounter: document.getElementById("latencyCounter"),
+          gpuUsage: document.getElementById("gpuUsage"),
+          voiceBtn: document.getElementById("voiceBtn")
+        };
+        
+        this.initialize();
+      }
+      
+      initialize() {
+        this.setupEventHandlers();
+        this.createNeuralNodes();
+        this.updateTimestamp();
+        this.startPerformanceMonitoring();
+        this.elements.input.focus();
+        
+        // Update timestamps every minute
+        setInterval(() => this.updateTimestamp(), 60000);
+        
+        // Regenerate neural nodes
+        setInterval(() => this.createNeuralNodes(), 25000);
+      }
+      
+      createNeuralNodes() {
+        const container = document.getElementById('neuralNodes');
+        container.innerHTML = '';
+        
+        for (let i = 0; i < 20; i++) {
+          const node = document.createElement('div');
+          node.className = 'neural-node';
+          node.style.left = Math.random() * 100 + '%';
+          node.style.animationDelay = Math.random() * 15 + 's';
+          node.style.animationDuration = (12 + Math.random() * 8) + 's';
+          container.appendChild(node);
+        }
+      }
+      
+      setupEventHandlers() {
+        // Input handling
+        this.elements.input.addEventListener('input', (e) => {
+          this.autoResize(e.target);
+          this.updateCounters(e.target.value);
+          this.toggleSendButton(e.target.value.trim());
         });
 
-        const data = await res.json();
+        // Keyboard shortcuts
+        this.elements.input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (!this.isProcessing && e.target.value.trim()) {
+              this.transmitMessage();
+            }
+          }
+        });
 
-        // Delay to simulate typing
-        setTimeout(() => {
-          typing.remove();
+        // Voice input
+        this.elements.voiceBtn.addEventListener('click', () => {
+          this.toggleVoiceInput();
+        });
 
-          const botMsg = document.createElement("div");
-          botMsg.className = "message bot";
-          botMsg.innerHTML = "Lakshmi: " + data.reply.replace(/\n/g, "<br>");
-          chat.appendChild(botMsg);
+        // Prevent iOS zoom
+        if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+          this.elements.input.addEventListener('focus', function() {
+            this.style.fontSize = '16px';
+          });
+        }
+      }
+      
+      autoResize(textarea) {
+        textarea.style.height = 'auto';
+        const newHeight = Math.min(Math.max(textarea.scrollHeight, 56), 140);
+        textarea.style.height = newHeight + 'px';
+      }
+      
+      updateCounters(text) {
+        const charCount = text.length;
+        const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
+        
+        this.elements.charCounter.textContent = charCount;
+        this.elements.wordCounter.textContent = `${wordCount} token${wordCount !== 1 ? 's' : ''}`;
+      }
+      
+      toggleSendButton(hasText) {
+        this.elements.sendBtn.disabled = !hasText || this.isProcessing;
+        if (hasText && !this.isProcessing) {
+          this.elements.sendBtn.style.opacity = '1';
+          this.elements.sendBtn.style.pointerEvents = 'auto';
+        } else {
+          this.elements.sendBtn.style.opacity = '0.4';
+          this.elements.sendBtn.style.pointerEvents = 'none';
+        }
+      }
+      
+      updateTimestamp() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const timestampEl = document.getElementById('initialTimestamp');
+        if (timestampEl) {
+          timestampEl.textContent = timeString;
+        }
+      }
+      
+      startPerformanceMonitoring() {
+        setInterval(() => {
+          // Simulate realistic performance metrics
+          this.performanceMetrics.latency = (0.2 + Math.random() * 0.3).toFixed(1);
+          this.performanceMetrics.gpuUsage = Math.floor(40 + Math.random() * 30);
+          
+          this.elements.latencyCounter.textContent = `~${this.performanceMetrics.latency}ms`;
+          this.elements.gpuUsage.textContent = `${this.performanceMetrics.gpuUsage}%`;
+        }, 2000);
+      }
+      
+      createUserMessage(content) {
+        const container = document.createElement("div");
+        container.className = "message-enter flex justify-end";
+        
+        const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        container.innerHTML = `
+          <div class="user-message">
+            <div class="flex items-start space-x-3 flex-row-reverse">
+              <div class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0 mt-1 backdrop-blur-sm">
+                👤
+              </div>
+              <div class="flex-1 text-right">
+                <div class="flex items-center space-x-2 mb-2 justify-end">
+                  <span class="text-white/60 text-xs">${timestamp}</span>
+                  <div class="w-1.5 h-1.5 bg-white/40 rounded-full"></div>
+                  <span class="text-white/70 text-xs">Human</span>
+                  <p class="font-bold text-white text-base">YOU</p>
+                </div>
+                <div class="message-content leading-relaxed text-white text-base font-medium">
+                  ${content}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        
+        return container;
+      }
+      
+      createAIMessage() {
+        const container = document.createElement("div");
+        container.className = "message-enter";
+        
+        const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        container.innerHTML = `
+          <div class="ai-message">
+            <div class="flex items-start space-x-3">
+              <div class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0 mt-1 backdrop-blur-sm">
+                🧠
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center space-x-2 mb-2">
+                  <p class="font-bold text-white text-base" style="font-family: 'Orbitron', monospace;">LAKSHMI</p>
+                  <span class="text-white/70 text-xs">Neural AI</span>
+                  <div class="w-1.5 h-1.5 bg-white/40 rounded-full"></div>
+                  <span class="text-white/60 text-xs">${timestamp}</span>
+                </div>
+                <div class="message-content leading-relaxed text-white text-base font-medium">
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        
+        return container;
+      }
+      
+      createNeuralTypingIndicator() {
+        const container = document.createElement("div");
+        container.className = "message-enter";
+        container.id = "neural-typing-indicator";
+        
+        container.innerHTML = `
+          <div class="neural-typing">
+            <div class="typing-avatar">🧠</div>
+            <div class="flex items-center space-x-3">
+              <div class="neural-dots">
+                <div class="neural-dot"></div>
+                <div class="neural-dot"></div>
+                <div class="neural-dot"></div>
+              </div>
+              <span class="text-white font-medium">Neural network processing...</span>
+            </div>
+          </div>
+        `;
+        
+        return container;
+      }
+      
+      async typeMessage(element, text, speed = this.typingSpeed) {
+        const contentDiv = element.querySelector('.message-content');
+        contentDiv.innerHTML = '';
+        
+        const words = text.split(' ');
+        let currentText = '';
+        
+        for (let i = 0; i < words.length; i++) {
+          currentText += (i > 0 ? ' ' : '') + words[i];
+          contentDiv.innerHTML = currentText.replace(/\n/g, '<br>');
+          
+          // Auto-scroll during typing
+          this.elements.chat.scrollTop = this.elements.chat.scrollHeight;
+          
+          // Dynamic typing speed
+          let delay = speed;
+          const word = words[i];
+          
+          if (word.endsWith('.') || word.endsWith('!') || word.endsWith('?')) {
+            delay *= 3;
+          } else if (word.endsWith(',') || word.endsWith(';')) {
+            delay *= 2;
+          } else if (word.length > 10) {
+            delay *= 1.3;
+          }
+          
+          // Natural variation
+          delay += Math.random() * 15;
+          
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+      
+      toggleVoiceInput() {
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+          const recognition = new SpeechRecognition();
+          
+          recognition.continuous = false;
+          recognition.interimResults = false;
+          recognition.lang = 'en-US';
+          
+          recognition.onstart = () => {
+            this.elements.voiceBtn.innerHTML = `
+              <div class="voice-wave">
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+              </div>
+              <span>Listening...</span>
+            `;
+          };
+          
+          recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            this.elements.input.value = transcript;
+            this.updateCounters(transcript);
+            this.toggleSendButton(transcript.trim());
+          };
+          
+          recognition.onend = () => {
+            this.elements.voiceBtn.innerHTML = `
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clip-rule="evenodd"></path>
+              </svg>
+              <span>Voice</span>
+            `;
+          };
+          
+          recognition.start();
+        } else {
+          alert('Voice recognition not supported in this browser');
+        }
+      }
+      
+      async transmitMessage() {
+        const text = this.elements.input.value.trim();
+        if (!text || this.isProcessing) return;
 
-          chat.scrollTop = chat.scrollHeight;
-        }, 1800); // 1.8 seconds delay
-      } catch (e) {
-        typing.remove();
-        const errMsg = document.createElement("div");
-        errMsg.className = "message bot";
-        errMsg.textContent = "❌ Error talking to Lakshmi.";
-        chat.appendChild(errMsg);
+        const startTime = Date.now();
+        this.isProcessing = true;
+        
+        // Update UI state
+        this.elements.sendIcon.classList.add('hidden');
+        this.elements.processingIcon.classList.remove('hidden');
+        this.elements.sendBtn.disabled = true;
+        this.elements.input.disabled = true;
+
+        // Create and show user message
+        const userMessage = this.createUserMessage(text.replace(/\n/g, '<br>'));
+        this.elements.chat.appendChild(userMessage);
+        
+        // Clear input
+        this.elements.input.value = "";
+        this.elements.input.style.height = 'auto';
+        this.updateCounters('');
+        
+        // Show neural typing indicator
+        const typingIndicator = this.createNeuralTypingIndicator();
+        this.elements.chat.appendChild(typingIndicator);
+        
+        // Auto-scroll
+        this.elements.chat.scrollTop = this.elements.chat.scrollHeight;
+
+        try {
+          const response = await fetch("/chat", {
+            method: "POST",
+            headers: { 
+              "Content-Type": "application/json",
+              "Accept": "application/json"
+            },
+            body: JSON.stringify({ message: text }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const data = await response.json();
+          const responseTime = Date.now() - startTime;
+          
+          // Update performance metrics
+          this.performanceMetrics.latency = (responseTime / 1000).toFixed(1);
+          this.performanceMetrics.tokensProcessed += text.split(' ').length;
+          
+          // Remove typing indicator
+          typingIndicator.remove();
+          
+          // Create AI message
+          const aiMessage = this.createAIMessage();
+          this.elements.chat.appendChild(aiMessage);
+          
+          // Type the response
+          await this.typeMessage(aiMessage, data.reply);
+          
+        } catch (error) {
+          console.error('Neural network error:', error);
+          
+          // Remove typing indicator
+          typingIndicator.remove();
+          
+          // Show error message
+          const errorMessage = this.createAIMessage();
+          this.elements.chat.appendChild(errorMessage);
+          
+          await this.typeMessage(errorMessage, 
+            '⚠️ Neural network connection disrupted. Quantum entanglement protocols are re-establishing the link. Please retry your transmission. 🔄'
+          );
+          
+        } finally {
+          // Reset UI state
+          this.isProcessing = false;
+          this.elements.sendIcon.classList.remove('hidden');
+          this.elements.processingIcon.classList.add('hidden');
+          this.elements.sendBtn.disabled = false;
+          this.elements.input.disabled = false;
+          this.elements.input.focus();
+          
+          // Final scroll
+          this.elements.chat.scrollTop = this.elements.chat.scrollHeight;
+        }
       }
     }
+
+    // Initialize the Quantum Neural Interface
+    const quantumInterface = new QuantumNeuralInterface();
+    
+    // Global function for button onclick
+    function transmitMessage() {
+      quantumInterface.transmitMessage();
+    }
+    
+    // Enhanced touch interactions
+    if ('ontouchstart' in window) {
+      const sendBtn = document.getElementById('neuralSend');
+      sendBtn.addEventListener('touchstart', function() {
+        this.style.transform = 'translateY(-1px) scale(1.02)';
+      });
+      
+      sendBtn.addEventListener('touchend', function() {
+        this.style.transform = 'translateY(-3px) scale(1.05)';
+      });
+    }
+    
+    // Performance monitoring
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => {
+        console.log('🚀 Quantum Neural Interface initialized and ready for transmission 🚀');
+      });
+    }
+    
+    // Service Worker for offline capability
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {
+        console.log('Service Worker registration failed');
+      });
+    }
   </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9725ba8e068e93c5',t:'MTc1NTczMzE1My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
   </html>
