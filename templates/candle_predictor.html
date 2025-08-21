@@ -2,804 +2,938 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>🔮 AI Candle Predictor — Lakshmi</title>
+  <title>⚡ Ultra AI Trader — Futuristic Candles & Strategies</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- Tailwind CSS via CDN -->
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Inter font -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <!-- Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     :root{
-      --grad-a:#fdf2f8;
-      --grad-b:#ecfeff;
-      --ink:#0f172a;
+      --bg1:#020617; /* slate-950-ish */
+      --bg2:#0b1023;
+      --grid:#11182755;
+      --ink:#e5e7eb;
+      --muted:#94a3b8;
+      --neon:#14f195;
+      --neon-p:#22d3ee;
+      --neon-m:#a78bfa;
+      --danger:#fb7185;
+      --bull:#22c55e;
+      --bear:#ef4444;
+      --card:#0b122a;
+      --card-2:#0d1530;
     }
     html,body{height:100%}
     body{
       font-family:'Inter',system-ui,Segoe UI,Roboto,Arial,sans-serif;
+      color:var(--ink);
       background:
-        radial-gradient(1200px 800px at 10% 10%, var(--grad-a), transparent),
-        radial-gradient(900px 700px at 90% 0%, var(--grad-b), transparent),
-        linear-gradient(180deg, #fff 0%, #fdf4ff 100%);
-      color: var(--ink);
+        radial-gradient(1200px 600px at 10% 0%, #0ea5e925, transparent),
+        radial-gradient(1000px 700px at 90% 10%, #a78bfa22, transparent),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
     }
-    .glass{ backdrop-filter: blur(8px); background: rgba(255,255,255,0.75); }
-    .soft-shadow{ box-shadow: 0 10px 30px rgba(17,24,39,0.08), 0 2px 6px rgba(17,24,39,0.06); }
-    .ring-focus:focus{ outline: none; box-shadow: 0 0 0 4px rgba(214,51,132,0.25); }
+    .glass{ background: linear-gradient(180deg, #0b122aE6, #0b122ab3); backdrop-filter: blur(10px); border:1px solid #1f2a44; }
+    .glass2{ background: linear-gradient(180deg, #0d1530ee, #0d1530c0); border:1px solid #243155; }
+    .soft-shadow{ box-shadow: 0 10px 30px rgba(0,0,0,0.3), 0 2px 10px rgba(0,0,0,0.3); }
+    .btn-primary{ background: linear-gradient(135deg, #0ea5e9, #22d3ee); color:#041018; }
+    .btn-primary:hover{ filter: brightness(1.06); }
+    .btn-ghost{ background:#0c142f; border:1px solid #21325b; color:#cbd5e1; }
+    .btn-ghost:hover{ background:#101b3d; }
+    .panel-title{ color:#e2e8f0 }
+    .neon{ text-shadow: 0 0 18px #14f195, 0 0 6px #14f195; }
+    .neon-p{ text-shadow: 0 0 14px #22d3ee; }
+    .chip{ background:#0b132e; border:1px dashed #1d2b53; color:#a5b4fc }
     .tip{ pointer-events:none; }
+    .pulse{
+      animation: pulseGlow 2s ease-in-out infinite;
+    }
+    @keyframes pulseGlow{
+      0%{ box-shadow: 0 0 0 0 rgba(20,241,149,0.35); }
+      70%{ box-shadow: 0 0 0 12px rgba(20,241,149,0); }
+      100%{ box-shadow: 0 0 0 0 rgba(20,241,149,0); }
+    }
+    .glow-ring{ box-shadow: 0 0 0 2px #1f2a44, 0 0 0 6px #0ea5e955, inset 0 0 24px #0ea5e922; }
+    .on{ background:linear-gradient(135deg, #22c55e, #86efac); color:#01200f; }
+    .off{ background:#0f172a; color:#94a3b8; border:1px solid #1f2a44;}
+    .grid-dot{
+      background-image: radial-gradient(#293551 1px, transparent 0);
+      background-size: 22px 22px;
+      background-position: -10px -10px;
+    }
+    .badge{
+      border:1px solid #1f2a44; background: #0b132e; color:#8badd9;
+    }
+    .title-grad{
+      background: linear-gradient(90deg,#e2e8f0 0%, #22d3ee 40%, #a78bfa 80%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
   </style>
 </head>
 <body class="min-h-screen">
-  <header class="max-w-7xl mx-auto px-6 md:px-10 pt-8 pb-4">
+  <!-- Header -->
+  <header class="max-w-7xl mx-auto px-6 md:px-10 pt-8 pb-6">
     <div class="flex items-start md:items-center justify-between gap-6 flex-col md:flex-row">
-      <div class="flex items-center gap-3">
-        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-pink-500 to-fuchsia-600 flex items-center justify-center text-white text-2xl">🔮</div>
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-400 to-fuchsia-500 flex items-center justify-center text-slate-900 text-2xl glow-ring">⚡</div>
         <div>
-          <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900">AI Candle Predictor — Lakshmi</h1>
-          <p class="text-slate-600">Paste OHLC/OHLCV (time optional), visualize, and get a prediction.</p>
+          <h1 class="text-2xl md:text-4xl font-extrabold tracking-tight title-grad">Ultra AI Trader</h1>
+          <p class="text-sm text-slate-300">Futuristic candles, smart strategies, and an AI-style narrative.</p>
         </div>
       </div>
-      <a href="/dashboard" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white hover:bg-slate-50 text-pink-700 font-semibold soft-shadow transition">
-        ← Back to Dashboard
-      </a>
+      <div class="flex items-center gap-3 flex-wrap">
+        <span class="badge text-xs px-3 py-1 rounded-lg">Private demo • Client-side only</span>
+        <a href="#" class="btn-ghost px-4 py-2 rounded-xl soft-shadow">Docs</a>
+      </div>
     </div>
   </header>
 
+  <!-- Main -->
   <main class="max-w-7xl mx-auto px-6 md:px-10 pb-16">
     <section class="grid lg:grid-cols-3 gap-6">
-      <!-- Input Panel -->
-      <div class="lg:col-span-1 glass rounded-2xl soft-shadow p-5 md:p-6">
-        <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">📥 Data Input</h2>
-        <p class="text-slate-600 text-sm mt-1">
-          Formats accepted:
-          - open,high,low,close[,volume]
-          - time,open,high,low,close[,volume]
-          Time is optional. Avoid thousand separators (use 45700, not 45,700).
-        </p>
-
-        <textarea id="dataInput" rows="8" class="mt-4 w-full ring-1 ring-slate-200 rounded-xl p-3 ring-focus placeholder-slate-400" placeholder="45710,45745,45690,45720,152300
-45720,45750,45700,45735,141900
-..."></textarea>
-
-        <div class="mt-3 grid grid-cols-2 gap-3">
-          <select id="timeframe" class="w-full ring-1 ring-slate-200 rounded-xl p-3 ring-focus">
-            <option value="1m">1 Minute</option>
-            <option value="5m" selected>5 Minutes</option>
-            <option value="15m">15 Minutes</option>
-            <option value="1h">1 Hour</option>
-          </select>
-          <select id="symbolPicker" class="w-full ring-1 ring-slate-200 rounded-xl p-3 ring-focus">
-            <option value="NSE:NIFTY">Symbol: NSE:NIFTY</option>
-            <option value="NSE:BANKNIFTY">Symbol: NSE:BANKNIFTY</option>
-            <option value="NSE:RELIANCE">Symbol: NSE:RELIANCE</option>
-          </select>
-          <input id="apiRoute" class="col-span-2 w-full ring-1 ring-slate-200 rounded-xl p-3 ring-focus" placeholder="Your server route (https://.../api/candle or /api/candle)" value="/api/candle" />
-        </div>
-
-        <div class="mt-4 flex flex-wrap gap-3">
-          <button id="btnLoad" class="px-4 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-semibold transition">Load Data</button>
-          <button id="btnSample" class="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-semibold soft-shadow transition">Use Sample</button>
-          <button id="btnClear" class="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-semibold soft-shadow transition">Clear</button>
-        </div>
-
-        <div class="mt-5 p-4 rounded-xl bg-white/70 ring-1 ring-slate-200 space-y-2">
-          <div class="flex items-center justify-between gap-3">
-            <p class="text-sm text-slate-600">Server route:</p>
-            <span id="serverState" class="text-xs px-2 py-1 rounded-lg bg-slate-100 text-slate-700">Tap Predict to test</span>
-          </div>
-          <div class="text-sm text-slate-600 break-all">
-            <span class="font-semibold">Route:</span> <span id="serverRouteText">/api/candle</span>
-          </div>
-          <p class="text-xs text-slate-500">Heads up: Your route must be public https and allow this page to call it. Localhost won’t work here.</p>
-        </div>
-      </div>
-
-      <!-- Chart Panel -->
-      <div class="lg:col-span-2 glass rounded-2xl soft-shadow p-5 md:p-6">
-        <div class="flex items-center justify-between gap-3 flex-wrap">
-          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">📈 Chart</h2>
-          <div class="flex items-center gap-2 flex-wrap">
-            <label class="flex items-center gap-2 px-3 py-2 rounded-xl bg-white ring-1 ring-slate-200 cursor-pointer">
-              <input id="toggleSMA" type="checkbox" class="accent-pink-600"> <span class="text-sm font-semibold">SMA (14)</span>
-            </label>
-            <label class="flex items-center gap-2 px-3 py-2 rounded-xl bg-white ring-1 ring-slate-200 cursor-pointer">
-              <input id="toggleEMA" type="checkbox" class="accent-pink-600"> <span class="text-sm font-semibold">EMA (14)</span>
-            </label>
-            <label class="flex items-center gap-2 px-3 py-2 rounded-xl bg-white ring-1 ring-slate-200 cursor-pointer">
-              <input id="toggleRSI" type="checkbox" class="accent-pink-600" checked> <span class="text-sm font-semibold">RSI (14)</span>
-            </label>
-            <button id="btnResetZoom" class="px-3 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-semibold soft-shadow transition">Reset Zoom</button>
-          </div>
-        </div>
-
-        <div class="mt-4 grid gap-4">
-          <!-- Main Candles -->
-          <div class="rounded-xl overflow-hidden ring-1 ring-slate-200 bg-white">
-            <div class="flex items-center justify-between px-4 py-2 bg-gradient-to-r from-white to-pink-50">
-              <div id="chartTitle" class="font-semibold text-slate-800">No data loaded</div>
-              <div id="chartCursor" class="text-sm text-slate-600">—</div>
-            </div>
-            <div class="relative">
-              <svg id="candleSVG" class="block w-full h-[360px] bg-white"></svg>
-              <div id="tooltip" class="tip hidden absolute bg-slate-900/90 text-white text-xs px-3 py-2 rounded-lg soft-shadow"></div>
-            </div>
-          </div>
-          <!-- RSI -->
-          <div id="rsiWrap" class="rounded-xl overflow-hidden ring-1 ring-slate-200 bg-white">
-            <div class="flex items-center justify-between px-4 py-2 bg-gradient-to-r from-white to-pink-50">
-              <div class="font-semibold text-slate-800">RSI (14)</div>
-              <div id="rsiCursor" class="text-sm text-slate-600">—</div>
-            </div>
-            <div class="relative">
-              <svg id="rsiSVG" class="block w-full h-[120px] bg-white"></svg>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Insights & Prediction -->
-    <section class="mt-6 grid lg:grid-cols-3 gap-6">
-      <!-- Stats -->
-      <div class="glass rounded-2xl soft-shadow p-5 md:p-6">
-        <h3 class="text-lg font-bold text-slate-900 mb-3">📊 Quick Stats</h3>
-        <div class="grid grid-cols-2 gap-3">
-          <div class="p-4 rounded-xl bg-white ring-1 ring-slate-200">
-            <div class="text-slate-500 text-sm">Bars</div>
-            <div id="statBars" class="text-2xl font-extrabold">—</div>
-          </div>
-          <div class="p-4 rounded-xl bg-white ring-1 ring-slate-200">
-            <div class="text-slate-500 text-sm">Range</div>
-            <div id="statRange" class="text-2xl font-extrabold">—</div>
-          </div>
-          <div class="p-4 rounded-xl bg-white ring-1 ring-slate-200">
-            <div class="text-slate-500 text-sm">Last Close</div>
-            <div id="statClose" class="text-2xl font-extrabold">—</div>
-          </div>
-          <div class="p-4 rounded-xl bg-white ring-1 ring-slate-200">
-            <div class="text-slate-500 text-sm">Volatility</div>
-            <div id="statVol" class="text-2xl font-extrabold">—</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Signals -->
-      <div class="glass rounded-2xl soft-shadow p-5 md:p-6">
-        <h3 class="text-lg font-bold text-slate-900 mb-3">🧭 Signals</h3>
-        <ul id="signalsList" class="space-y-2">
-          <li class="text-slate-600">No signals yet.</li>
-        </ul>
-      </div>
-
-      <!-- Prediction -->
-      <div class="glass rounded-2xl soft-shadow p-5 md:p-6">
+      <!-- Controls -->
+      <div class="lg:col-span-1 glass soft-shadow rounded-2xl p-5">
         <div class="flex items-center justify-between">
-          <h3 class="text-lg font-bold text-slate-900 mb-3">🔔 Prediction</h3>
-          <span id="predConfidence" class="text-xs px-2 py-1 rounded-lg bg-pink-100 text-pink-700 font-semibold">—</span>
+          <h2 class="panel-title font-bold text-lg">Control Center</h2>
+          <span class="text-xs chip px-2 py-1 rounded-md">AI mode ready</span>
         </div>
-        <div id="predictionBox" class="p-4 rounded-xl bg-white ring-1 ring-slate-200">
-          <div class="text-slate-600">Load data to generate a prediction.</div>
+
+        <div class="mt-4 space-y-4">
+          <!-- Symbol + Timeframe -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs text-slate-400">Symbol</label>
+              <select id="symbolPicker" class="w-full mt-1 bg-[#0d1530] border border-[#293a69] rounded-xl p-3 text-slate-100">
+                <option value="NSE:NIFTY">NSE:NIFTY</option>
+                <option value="NSE:BANKNIFTY">NSE:BANKNIFTY</option>
+                <option value="NSE:RELIANCE">NSE:RELIANCE</option>
+                <option value="NSE:TCS">NSE:TCS</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400">Timeframe</label>
+              <select id="timeframe" class="w-full mt-1 bg-[#0d1530] border border-[#293a69] rounded-xl p-3 text-slate-100">
+                <option value="1m">1m</option>
+                <option value="5m" selected>5m</option>
+                <option value="15m">15m</option>
+                <option value="1h">1h</option>
+                <option value="1d">1D</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Input -->
+          <div>
+            <label class="text-xs text-slate-400">Paste data</label>
+            <p class="text-[11px] text-slate-400 mt-1">Use: open,high,low,close[,volume] or time,open,high,low,close[,volume]. Time is optional.</p>
+            <textarea id="dataInput" rows="7" class="mt-2 w-full bg-[#0d1530] border border-[#293a69] rounded-xl p-3 text-slate-100 placeholder-slate-500" placeholder="45710,45745,45690,45720,152300&#10;45720,45750,45700,45735,141900&#10;..."></textarea>
+          </div>
+
+          <!-- Buttons -->
+          <div class="flex flex-wrap gap-3">
+            <button id="btnSample" class="btn-ghost px-4 py-2 rounded-xl">Use Sample</button>
+            <button id="btnLoad" class="btn-primary px-4 py-2 rounded-xl font-bold">Load Data</button>
+            <button id="btnClear" class="btn-ghost px-4 py-2 rounded-xl">Clear</button>
+          </div>
+
+          <!-- Indicators -->
+          <div class="pt-2">
+            <div class="text-xs text-slate-400 mb-2">Indicators</div>
+            <div class="grid grid-cols-2 gap-2">
+              <button id="tSMA" class="off rounded-xl px-3 py-2 text-sm">SMA 14/50</button>
+              <button id="tEMA" class="off rounded-xl px-3 py-2 text-sm">EMA 14</button>
+              <button id="tBB" class="off rounded-xl px-3 py-2 text-sm">Bollinger</button>
+              <button id="tHA" class="off rounded-xl px-3 py-2 text-sm">Heikin Ashi</button>
+              <button id="tRSI" class="on rounded-xl px-3 py-2 text-sm">RSI</button>
+              <button id="tMACD" class="on rounded-xl px-3 py-2 text-sm">MACD</button>
+            </div>
+          </div>
+
+          <!-- Strategies -->
+          <div class="pt-2">
+            <div class="text-xs text-slate-400 mb-2">Strategies</div>
+            <div class="grid grid-cols-2 gap-2">
+              <button id="sGolden" class="on rounded-xl px-3 py-2 text-sm">Golden Cross</button>
+              <button id="sRSI" class="on rounded-xl px-3 py-2 text-sm">RSI Zones</button>
+              <button id="sBreak" class="on rounded-xl px-3 py-2 text-sm">Breakouts</button>
+              <button id="sBB" class="on rounded-xl px-3 py-2 text-sm">BB Squeeze</button>
+            </div>
+          </div>
+
+          <!-- Server -->
+          <div class="grid grid-cols-1 gap-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-400">Prediction source</span>
+              <span id="serverState" class="text-[11px] px-2 py-1 rounded-md badge">Idle</span>
+            </div>
+            <select id="predictMode" class="w-full bg-[#0d1530] border border-[#293a69] rounded-xl p-3 text-slate-100">
+              <option value="server-last">Server: send last OHLC to /api/candle</option>
+              <option value="server-all">Server: send all candles to /api/predict</option>
+              <option value="local">Local demo (no server)</option>
+            </select>
+            <input id="apiRoute" class="w-full bg-[#0d1530] border border-[#293a69] rounded-xl p-3 text-slate-100" value="/api/candle" placeholder="https://your-site.com/api/candle or /api/candle" />
+            <div class="flex items-center gap-2">
+              <button id="btnPredict" class="btn-primary px-4 py-2 rounded-xl font-bold pulse">Predict</button>
+              <button id="btnNarrate" class="btn-ghost px-4 py-2 rounded-xl">AI Narrative</button>
+              <button id="btnDownload" class="btn-ghost px-4 py-2 rounded-xl">Download</button>
+            </div>
+          </div>
         </div>
-        <div class="mt-3 flex flex-wrap gap-3">
-          <button id="btnPredict" class="px-4 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-semibold transition">Predict Next Candle</button>
-          <button id="btnDownload" class="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-semibold soft-shadow transition">Download Report</button>
+      </div>
+
+      <!-- Charts -->
+      <div class="lg:col-span-2 grid gap-6">
+        <!-- Candles + volume -->
+        <div class="glass2 soft-shadow rounded-2xl overflow-hidden">
+          <div class="flex items-center justify-between px-5 py-3 border-b border-[#1f2a44] bg-[#0b1325]">
+            <div id="chartTitle" class="font-semibold">No data loaded</div>
+            <div id="chartCursor" class="text-sm text-slate-400">—</div>
+          </div>
+          <div class="grid-dot">
+            <div class="relative">
+              <svg id="candleSVG" class="block w-full h-[420px]"></svg>
+              <div id="tooltip" class="tip hidden absolute bg-[#020617] border border-[#293a69] text-slate-200 text-xs px-3 py-2 rounded-lg soft-shadow"></div>
+            </div>
+            <div class="relative border-t border-[#1f2a44]">
+              <svg id="volSVG" class="block w-full h-[80px]"></svg>
+            </div>
+          </div>
         </div>
-        <p class="mt-3 text-xs text-slate-500">
-          If your route is reachable, you'll see your server’s reply. Otherwise a demo result is shown. Not financial advice.
-        </p>
+
+        <!-- RSI + MACD -->
+        <div class="grid md:grid-cols-2 gap-6">
+          <div class="glass2 soft-shadow rounded-2xl overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-3 border-b border-[#1f2a44] bg-[#0b1325]">
+              <div class="font-semibold">RSI (14)</div>
+              <div id="rsiCursor" class="text-sm text-slate-400">—</div>
+            </div>
+            <div class="relative">
+              <svg id="rsiSVG" class="block w-full h-[150px]"></svg>
+            </div>
+          </div>
+          <div class="glass2 soft-shadow rounded-2xl overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-3 border-b border-[#1f2a44] bg-[#0b1325]">
+              <div class="font-semibold">MACD (12,26,9)</div>
+              <div id="macdCursor" class="text-sm text-slate-400">—</div>
+            </div>
+            <div class="relative">
+              <svg id="macdSVG" class="block w-full h-[150px]"></svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Insights -->
+        <div class="grid md:grid-cols-3 gap-6">
+          <div class="glass soft-shadow rounded-2xl p-5">
+            <h3 class="panel-title font-bold mb-3">Quick Stats</h3>
+            <div class="grid grid-cols-2 gap-3 text-slate-300">
+              <div class="p-4 rounded-xl bg-[#0b132e] border border-[#1f2a44]">
+                <div class="text-xs text-slate-400">Bars</div>
+                <div id="statBars" class="text-2xl font-extrabold">—</div>
+              </div>
+              <div class="p-4 rounded-xl bg-[#0b132e] border border-[#1f2a44]">
+                <div class="text-xs text-slate-400">Range</div>
+                <div id="statRange" class="text-2xl font-extrabold">—</div>
+              </div>
+              <div class="p-4 rounded-xl bg-[#0b132e] border border-[#1f2a44]">
+                <div class="text-xs text-slate-400">Last Close</div>
+                <div id="statClose" class="text-2xl font-extrabold">—</div>
+              </div>
+              <div class="p-4 rounded-xl bg-[#0b132e] border border-[#1f2a44]">
+                <div class="text-xs text-slate-400">Volatility</div>
+                <div id="statVol" class="text-2xl font-extrabold">—</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass soft-shadow rounded-2xl p-5">
+            <h3 class="panel-title font-bold mb-3">Signals</h3>
+            <ul id="signalsList" class="space-y-2 text-sm">
+              <li class="text-slate-400">No signals yet.</li>
+            </ul>
+          </div>
+
+          <div class="glass soft-shadow rounded-2xl p-5">
+            <div class="flex items-center justify-between">
+              <h3 class="panel-title font-bold mb-3">Prediction</h3>
+              <span id="predConfidence" class="text-[11px] px-2 py-1 rounded-md badge">—</span>
+            </div>
+            <div id="predictionBox" class="p-4 rounded-xl bg-[#0b132e] border border-[#1f2a44] text-slate-300">
+              Load data to generate a prediction.
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Narrative -->
+        <div class="glass soft-shadow rounded-2xl p-5">
+          <div class="flex items-center justify-between">
+            <h3 class="panel-title font-bold">AI Narrative</h3>
+            <span class="text-xs text-slate-400">Local, private, no cloud</span>
+          </div>
+          <p id="narrative" class="mt-3 text-slate-300">Click “AI Narrative” for an analyst-style summary of trend, momentum, and risk.</p>
+        </div>
       </div>
     </section>
   </main>
 
-  <footer class="max-w-7xl mx-auto px-6 md:px-10 pb-10 text-center text-slate-500">
-    Built with care by Lakshmi · Crafted by Canva Code
+  <!-- Footer -->
+  <footer class="max-w-7xl mx-auto px-6 md:px-10 pb-10 text-center text-slate-400">
+    Crafted by Canva Code · Beautiful by default · Fully responsive
   </footer>
 
   <script>
     // State
-    let candles = []; // {t, o, h, l, c, v}
-    let viewStart = 0;
-    let viewEnd = 0;
+    let rawCandles = [];   // original candles {t,o,h,l,c,v}
+    let candles = [];      // possibly transformed (Heikin Ashi)
+    let viewStart = 0, viewEnd = 0;
     let lastPrediction = null;
 
     // Elements
-    const dataInput = document.getElementById('dataInput');
-    const timeframeSel = document.getElementById('timeframe');
     const symbolPicker = document.getElementById('symbolPicker');
-    const btnLoad = document.getElementById('btnLoad');
+    const timeframeSel = document.getElementById('timeframe');
+    const dataInput = document.getElementById('dataInput');
     const btnSample = document.getElementById('btnSample');
+    const btnLoad = document.getElementById('btnLoad');
     const btnClear = document.getElementById('btnClear');
+
+    const tSMA = document.getElementById('tSMA');
+    const tEMA = document.getElementById('tEMA');
+    const tBB = document.getElementById('tBB');
+    const tHA = document.getElementById('tHA');
+    const tRSI = document.getElementById('tRSI');
+    const tMACD = document.getElementById('tMACD');
+
+    const sGolden = document.getElementById('sGolden');
+    const sRSI = document.getElementById('sRSI');
+    const sBreak = document.getElementById('sBreak');
+    const sBB = document.getElementById('sBB');
+
+    const predictMode = document.getElementById('predictMode');
     const apiRouteInput = document.getElementById('apiRoute');
     const serverState = document.getElementById('serverState');
-    const serverRouteText = document.getElementById('serverRouteText');
-
-    const toggleSMA = document.getElementById('toggleSMA');
-    const toggleEMA = document.getElementById('toggleEMA');
-    const toggleRSI = document.getElementById('toggleRSI');
-    const btnResetZoom = document.getElementById('btnResetZoom');
+    const btnPredict = document.getElementById('btnPredict');
+    const btnDownload = document.getElementById('btnDownload');
+    const btnNarrate = document.getElementById('btnNarrate');
 
     const candleSVG = document.getElementById('candleSVG');
+    const volSVG = document.getElementById('volSVG');
     const rsiSVG = document.getElementById('rsiSVG');
-    const rsiWrap = document.getElementById('rsiWrap');
+    const macdSVG = document.getElementById('macdSVG');
     const tooltip = document.getElementById('tooltip');
 
     const chartTitle = document.getElementById('chartTitle');
-    aconst chartCursor = document.getElementById('chartCursor');
+    const chartCursor = document.getElementById('chartCursor');
     const rsiCursor = document.getElementById('rsiCursor');
+    const macdCursor = document.getElementById('macdCursor');
 
     const statBars = document.getElementById('statBars');
     const statRange = document.getElementById('statRange');
     const statClose = document.getElementById('statClose');
     const statVol = document.getElementById('statVol');
-
     const signalsList = document.getElementById('signalsList');
-
     const predictionBox = document.getElementById('predictionBox');
     const predConfidence = document.getElementById('predConfidence');
-    const btnPredict = document.getElementById('btnPredict');
-    const btnDownload = document.getElementById('btnDownload');
+    const narrative = document.getElementById('narrative');
 
-    // Utils
+    // Helpers
+    const on = (el)=>{ el.classList.add('on'); el.classList.remove('off'); }
+    const off = (el)=>{ el.classList.add('off'); el.classList.remove('on'); }
+    function toggle(el){ el.classList.toggle('on'); el.classList.toggle('off'); drawAll(); }
+
+    function tfMs(){
+      const v = timeframeSel.value;
+      if(v==='1h') return 60*60*1000;
+      if(v==='1d') return 24*60*60*1000;
+      if(v==='15m') return 15*60*1000;
+      if(v==='5m') return 5*60*1000;
+      return 60*1000;
+    }
+
     function isValidDateString(s){
-      if(!s) return false;
-      if(!isNaN(Number(s))) return false;
-      const d = new Date(s);
-      return !isNaN(d.getTime());
+      if(!s) return false; if(!isNaN(Number(s))) return false;
+      const d = new Date(s); return !isNaN(d.getTime());
     }
-    function escapeHTML(s){
-      return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-    }
-
-    // Accept OHLC, OHLCV, or time+OHLC(+V)
     function parseInput(text){
       const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-      const out = [];
+      const out=[];
       for(const line of lines){
-        const parts = line.split(/[,\s;]+/).map(x=>x.trim()).filter(Boolean);
-        if(parts.length < 4) continue;
+        const parts=line.split(/[,\s;]+/).map(x=>x.trim()).filter(Boolean);
+        if(parts.length<4) continue;
+        let t=null, o,h,l,c, v=null;
+        if(parts.length>=6){
+          if(isValidDateString(parts[0])) [t,o,h,l,c,v]=[parts[0],parts[1],parts[2],parts[3],parts[4],parts[5]];
+          else [o,h,l,c,v]=[parts[0],parts[1],parts[2],parts[3],parts[4]];
+        } else if(parts.length===5){
+          if(isValidDateString(parts[0])) [t,o,h,l,c]=[parts[0],parts[1],parts[2],parts[3],parts[4]];
+          else [o,h,l,c,v]=[parts[0],parts[1],parts[2],parts[3],parts[4]];
+        } else { [o,h,l,c]=[parts[0],parts[1],parts[2],parts[3]]; }
+        const O=Number(o),H=Number(h),L=Number(l),C=Number(c);
+        if([O,H,L,C].some(x=>Number.isNaN(x))) continue;
+        const when = t? new Date(t).toISOString(): null;
+        const V = (v!=null && v!=='')? Number(v): null;
+        out.push({t:when,o:O,h:H,l:L,c:C,v:V});
+      }
+      return out;
+    }
+    function ensureTimesIfMissing(arr){
+      if(arr.length===0) return;
+      if(!arr.every(c=>!c.t)) return;
+      const step = tfMs();
+      const start = Date.now()-arr.length*step;
+      for(let i=0;i<arr.length;i++) arr[i].t = new Date(start + i*step).toISOString();
+    }
+    const nice=(n)=> Number.isFinite(n) ? (Math.abs(n)>=1000? n.toFixed(2): n.toFixed(4).replace(/0+$/,'').replace(/\.$/,'')) : '—';
+    const fmt=(t)=>{ if(!t) return '—'; const d=new Date(t); return isNaN(d)? String(t): d.toLocaleString(); }
+    function clearSVG(svg){ while(svg.firstChild) svg.removeChild(svg.firstChild); }
 
-        let t = null, o, h, l, c, v = null;
-
-        if(parts.length >= 6){
-          if(isValidDateString(parts[0])){
-            [t, o, h, l, c, v] = [parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]];
-          } else {
-            [o, h, l, c, v] = [parts[0], parts[1], parts[2], parts[3], parts[4]];
-          }
-        } else if(parts.length === 5){
-          if(isValidDateString(parts[0])){
-            [t, o, h, l, c] = [parts[0], parts[1], parts[2], parts[3], parts[4]];
-          } else {
-            [o, h, l, c, v] = [parts[0], parts[1], parts[2], parts[3], parts[4]];
-          }
-        } else {
-          [o, h, l, c] = [parts[0], parts[1], parts[2], parts[3]];
-        }
-
-        const open = Number(o), high = Number(h), low = Number(l), close = Number(c);
-        if([open,high,low,close].some(x=>Number.isNaN(x))) continue;
-
-        const when = t ? new Date(t).toISOString() : null;
-        const vol = (v!=null && v!=='') ? Number(v) : null;
-
-        out.push({t: when, o: open, h: high, l: low, c: close, v: vol});
+    // Indicators
+    function SMA(src, p, acc){ const r=Array(src.length).fill(null); let sum=0; for(let i=0;i<src.length;i++){ const v=acc(src[i]); sum+=v; if(i>=p) sum-=acc(src[i-p]); if(i>=p-1) r[i]=sum/p; } return r; }
+    function EMA(src, p, acc){ const r=Array(src.length).fill(null); const k=2/(p+1); let prev=null; for(let i=0;i<src.length;i++){ const v=acc(src[i]); prev=(prev===null)?v:(v-prev)*k+prev; if(i>=p-1) r[i]=prev; } return r; }
+    function RSI(arr, p){ const r=Array(arr.length).fill(null); let ag=0, al=0; for(let i=1;i<arr.length;i++){ const ch=arr[i].c-arr[i-1].c; const g=Math.max(ch,0), l=Math.max(-ch,0); if(i<=p){ ag+=g; al+=l; if(i===p){ ag/=p; al/=p; const rs=al===0? 100: ag/al; r[i]=100-(100/(1+rs)); } } else { ag=(ag*(p-1)+g)/p; al=(al*(p-1)+l)/p; const rs=al===0? 100: ag/al; r[i]=100-(100/(1+rs)); } } return r; }
+    function Bollinger(arr, p=20, k=2){ const mid=SMA(arr,p,d=>d.c); const up=Array(arr.length).fill(null); const dn=Array(arr.length).fill(null); for(let i=p-1;i<arr.length;i++){ const slice=arr.slice(i-p+1,i+1).map(d=>d.c); const m=mid[i]; const v=slice.reduce((s,x)=>s+(x-m)*(x-m),0)/p; const sd=Math.sqrt(v); up[i]=m+k*sd; dn[i]=m-k*sd; } return {mid,up,dn}; }
+    function MACD(arr, fast=12, slow=26, signal=9){
+      const emaF = EMA(arr, fast, d=>d.c);
+      const emaS = EMA(arr, slow, d=>d.c);
+      const macd = arr.map((_,i)=>(emaF[i]!=null && emaS[i]!=null)? (emaF[i]-emaS[i]) : null);
+      const sig = EMA(macd.map((v,i)=>({c:v??0})), signal, d=>d.c);
+      const hist = macd.map((v,i)=> (v!=null && sig[i]!=null) ? v - sig[i] : null);
+      return {macd, sig, hist};
+    }
+    function HeikinAshi(src){
+      if(src.length===0) return [];
+      const out=[];
+      let haC = (src[0].o + src[0].h + src[0].l + src[0].c)/4;
+      let haO = (src[0].o + src[0].c)/2;
+      let haH = Math.max(src[0].h, haO, haC);
+      let haL = Math.min(src[0].l, haO, haC);
+      out.push({t:src[0].t,o:haO,h:haH,l:haL,c:haC,v:src[0].v??null});
+      for(let i=1;i<src.length;i++){
+        haC = (src[i].o + src[i].h + src[i].l + src[i].c)/4;
+        haO = (out[i-1].o + out[i-1].c)/2;
+        haH = Math.max(src[i].h, haO, haC);
+        haL = Math.min(src[i].l, haO, haC);
+        out.push({t:src[i].t,o:haO,h:haH,l:haL,c:haC,v:src[i].v??null});
       }
       return out;
     }
 
-    function ensureTimesIfMissing(){
-      if(candles.length===0) return;
-      const allMissing = candles.every(c=>!c.t);
-      if(!allMissing) return;
-      const step = timeframeSel.value==='1h' ? 60*60*1000 :
-                   timeframeSel.value==='15m' ? 15*60*1000 :
-                   timeframeSel.value==='5m' ? 5*60*1000 : 60*1000;
-      const start = Date.now() - candles.length*step;
-      for(let i=0;i<candles.length;i++){
-        candles[i].t = new Date(start + i*step).toISOString();
+    // Sample data
+    function makeSample(n=220, start=100){
+      const step = tfMs();
+      const t0 = Date.now()-n*step;
+      const rows=[];
+      let base=start + Math.random()*5;
+      for(let i=0;i<n;i++){
+        const drift = Math.sin(i/18)*0.18 + Math.cos(i/9)*0.12;
+        const noise = (Math.random()-0.5)*0.6;
+        const o = base;
+        const c = Math.max(1, o*(1 + (drift+noise)*0.002));
+        const h = Math.max(o,c) * (1 + Math.random()*0.004);
+        const l = Math.min(o,c) * (1 - Math.random()*0.004);
+        const v = Math.floor(1000 + Math.random()*5000);
+        rows.push({t:new Date(t0 + i*step).toISOString(), o:+o.toFixed(2), h:+h.toFixed(2), l:+l.toFixed(2), c:+c.toFixed(2), v});
+        base=c;
       }
+      return rows;
     }
 
-    function sma(arr, period, acc){ const res=new Array(arr.length).fill(null); let sum=0; for(let i=0;i<arr.length;i++){ const v=acc(arr[i]); sum+=v; if(i>=period) sum-=acc(arr[i-period]); if(i>=period-1) res[i]=sum/period; } return res; }
-    function ema(arr, period, acc){ const res=new Array(arr.length).fill(null); const k=2/(period+1); let prev=null; for(let i=0;i<arr.length;i++){ const v=acc(arr[i]); prev=(prev===null)?v:(v-prev)*k+prev; if(i>=period-1) res[i]=prev; } return res; }
-    function rsi(arr, period){
-      const res = new Array(arr.length).fill(null);
-      let avgGain=0, avgLoss=0;
-      for(let i=1;i<arr.length;i++){
-        const ch = arr[i].c - arr[i-1].c;
-        const gain = Math.max(ch,0), loss = Math.max(-ch,0);
-        if(i<=period){
-          avgGain += gain; avgLoss += loss;
-          if(i===period){
-            avgGain/=period; avgLoss/=period;
-            const rs = avgLoss===0 ? 100 : avgGain/avgLoss;
-            res[i] = 100 - (100/(1+rs));
-          }
-        } else {
-          avgGain = (avgGain*(period-1) + gain)/period;
-          avgLoss = (avgLoss*(period-1) + loss)/period;
-          const rs = avgLoss===0 ? 100 : avgGain/avgLoss;
-          res[i] = 100 - (100/(1+rs));
-        }
-      }
-      return res;
-    }
-
-    function niceNumber(n){
-      return Number.isFinite(n) ? (Math.abs(n)>=1000 ? n.toFixed(2) : n.toFixed(4).replace(/0+$/,'').replace(/\.$/,'')) : '—';
-    }
-    function fmtTime(t){
-      if(!t) return '—';
-      const d = new Date(t);
-      return isNaN(d.getTime()) ? String(t) : d.toLocaleString();
-    }
-
-    function computeStats(){
-      if(candles.length===0){ statBars.textContent='—'; statRange.textContent='—'; statClose.textContent='—'; statVol.textContent='—'; return; }
-      const lows = candles.map(c=>c.l), highs = candles.map(c=>c.h);
-      const minL = Math.min(...lows), maxH = Math.max(...highs);
-      const range = maxH - minL;
-      const lastC = candles[candles.length-1].c;
-      const rets = [];
-      for(let i=1;i<candles.length;i++){ rets.push((candles[i].c/candles[i-1].c)-1); }
+    // Stats & Signals
+    function computeStats(arr){
+      if(arr.length===0){ statBars.textContent='—'; statRange.textContent='—'; statClose.textContent='—'; statVol.textContent='—'; return; }
+      const lows=arr.map(d=>d.l), highs=arr.map(d=>d.h);
+      const range = Math.max(...highs) - Math.min(...lows);
+      const lastC = arr[arr.length-1].c;
+      // simple volatility using returns std
+      const rets = []; for(let i=1;i<arr.length;i++){ rets.push((arr[i].c/arr[i-1].c)-1); }
       const mu = rets.reduce((a,b)=>a+b,0)/(rets.length||1);
       const std = Math.sqrt(rets.reduce((s,x)=>s+(x-mu)*(x-mu),0)/(rets.length||1));
-      const volPct = (std*100).toFixed(2)+'%';
-
-      statBars.textContent = candles.length;
-      statRange.textContent = niceNumber(range);
-      statClose.textContent = niceNumber(lastC);
-      statVol.textContent = volPct;
+      statBars.textContent = arr.length;
+      statRange.textContent = nice(range);
+      statClose.textContent = nice(lastC);
+      statVol.textContent = (std*100).toFixed(2)+'%';
     }
 
-    function buildSignals(sma14, ema14, rsi14){
-      const items = [];
-      const n = candles.length;
-      if(n<3){ signalsList.innerHTML = '<li class="text-slate-600">Not enough data for signals.</li>'; return; }
+    function buildSignals(arr){
+      const n = arr.length;
+      const out=[];
+      if(n<3){ signalsList.innerHTML = '<li class="text-slate-400">Not enough data for signals.</li>'; return; }
+      const sma14 = SMA(arr,14,d=>d.c), sma50=SMA(arr,50,d=>d.c), sma200=SMA(arr,200,d=>d.c);
+      const ema14 = EMA(arr,14,d=>d.c);
+      const rsi14 = RSI(arr,14);
+      const {mid,up,dn} = Bollinger(arr,20,2);
+      const {macd,sig,hist} = MACD(arr,12,26,9);
 
-      const mom = candles[n-1].c - candles[n-3].c;
-      if(mom>0) items.push({label:'Momentum up', tone:'positive'});
-      if(mom<0) items.push({label:'Momentum down', tone:'negative'});
+      const mom = arr[n-1].c - arr[n-4]?.c;
+      if(mom>0) out.push({t:'positive', label:'Momentum up'});
+      if(mom<0) out.push({t:'negative', label:'Momentum down'});
 
-      if(sma14[n-1]!=null){
-        if(candles[n-1].c > sma14[n-1]) items.push({label:'Price above SMA(14)', tone:'positive'});
-        else items.push({label:'Price below SMA(14)', tone:'negative'});
+      if(sma50[n-1]!=null && sma200[n-1]!=null){
+        if(sma50[n-2]!=null && sma200[n-2]!=null){
+          const crossUp = sma50[n-2] <= sma200[n-2] && sma50[n-1] > sma200[n-1];
+          const crossDn = sma50[n-2] >= sma200[n-2] && sma50[n-1] < sma200[n-1];
+          if(crossUp) out.push({t:'positive', label:'Golden Cross (50>200)'});
+          if(crossDn) out.push({t:'negative', label:'Death Cross (50<200)'});
+        }
       }
-      if(ema14[n-1]!=null && ema14[n-2]!=null){
-        if(ema14[n-1] > ema14[n-2]) items.push({label:'EMA(14) rising', tone:'positive'});
-        else items.push({label:'EMA(14) falling', tone:'negative'});
+
+      if(ema14[n-1]!=null){
+        if(arr[n-1].c > ema14[n-1]) out.push({t:'positive', label:'Close above EMA(14)'});
+        else out.push({t:'negative', label:'Close below EMA(14)'});
       }
 
       if(rsi14[n-1]!=null){
-        if(rsi14[n-1] > 70) items.push({label:'RSI overbought (>70)', tone:'neutral'});
-        else if(rsi14[n-1] < 30) items.push({label:'RSI oversold (<30)', tone:'neutral'});
-        else items.push({label:'RSI neutral', tone:'neutral'});
+        if(rsi14[n-1] > 70) out.push({t:'neutral', label:'RSI overbought'});
+        else if(rsi14[n-1] < 30) out.push({t:'neutral', label:'RSI oversold'});
+        else out.push({t:'neutral', label:'RSI neutral'});
       }
 
-      signalsList.innerHTML = '';
-      if(items.length===0){
-        signalsList.innerHTML = '<li class="text-slate-600">No signals yet.</li>';
-        return;
+      if(mid[n-1]!=null){
+        const width=(up[n-1]-dn[n-1])/(mid[n-1]||1);
+        if(width<0.02) out.push({t:'neutral', label:'BB squeeze (low volatility)'});
       }
-      for(const it of items){
-        const color = it.tone==='positive' ? 'text-emerald-700 bg-emerald-50 ring-emerald-100' :
-                      it.tone==='negative' ? 'text-rose-700 bg-rose-50 ring-rose-100' :
-                                             'text-slate-700 bg-slate-50 ring-slate-200';
-        const li = document.createElement('li');
-        li.className = `px-3 py-2 rounded-lg ring-1 ${color} text-sm font-semibold`;
-        li.textContent = it.label;
+
+      if(hist[n-1]!=null && hist[n-2]!=null){
+        if(hist[n-1]>0 && hist[n-2]<=0) out.push({t:'positive', label:'MACD momentum turns positive'});
+        if(hist[n-1]<0 && hist[n-2]>=0) out.push({t:'negative', label:'MACD momentum turns negative'});
+      }
+
+      signalsList.innerHTML='';
+      if(out.length===0){ signalsList.innerHTML='<li class="text-slate-400">No signals yet.</li>'; return; }
+      for(const s of out){
+        const cls = s.t==='positive' ? 'border-emerald-700/40 bg-emerald-900/20 text-emerald-300' :
+                    s.t==='negative' ? 'border-rose-700/40 bg-rose-900/20 text-rose-300' :
+                                       'border-cyan-700/40 bg-cyan-900/20 text-cyan-200';
+        const li=document.createElement('li');
+        li.className='px-3 py-2 rounded-lg border text-sm '+cls;
+        li.textContent=s.label;
         signalsList.appendChild(li);
       }
     }
 
-    function clearSVG(svg){ while(svg.firstChild) svg.removeChild(svg.firstChild); }
+    // Heikin vs Raw view
+    function refreshViewSeries(){
+      candles = tHA.classList.contains('on') ? HeikinAshi(rawCandles) : rawCandles.slice();
+    }
 
-    function drawChart(){
-      clearSVG(candleSVG);
-      clearSVG(rsiSVG);
-      if(candles.length===0){
-        chartTitle.textContent = 'No data loaded';
-        chartCursor.textContent = '—';
-        rsiCursor.textContent = '—';
-        return;
-      }
-      const width = candleSVG.clientWidth || 800;
-      const height = candleSVG.clientHeight || 360;
-      const padL=50, padR=20, padT=10, padB=24;
+    // Drawing
+    function drawAll(){
+      refreshViewSeries();
+      computeStats(candles);
+      drawCandles();
+      drawRSI();
+      drawMACD();
+      buildSignals(candles);
+    }
+
+    function drawCandles(){
+      clearSVG(candleSVG); clearSVG(volSVG);
+      if(candles.length===0){ chartTitle.textContent='No data loaded'; chartCursor.textContent='—'; return; }
+      chartTitle.textContent = `${symbolPicker.value} · ${timeframeSel.value} · ${fmt(candles[0].t)} → ${fmt(candles[candles.length-1].t)}`;
+
+      const width = candleSVG.clientWidth || 900;
+      const height = candleSVG.clientHeight || 420;
+      const padL=60, padR=20, padT=16, padB=28;
       const plotW = width - padL - padR;
       const plotH = height - padT - padB;
 
-      const vs = viewEnd - viewStart;
+      viewStart = 0; viewEnd = candles.length;
       const data = candles.slice(viewStart, viewEnd);
-
       const minL = Math.min(...data.map(d=>d.l));
       const maxH = Math.max(...data.map(d=>d.h));
-      const yScale = (p)=> padT + (maxH - p) * (plotH / Math.max(1e-8, (maxH - minL)));
+      const y = (p)=> padT + (maxH - p) * (plotH / Math.max(1e-8,(maxH-minL)));
+      const step = Math.max(3, plotW/Math.max(1, data.length-1));
+      const x = (i)=> padL + i*step + step*0.5;
 
-      // Y grid + labels
-      const grid = document.createElementNS('http://www.w3.org/2000/svg','g');
-      const yTicks = 5;
+      // Grid + Y labels
+      const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+      const yTicks=5;
       for(let i=0;i<=yTicks;i++){
-        const y = padT + (plotH/yTicks)*i;
-        const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+        const yy = padT + (plotH/yTicks)*i;
+        const line=document.createElementNS('http://www.w3.org/2000/svg','line');
         line.setAttribute('x1', padL); line.setAttribute('x2', padL+plotW);
-        line.setAttribute('y1', y); line.setAttribute('y2', y);
-        line.setAttribute('stroke', i===yTicks ? '#e2e8f0' : '#f1f5f9');
-        line.setAttribute('stroke-width', '1');
-        grid.appendChild(line);
+        line.setAttribute('y1', yy); line.setAttribute('y2', yy);
+        line.setAttribute('stroke', '#1e293b');
+        line.setAttribute('stroke-width','1');
+        g.appendChild(line);
 
-        const price = maxH - ( (maxH-minL)/yTicks )*i;
-        const label = document.createElementNS('http://www.w3.org/2000/svg','text');
-        label.setAttribute('x', 8);
-        label.setAttribute('y', y+4);
-        label.setAttribute('fill', '#64748b');
-        label.setAttribute('font-size', '11');
-        label.textContent = niceNumber(price);
+        const price = maxH - ((maxH-minL)/yTicks)*i;
+        const label=document.createElementNS('http://www.w3.org/2000/svg','text');
+        label.setAttribute('x', 10);
+        label.setAttribute('y', yy+4);
+        label.setAttribute('fill', '#8fa1c1');
+        label.setAttribute('font-size','11');
+        label.textContent = nice(price);
         candleSVG.appendChild(label);
       }
-      candleSVG.appendChild(grid);
+      candleSVG.appendChild(g);
 
-      const step = Math.max(3, plotW/Math.max(1,vs-1));
-      const xAt = (i)=> padL + i*step + step*0.5;
-
-      // Indicators
-      const sma14 = sma(candles, 14, d=>d.c);
-      const ema14 = ema(candles, 14, d=>d.c);
-      const rsi14 = rsi(candles, 14);
+      // Bollinger?
+      if(tBB.classList.contains('on')){
+        const bb=Bollinger(candles,20,2);
+        const pathU=document.createElementNS('http://www.w3.org/2000/svg','path');
+        const pathM=document.createElementNS('http://www.w3.org/2000/svg','path');
+        const pathD=document.createElementNS('http://www.w3.org/2000/svg','path');
+        let du='', dm='', dd='';
+        for(let i=0;i<data.length;i++){
+          const gi=viewStart+i;
+          if(bb.up[gi]!=null){ du+=(du===''?'M':' L')+x(i)+' '+y(bb.up[gi]); }
+          if(bb.mid[gi]!=null){ dm+=(dm===''?'M':' L')+x(i)+' '+y(bb.mid[gi]); }
+          if(bb.dn[gi]!=null){ dd+=(dd===''?'M':' L')+x(i)+' '+y(bb.dn[gi]); }
+        }
+        pathU.setAttribute('d',du); pathU.setAttribute('fill','none'); pathU.setAttribute('stroke','#22d3ee'); pathU.setAttribute('stroke-width','1.5');
+        pathM.setAttribute('d',dm); pathM.setAttribute('fill','none'); pathM.setAttribute('stroke','#94a3b8'); pathM.setAttribute('stroke-dasharray','4 3'); pathM.setAttribute('stroke-width','1');
+        pathD.setAttribute('d',dd); pathD.setAttribute('fill','none'); pathD.setAttribute('stroke','#22d3ee'); pathD.setAttribute('stroke-width','1.5');
+        candleSVG.appendChild(pathU); candleSVG.appendChild(pathM); candleSVG.appendChild(pathD);
+      }
 
       // Candles
+      const useBull='#22c55e', useBear='#ef4444';
       for(let i=0;i<data.length;i++){
-        const d = data[i];
-        const gi = viewStart + i;
-        const x = xAt(i);
-        const yO = yScale(d.o), yC = yScale(d.c), yH = yScale(d.h), yL = yScale(d.l);
+        const d=data[i];
+        const yyO=y(d.o), yyC=y(d.c), yyH=y(d.h), yyL=y(d.l);
+        const cx=x(i);
 
-        const wick = document.createElementNS('http://www.w3.org/2000/svg','line');
-        wick.setAttribute('x1', x);
-        wick.setAttribute('x2', x);
-        wick.setAttribute('y1', yH);
-        wick.setAttribute('y2', yL);
-        wick.setAttribute('stroke', d.c>=d.o ? '#22c55e' : '#ef4444');
-        wick.setAttribute('stroke-width', '2');
+        const wick=document.createElementNS('http://www.w3.org/2000/svg','line');
+        wick.setAttribute('x1',cx); wick.setAttribute('x2',cx);
+        wick.setAttribute('y1',yyH); wick.setAttribute('y2',yyL);
+        wick.setAttribute('stroke', d.c>=d.o? useBull: useBear);
+        wick.setAttribute('stroke-width','2');
         candleSVG.appendChild(wick);
 
-        const body = document.createElementNS('http://www.w3.org/2000/svg','rect');
-        const bodyH = Math.max(2, Math.abs(yC - yO));
-        body.setAttribute('x', x - Math.max(2, step*0.35));
-        body.setAttribute('y', Math.min(yO, yC));
+        const body=document.createElementNS('http://www.w3.org/2000/svg','rect');
+        const h=Math.max(2, Math.abs(yyC-yyO));
+        body.setAttribute('x', cx - Math.max(2, step*0.35));
+        body.setAttribute('y', Math.min(yyO,yyC));
         body.setAttribute('width', Math.max(3, step*0.7));
-        body.setAttribute('height', bodyH);
-        body.setAttribute('fill', d.c>=d.o ? '#22c55e' : '#ef4444');
-        body.setAttribute('opacity', '0.9');
-        body.style.cursor = 'crosshair';
+        body.setAttribute('height', h);
+        body.setAttribute('fill', d.c>=d.o? useBull: useBear);
+        body.setAttribute('opacity','0.9');
         body.addEventListener('mouseenter', ()=>{
           tooltip.classList.remove('hidden');
           tooltip.innerHTML = `
-            <div class="font-semibold">${fmtTime(d.t)}</div>
-            <div>O: <b>${niceNumber(d.o)}</b>  H: <b>${niceNumber(d.h)}</b></div>
-            <div>L: <b>${niceNumber(d.l)}</b>  C: <b>${niceNumber(d.c)}</b></div>
+            <div class="font-semibold">${fmt(d.t)}</div>
+            <div>O: <b>${nice(d.o)}</b> H: <b>${nice(d.h)}</b></div>
+            <div>L: <b>${nice(d.l)}</b> C: <b>${nice(d.c)}</b></div>
           `;
-          chartCursor.textContent = `${fmtTime(d.t)} · O ${niceNumber(d.o)} · H ${niceNumber(d.h)} · L ${niceNumber(d.l)} · C ${niceNumber(d.c)}`;
-          if(rsi14[gi]!=null){
-            rsiCursor.textContent = `RSI: ${rsi14[gi].toFixed(1)}`;
-          } else {
-            rsiCursor.textContent = '—';
-          }
+          chartCursor.textContent = `${fmt(d.t)} · O ${nice(d.o)} · H ${nice(d.h)} · L ${nice(d.l)} · C ${nice(d.c)}`;
         });
         body.addEventListener('mousemove', (e)=>{
-          const rect = e.target.ownerSVGElement.getBoundingClientRect();
-          tooltip.style.left = (e.clientX - rect.left + 12) + 'px';
-          tooltip.style.top = (e.clientY - rect.top + 12) + 'px';
+          const rect=e.target.ownerSVGElement.getBoundingClientRect();
+          tooltip.style.left=(e.clientX-rect.left+12)+'px';
+          tooltip.style.top=(e.clientY-rect.top+12)+'px';
         });
         body.addEventListener('mouseleave', ()=>{
           tooltip.classList.add('hidden');
-          chartCursor.textContent = '—';
-          rsiCursor.textContent = '—';
+          chartCursor.textContent='—';
         });
         candleSVG.appendChild(body);
       }
 
-      // SMA
-      if(toggleSMA.checked){
-        const path = document.createElementNS('http://www.w3.org/2000/svg','path');
-        let d = '';
-        for(let i=0;i<data.length;i++){
-          const gi = viewStart + i;
-          if(sma14[gi]==null) continue;
-          d += (d===''?'M':' L') + xAt(i) + ' ' + yScale(sma14[gi]);
-        }
-        path.setAttribute('d', d);
-        path.setAttribute('fill','none');
-        path.setAttribute('stroke','#0ea5e9');
-        path.setAttribute('stroke-width','2');
-        candleSVG.appendChild(path);
+      // SMA/EMA?
+      if(tSMA.classList.contains('on')){
+        const sma14=SMA(candles,14,d=>d.c);
+        const sma50=SMA(candles,50,d=>d.c);
+        const drawLine=(arr, color, w=2, dash=null)=>{
+          const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+          let d='';
+          for(let i=0;i<data.length;i++){
+            const gi=viewStart+i;
+            if(arr[gi]==null) continue;
+            d+=(d===''?'M':' L')+x(i)+' '+y(arr[gi]);
+          }
+          p.setAttribute('d', d); p.setAttribute('fill','none'); p.setAttribute('stroke',color); p.setAttribute('stroke-width',w);
+          if(dash) p.setAttribute('stroke-dasharray',dash);
+          candleSVG.appendChild(p);
+        };
+        drawLine(sma14, '#22d3ee', 2);
+        drawLine(sma50, '#a78bfa', 2, '6 3');
+      }
+      if(tEMA.classList.contains('on')){
+        const ema14=EMA(candles,14,d=>d.c);
+        const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+        let d=''; for(let i=0;i<data.length;i++){ const gi=viewStart+i; if(ema14[gi]==null) continue; d+=(d===''?'M':' L')+x(i)+' '+y(ema14[gi]); }
+        p.setAttribute('d', d); p.setAttribute('fill','none'); p.setAttribute('stroke','#14f195'); p.setAttribute('stroke-width','2');
+        candleSVG.appendChild(p);
       }
 
-      // EMA
-      if(toggleEMA.checked){
-        const path = document.createElementNS('http://www.w3.org/2000/svg','path');
-        let d = '';
-        for(let i=0;i<data.length;i++){
-          const gi = viewStart + i;
-          if(ema14[gi]==null) continue;
-          d += (d===''?'M':' L') + xAt(i) + ' ' + yScale(ema14[gi]);
-        }
-        path.setAttribute('d', d);
-        path.setAttribute('fill','none');
-        path.setAttribute('stroke','#a21caf');
-        path.setAttribute('stroke-width','2');
-        candleSVG.appendChild(path);
+      // Volume
+      const vw = volSVG.clientWidth || width;
+      const vh = volSVG.clientHeight || 80;
+      const pL=60,pR=20,pT=8,pB=16;
+      const pw=vw-pL-pR, ph=vh-pT-pB;
+      const vMax = Math.max(1, ...data.map(d=>d.v||0));
+      const vx=(i)=> pL + i*(pw/Math.max(1,(data.length-1)));
+      for(let i=0;i<data.length;i++){
+        const d=data[i];
+        const h=(ph*((d.v||0)/vMax));
+        const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');
+        rect.setAttribute('x', vx(i)-Math.max(1, (pw/Math.max(1,(data.length-1)))*0.35));
+        rect.setAttribute('y', pT + (ph-h));
+        rect.setAttribute('width', Math.max(2, (pw/Math.max(1,(data.length-1)))*0.7));
+        rect.setAttribute('height', Math.max(2,h));
+        rect.setAttribute('fill', d.c>=d.o ? '#10b981' : '#f43f5e');
+        rect.setAttribute('opacity','0.65');
+        volSVG.appendChild(rect);
       }
-
-      // RSI
-      rsiWrap.style.display = toggleRSI.checked ? 'block' : 'none';
-      if(toggleRSI.checked){
-        const w = rsiSVG.clientWidth || 800;
-        const h = rsiSVG.clientHeight || 120;
-        const pL=50,pR=20,pT=8,pB=18;
-        const pw = w - pL - pR;
-        const ph = h - pT - pB;
-        const step2 = Math.max(3, pw/Math.max(1,vs-1));
-        const x2 = (i)=> pL + i*step2 + step2*0.5;
-
-        const yRSI = (v)=> pT + (100 - v) * (ph/100);
-        const g = document.createElementNS('http://www.w3.org/2000/svg','g');
-        for(const lvl of [30,50,70]){
-          const line = document.createElementNS('http://www.w3.org/2000/svg','line');
-          line.setAttribute('x1', pL); line.setAttribute('x2', pL+pw);
-          line.setAttribute('y1', yRSI(lvl)); line.setAttribute('y2', yRSI(lvl));
-          line.setAttribute('stroke', lvl===50 ? '#e2e8f0' : '#f1f5f9');
-          line.setAttribute('stroke-width', '1');
-          g.appendChild(line);
-
-          const label = document.createElementNS('http://www.w3.org/2000/svg','text');
-          label.setAttribute('x', 8);
-          label.setAttribute('y', yRSI(lvl)+4);
-          label.setAttribute('fill', '#64748b');
-          label.setAttribute('font-size', '11');
-          label.textContent = lvl;
-          rsiSVG.appendChild(label);
-        }
-        rsiSVG.appendChild(g);
-
-        const path = document.createElementNS('http://www.w3.org/2000/svg','path');
-        let d2 = '';
-        for(let i=0;i<data.length;i++){
-          const gi = viewStart + i;
-          if(rsi14[gi]==null) continue;
-          d2 += (d2===''?'M':' L') + x2(i) + ' ' + yRSI(rsi14[gi]);
-        }
-        path.setAttribute('d', d2);
-        path.setAttribute('fill','none');
-        path.setAttribute('stroke','#ef4444');
-        path.setAttribute('stroke-width','2');
-        rsiSVG.appendChild(path);
-      }
-
-      const sym = symbolPicker.value;
-      chartTitle.textContent = `${sym} · ${timeframeSel.value} · ${fmtTime(data[0]?.t)} → ${fmtTime(data[data.length-1]?.t)}`;
-
-      const sma14all = sma(candles,14,d=>d.c);
-      const ema14all = ema(candles,14,d=>d.c);
-      const rsi14all = rsi(candles,14);
-      buildSignals(sma14all, ema14all, rsi14all);
-      computeStats();
-
-      // Drag zoom
-      let dragStart = null;
-      candleSVG.onmousedown = (e)=>{
-        const rect = candleSVG.getBoundingClientRect();
-        dragStart = e.clientX - rect.left;
-      };
-      candleSVG.onmouseup = (e)=>{
-        if(dragStart===null) return;
-        const rect = candleSVG.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const a = Math.min(dragStart, x), b=Math.max(dragStart, x);
-        const startIdx = Math.max(0, Math.floor((a - padL)/step));
-        const endIdx = Math.min(candles.length, Math.ceil((b - padL)/step));
-        if(endIdx - startIdx >= 10){
-          viewStart += startIdx;
-          viewEnd = viewStart + (endIdx - startIdx);
-          viewStart = Math.max(0, Math.min(viewStart, candles.length-10));
-          viewEnd = Math.max(viewStart+10, Math.min(viewEnd, candles.length));
-          drawChart();
-        }
-        dragStart = null;
-      };
     }
 
-    function resetView(){ viewStart = 0; viewEnd = candles.length; }
+    function drawRSI(){
+      clearSVG(rsiSVG);
+      if(candles.length===0 || !tRSI.classList.contains('on')) return;
+      const width=rsiSVG.clientWidth||600, height=rsiSVG.clientHeight||150;
+      const pL=60,pR=20,pT=10,pB=20, pw=width-pL-pR, ph=height-pT-pB;
+      const rsi14=RSI(candles,14);
+      const x=(i)=> pL + i*(pw/Math.max(1,(candles.length-1)));
+      const y=(v)=> pT + (100 - v) * (ph/100);
 
-    // Simple on-page demo prediction if server not reachable
+      // bands
+      const bands=[30,50,70];
+      for(const lvl of bands){
+        const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+        line.setAttribute('x1', pL); line.setAttribute('x2', pL+pw);
+        line.setAttribute('y1', y(lvl)); line.setAttribute('y2', y(lvl));
+        line.setAttribute('stroke', lvl===50 ? '#334155' : '#1f2a44');
+        line.setAttribute('stroke-width','1');
+        rsiSVG.appendChild(line);
+
+        const label=document.createElementNS('http://www.w3.org/2000/svg','text');
+        label.setAttribute('x', 10); label.setAttribute('y', y(lvl)+4);
+        label.setAttribute('fill','#8fa1c1'); label.setAttribute('font-size','11');
+        label.textContent = lvl; rsiSVG.appendChild(label);
+      }
+
+      const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+      let d=''; for(let i=0;i<candles.length;i++){ if(rsi14[i]==null) continue; d+=(d===''?'M':' L')+x(i)+' '+y(rsi14[i]); }
+      path.setAttribute('d', d); path.setAttribute('fill','none'); path.setAttribute('stroke','#22d3ee'); path.setAttribute('stroke-width','2');
+      rsiSVG.appendChild(path);
+
+      rsiCursor.textContent = (rsi14[rsi14.length-1]!=null) ? `RSI: ${rsi14[rsi14.length-1].toFixed(1)}` : '—';
+    }
+
+    function drawMACD(){
+      clearSVG(macdSVG);
+      if(candles.length===0 || !tMACD.classList.contains('on')) return;
+      const width=macdSVG.clientWidth||600, height=macdSVG.clientHeight||150;
+      const pL=60,pR=20,pT=10,pB=20, pw=width-pL-pR, ph=height-pT-pB;
+
+      const {macd, sig, hist} = MACD(candles,12,26,9);
+      const vals = [...macd, ...sig, ...hist].filter(v=>v!=null);
+      const min = Math.min(...vals), max = Math.max(...vals);
+      const x=(i)=> pL + i*(pw/Math.max(1,(candles.length-1)));
+      const y=(v)=> pT + (max - v) * (ph/Math.max(1e-8,(max-min)));
+
+      // zero line
+      const zero=document.createElementNS('http://www.w3.org/2000/svg','line');
+      zero.setAttribute('x1', pL); zero.setAttribute('x2', pL+pw);
+      zero.setAttribute('y1', y(0)); zero.setAttribute('y2', y(0));
+      zero.setAttribute('stroke','#334155'); zero.setAttribute('stroke-width','1');
+      macdSVG.appendChild(zero);
+
+      // histogram bars
+      for(let i=0;i<candles.length;i++){
+        if(hist[i]==null) continue;
+        const cx=x(i);
+        const y0=y(0), yh=y(hist[i]);
+        const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');
+        rect.setAttribute('x', cx - Math.max(1,(pw/Math.max(1,(candles.length-1)))*0.35));
+        rect.setAttribute('width', Math.max(2,(pw/Math.max(1,(candles.length-1)))*0.7));
+        rect.setAttribute('y', Math.min(y0,yh));
+        rect.setAttribute('height', Math.max(2, Math.abs(yh-y0)));
+        rect.setAttribute('fill', hist[i]>=0 ? '#22c55e' : '#ef4444');
+        rect.setAttribute('opacity','0.6');
+        macdSVG.appendChild(rect);
+      }
+
+      // macd and signal
+      const drawLine=(arr,color)=>{
+        const p=document.createElementNS('http://www.w3.org/2000/svg','path'); let d='';
+        for(let i=0;i<candles.length;i++){ if(arr[i]==null) continue; d+=(d===''?'M':' L')+x(i)+' '+y(arr[i]); }
+        p.setAttribute('d', d); p.setAttribute('fill','none'); p.setAttribute('stroke',color); p.setAttribute('stroke-width','2'); macdSVG.appendChild(p);
+      };
+      drawLine(macd, '#22d3ee'); drawLine(sig, '#a78bfa');
+
+      const last = candles.length-1;
+      macdCursor.textContent = (macd[last]!=null && sig[last]!=null) ? `MACD: ${macd[last].toFixed(3)} • Signal: ${sig[last].toFixed(3)}` : '—';
+    }
+
+    // Local prediction (demo)
     function makeLocalPrediction(){
       if(candles.length<20){
-        predictionBox.innerHTML = `<div class="text-slate-600">Need at least 20 bars for a demo prediction.</div>`;
+        predictionBox.textContent = 'Need at least 20 bars for a demo prediction.';
         predConfidence.textContent = '—';
         return;
       }
       const close = candles.map(d=>d.c);
       const last = close.length-1;
       const mom = close[last] - close[last-3];
-      const sma14v = sma(candles,14,d=>d.c);
-      const ema14v = ema(candles,14,d=>d.c);
-      const rsi14v = rsi(candles,14);
+      const sma14=SMA(candles,14,d=>d.c), ema14=EMA(candles,14,d=>d.c), rsi14=RSI(candles,14);
+      const bb=Bollinger(candles,20,2); const mac=MACD(candles,12,26,9);
 
-      const bullish = [];
-      const bearish = [];
+      const pos=[], neg=[];
+      if(mom>0) pos.push('Momentum positive'); else neg.push('Momentum negative');
+      if(ema14[last]!=null){ (close[last]>ema14[last])? pos.push('Close > EMA14') : neg.push('Close < EMA14'); }
+      if(sma14[last]!=null && sma14[last-1]!=null){ (sma14[last]>sma14[last-1])? pos.push('SMA14 rising') : neg.push('SMA14 falling'); }
+      if(rsi14[last]!=null){ if(rsi14[last]>70) neg.push('RSI overbought'); else if(rsi14[last]<30) pos.push('RSI oversold'); }
 
-      if(mom>0) bullish.push('Short-term momentum positive'); else bearish.push('Short-term momentum negative');
-      if(ema14v[last]!=null){ (close[last] > ema14v[last]) ? bullish.push('Price above EMA(14)') : bearish.push('Price below EMA(14)'); }
-      if(sma14v[last]!=null && sma14v[last-1]!=null){ (sma14v[last] > sma14v[last-1]) ? bullish.push('SMA(14) rising') : bearish.push('SMA(14) falling'); }
-
-      const r = rsi14v[last];
-      let rsiNote = 'RSI neutral';
-      if(r!=null){
-        if(r>70){ bearish.push('RSI overbought'); rsiNote='RSI overbought'; }
-        else if(r<30){ bullish.push('RSI oversold'); rsiNote='RSI oversold'; }
-      }
-
-      const score = bullish.length - bearish.length;
-      let direction = 'Sideways';
-      if(score>=2) direction = 'Bullish';
-      else if(score<=-2) direction = 'Bearish';
-
-      const conf = Math.min(95, Math.max(55, 60 + score*7 + (Math.abs(mom)/(close[last]*0.01)) ));
+      const score = pos.length - neg.length;
+      let direction='Sideways'; if(score>=2) direction='Bullish'; else if(score<=-2) direction='Bearish';
+      const conf = Math.min(96, Math.max(55, 60 + score*8 + (Math.abs(mom)/(close[last]*0.01)) ));
       predConfidence.textContent = `${Math.round(conf)}% confidence`;
       const emoji = direction==='Bullish' ? '🟢' : direction==='Bearish' ? '🔴' : '🟡';
-
       predictionBox.innerHTML = `
         <div class="flex items-start gap-3">
           <div class="text-2xl">${emoji}</div>
           <div>
             <div class="text-lg font-extrabold">${direction} next candle</div>
-            <ul class="mt-2 space-y-1 text-sm text-slate-700">
-              ${bullish.map(s=>`<li>✅ ${s}</li>`).join('')}
-              ${bearish.map(s=>`<li>⚠️ ${s}</li>`).join('')}
-              <li>📌 ${rsiNote}</li>
+            <ul class="mt-2 space-y-1 text-sm text-slate-300">
+              ${pos.map(s=>`<li>✅ ${s}</li>`).join('')}
+              ${neg.map(s=>`<li>⚠️ ${s}</li>`).join('')}
             </ul>
           </div>
         </div>
       `;
-      return {direction, confidence: Math.round(conf), bullish, bearish, rsi: r, timeframe: timeframeSel.value, symbol: symbolPicker.value, lastTime: candles[last].t, lastClose: candles[last].c};
+      lastPrediction = {prediction:direction, confidence:Math.round(conf), positives:pos, negatives:neg, symbol:symbolPicker.value, timeframe:timeframeSel.value, lastClose:close[last], lastTime:candles[last].t};
+      return lastPrediction;
     }
 
+    function escapeHTML(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
     function downloadJSON(obj, name='prediction.json'){
       const blob = new Blob([JSON.stringify(obj,null,2)], {type:'application/json'});
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = name;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      const a = document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
     }
 
-    // Buttons
+    // AI Narrative (local, stylistic)
+    function makeNarrative(){
+      if(candles.length<20){ narrative.textContent='Load more data for a richer narrative.'; return; }
+      const last=candles.length-1;
+      const rsi14=RSI(candles,14); const {macd,sig,hist}=MACD(candles,12,26,9);
+      const sma50=SMA(candles,50,d=>d.c), sma200=SMA(candles,200,d=>d.c);
+      const bb=Bollinger(candles,20,2);
+      const aboveLong = sma200[last]!=null && candles[last].c > sma200[last];
+      const trend = (sma50[last]!=null && sma200[last]!=null) ? (sma50[last]>sma200[last] ? 'uptrend' : 'downtrend') : 'unclear trend';
+      const rsiNote = rsi14[last]==null ? 'RSI forming' : rsi14[last]>70 ? 'overbought' : rsi14[last]<30 ? 'oversold' : 'neutral';
+      const macNote = (macd[last]!=null && sig[last]!=null) ? (macd[last]>sig[last] ? 'bullish momentum' : 'bearish momentum') : 'momentum forming';
+      const width = (bb.up[last]!=null && bb.dn[last]!=null && bb.mid[last]!=null) ? ( (bb.up[last]-bb.dn[last])/(bb.mid[last]||1) ) : null;
+      const squeeze = (width!=null && width<0.02) ? 'volatility squeeze' : 'normal volatility';
+
+      narrative.innerHTML = `
+        <div class="text-slate-200">
+          <span class="neon-p font-bold">Outlook:</span> ${trend}, ${macNote}, ${squeeze}.<br/>
+          <span class="text-slate-300">Context:</span> Price ${aboveLong? 'trades above':'sits below'} the long view. RSI is ${rsiNote}.<br/>
+          <span class="text-slate-300">Note:</span> This is a local, stylistic summary — not advice.
+        </div>
+      `;
+    }
+
+    // Actions
     btnSample.addEventListener('click', ()=>{
-      // Sample OHLCV without time (NIFTY-like values)
-      const rows = [
-        '45710,45745,45690,45720,152300',
-        '45720,45750,45700,45735,141900',
-        '45735,45760,45710,45740,133200',
-        '45740,45780,45720,45765,128400',
-        '45765,45790,45730,45750,119800',
-        '45750,45770,45710,45725,125600',
-        '45725,45755,45700,45740,131400',
-        '45740,45785,45720,45780,127900',
-        '45780,45810,45760,45800,121300',
-        '45800,45820,45770,45795,118700',
-        '45795,45825,45760,45810,115600',
-        '45810,45845,45790,45830,113200'
-      ];
-      dataInput.value = rows.join('\n');
+      const start = symbolPicker.value.includes('NIFTY') ? 45700 : 2850;
+      const rows = makeSample(240, start);
+      dataInput.value = rows.map(r=>`${r.o},${r.h},${r.l},${r.c},${r.v}`).join('\n');
     });
 
     btnClear.addEventListener('click', ()=>{
-      dataInput.value = '';
-      candles = [];
-      resetView();
-      drawChart();
-      signalsList.innerHTML = '<li class="text-slate-600">No signals yet.</li>';
-      predictionBox.innerHTML = `<div class="text-slate-600">Load data to generate a prediction.</div>`;
-      predConfidence.textContent = '—';
-      chartTitle.textContent = 'No data loaded';
-      chartCursor.textContent = '—';
-      rsiCursor.textContent = '—';
-      computeStats();
+      dataInput.value=''; rawCandles=[]; candles=[]; clearSVG(candleSVG); clearSVG(volSVG); clearSVG(rsiSVG); clearSVG(macdSVG);
+      chartTitle.textContent='No data loaded'; chartCursor.textContent='—'; rsiCursor.textContent='—'; macdCursor.textContent='—';
+      signalsList.innerHTML = '<li class="text-slate-400">No signals yet.</li>';
+      predictionBox.textContent = 'Load data to generate a prediction.';
+      predConfidence.textContent='—';
+      narrative.textContent='Click “AI Narrative” for an analyst-style summary of trend, momentum, and risk.';
+      computeStats([]);
     });
 
     btnLoad.addEventListener('click', ()=>{
       const parsed = parseInput(dataInput.value);
       if(parsed.length<5){
-        predConfidence.textContent = '—';
-        predictionBox.innerHTML = `<div class="text-rose-700">Couldn’t read your data. Paste rows like: open,high,low,close[,volume] (time optional). Need at least 5 rows.</div>`;
+        predictionBox.innerHTML = '<span class="text-rose-300">Couldn’t read your data. Need at least 5 rows.</span>';
         return;
       }
-      candles = parsed;
-      ensureTimesIfMissing();
-      resetView();
-      drawChart();
-      computeStats();
-      predConfidence.textContent = '—';
-      predictionBox.innerHTML = `<div class="text-slate-700">Data loaded. Now click “Predict Next Candle”.</div>`;
+      ensureTimesIfMissing(parsed);
+      rawCandles = parsed;
+      drawAll();
+      predictionBox.textContent = 'Data loaded. Click Predict or AI Narrative.';
+      predConfidence.textContent='—';
     });
 
-    toggleSMA.addEventListener('change', drawChart);
-    toggleEMA.addEventListener('change', drawChart);
-    toggleRSI.addEventListener('change', drawChart);
-    btnResetZoom.addEventListener('click', ()=>{ resetView(); drawChart(); });
+    // Indicator toggles
+    tSMA.addEventListener('click', ()=>toggle(tSMA));
+    tEMA.addEventListener('click', ()=>toggle(tEMA));
+    tBB.addEventListener('click', ()=>toggle(tBB));
+    tHA.addEventListener('click', ()=>toggle(tHA));
+    tRSI.addEventListener('click', ()=>toggle(tRSI));
+    tMACD.addEventListener('click', ()=>toggle(tMACD));
+
+    // Strategy toggles (impact: Signals logic uses them implicitly by presence; for demo we keep UI alive)
+    sGolden.addEventListener('click', ()=>toggle(sGolden));
+    sRSI.addEventListener('click', ()=>toggle(sRSI));
+    sBreak.addEventListener('click', ()=>toggle(sBreak));
+    sBB.addEventListener('click', ()=>toggle(sBB));
+
+    btnNarrate.addEventListener('click', makeNarrative);
 
     btnPredict.addEventListener('click', async ()=>{
-      if(candles.length<1){
-        alert('Please load some data first.');
+      if(rawCandles.length<1){ alert('Please load some data first.'); return; }
+      serverState.textContent='Working…';
+      serverState.className='text-[11px] px-2 py-1 rounded-md badge';
+      const mode=predictMode.value.trim();
+      const route=(apiRouteInput?.value||'').trim();
+
+      if(mode==='local' || !route){
+        const res=makeLocalPrediction();
+        serverState.textContent='Local demo';
         return;
       }
-      const last = candles[candles.length-1];
-      predictionBox.innerHTML = `<div class="text-slate-600">Requesting prediction from your server…</div>`;
-      predConfidence.textContent = '—';
-      const route = (apiRouteInput?.value || '/api/candle').trim();
-      if(serverRouteText) serverRouteText.textContent = route;
 
       try{
-        const payload = { open: last.o, high: last.h, low: last.l, close: last.c };
-        const res = await fetch(route, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const isOK = res.ok;
-        let data = {};
-        try{ data = await res.json(); }catch{ /* ignore */ }
+        let res,isOK,data={};
+        if(mode==='server-last'){
+          const last = rawCandles[rawCandles.length-1];
+          res = await fetch(route, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({open:last.o, high:last.h, low:last.l, close:last.c}) });
+        } else {
+          const route2 = route.includes('predict') ? route : route.replace(/candle$/,'predict');
+          res = await fetch(route2, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({symbol:symbolPicker.value, timeframe:timeframeSel.value, candles: rawCandles}) });
+        }
+        isOK = res.ok;
+        try{ data = await res.json(); }catch{}
 
-        if(isOK && data && (typeof data.prediction === 'string')){
-          lastPrediction = data;
-          predConfidence.textContent = '—';
+        if(isOK && (data.prediction || data.result || data.reply)){
+          const text = escapeHTML(String(data.prediction || data.result || data.reply));
+          predConfidence.textContent = data.confidence ? String(data.confidence)+'%' : '—';
           predictionBox.innerHTML = `
             <div class="space-y-2">
-              <div class="text-lg font-extrabold">Server result</div>
-              <pre class="bg-slate-50 p-3 rounded-lg whitespace-pre-wrap text-sm">${escapeHTML(data.prediction)}</pre>
+              <div class="text-sm text-slate-300">Server response</div>
+              <pre class="bg-[#0b132e] border border-[#1f2a44] p-3 rounded-lg whitespace-pre-wrap text-slate-200 text-sm">${text}</pre>
             </div>
           `;
-          serverState.textContent = 'Online';
-          serverState.className = 'text-xs px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700';
+          lastPrediction = data;
+          serverState.textContent='Online';
+          serverState.className='text-[11px] px-2 py-1 rounded-md on';
         } else {
-          // Fallback to local demo
-          const local = makeLocalPrediction();
-          if(local) lastPrediction = local;
-          serverState.textContent = 'Unreachable';
-          serverState.className = 'text-xs px-2 py-1 rounded-lg bg-rose-100 text-rose-700';
+          const local=makeLocalPrediction();
+          serverState.textContent='Unreachable';
+          serverState.className='text-[11px] px-2 py-1 rounded-md badge';
+          predictionBox.innerHTML += `<div class="mt-2 text-rose-300">Server not reachable. Used local demo instead.</div>`;
+          if(local) lastPrediction=local;
         }
       }catch(err){
-        const local = makeLocalPrediction();
-        if(local) lastPrediction = local;
-        predictionBox.innerHTML += `<div class="mt-2 text-rose-700">Server error: ${String(err.message||err)}. Used demo logic instead.</div>`;
-        serverState.textContent = 'Unreachable';
-        serverState.className = 'text-xs px-2 py-1 rounded-lg bg-rose-100 text-rose-700';
+        const local=makeLocalPrediction();
+        serverState.textContent='Error';
+        serverState.className='text-[11px] px-2 py-1 rounded-md badge';
+        predictionBox.innerHTML += `<div class="mt-2 text-rose-300">Error: ${escapeHTML(err.message||String(err))}. Used local demo.</div>`;
+        if(local) lastPrediction=local;
       }
     });
 
     btnDownload.addEventListener('click', ()=>{
       if(!lastPrediction){
-        const local = makeLocalPrediction();
-        if(local) lastPrediction = local;
+        const res=makeLocalPrediction(); if(!res) return; lastPrediction=res;
       }
-      if(lastPrediction){
-        downloadJSON(lastPrediction, `prediction_${symbolPicker.value}_${timeframeSel.value}.json`);
-      }
+      downloadJSON(lastPrediction, `prediction_${symbolPicker.value.replace(':','_')}_${timeframeSel.value}.json`);
     });
 
-    // Init
-    // (We no longer ping the server automatically since your Flask route accepts POST only.)
-    function reflectRoute(){
-      const route = (apiRouteInput?.value || '/api/candle').trim();
-      if(serverRouteText) serverRouteText.textContent = route;
-      serverState.textContent = 'Tap Predict to test';
-      serverState.className = 'text-xs px-2 py-1 rounded-lg bg-slate-100 text-slate-700';
-    }
-    apiRouteInput?.addEventListener('change', reflectRoute);
-    apiRouteInput?.addEventListener('blur', reflectRoute);
-    reflectRoute();
+    // Initial UI defaults
+    on(tRSI); on(tMACD); off(tSMA); off(tEMA); off(tBB); off(tHA);
   </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9727f522832e3386',t:'MTc1NTc1NjUyNC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'972807c932328f9e',t:'MTc1NTc1NzI4OC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
