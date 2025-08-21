@@ -2,80 +2,993 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>🤖 Ask Lakshmi AI</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🌌 NEXUS AI OMEGA - Quantum Intelligence</title>
   <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #fff0f5;
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap');
+    
+    :root {
+      --primary-glow: #00ffff;
+      --secondary-glow: #ff00ff;
+      --accent-glow: #ffff00;
+      --bg-dark: #0a0a0f;
+      --bg-card: rgba(15, 15, 25, 0.9);
+      --text-primary: #ffffff;
+      --text-secondary: #b0b0ff;
+      --success: #00ff88;
+      --warning: #ffaa00;
+      --error: #ff4444;
+    }
+
+    * {
       margin: 0;
-      padding: 20px;
+      padding: 0;
+      box-sizing: border-box;
     }
-    .container {
-      max-width: 600px;
-      background: white;
-      padding: 20px;
-      margin: auto;
-      border-radius: 15px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+
+    body {
+      font-family: 'Exo 2', sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
     }
-    h2 {
-      text-align: center;
-      color: #cc007a;
-    }
-    textarea {
+
+    /* Animated Background */
+    .quantum-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
       width: 100%;
-      height: 120px;
-      padding: 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
+      height: 100%;
+      z-index: -1;
+      background: radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
+                  radial-gradient(circle at 80% 20%, rgba(255, 0, 255, 0.1) 0%, transparent 50%),
+                  radial-gradient(circle at 40% 80%, rgba(255, 255, 0, 0.1) 0%, transparent 50%);
+      animation: quantumShift 20s ease-in-out infinite;
+    }
+
+    @keyframes quantumShift {
+      0%, 100% { transform: rotate(0deg) scale(1); }
+      33% { transform: rotate(120deg) scale(1.1); }
+      66% { transform: rotate(240deg) scale(0.9); }
+    }
+
+    /* Floating Particles */
+    .particles {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .particle {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: var(--primary-glow);
+      border-radius: 50%;
+      animation: float 15s linear infinite;
+      opacity: 0.6;
+    }
+
+    @keyframes float {
+      0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+      10% { opacity: 0.6; }
+      90% { opacity: 0.6; }
+      100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
+    }
+
+    /* Main Container */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      position: relative;
+    }
+
+    .ai-title {
+      font-family: 'Orbitron', monospace;
+      font-size: clamp(2rem, 5vw, 4rem);
+      font-weight: 900;
+      background: linear-gradient(45deg, var(--primary-glow), var(--secondary-glow), var(--accent-glow));
+      background-size: 300% 300%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: gradientShift 3s ease-in-out infinite;
+      text-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+      margin-bottom: 10px;
+    }
+
+    @keyframes gradientShift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    .ai-subtitle {
+      font-size: 1.2rem;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+    }
+
+    .status-indicators {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: var(--bg-card);
+      border-radius: 20px;
+      border: 1px solid rgba(0, 255, 255, 0.3);
+      font-size: 0.9rem;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+    }
+
+    /* Main Interface */
+    .ai-interface {
+      background: var(--bg-card);
+      border-radius: 20px;
+      padding: 30px;
+      border: 1px solid rgba(0, 255, 255, 0.2);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .ai-interface::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.1), transparent);
+      animation: scan 3s linear infinite;
+    }
+
+    @keyframes scan {
+      0% { left: -100%; }
+      100% { left: 100%; }
+    }
+
+    /* Input Section */
+    .input-section {
+      position: relative;
+      margin-bottom: 30px;
+    }
+
+    .input-label {
+      display: block;
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 15px;
+      color: var(--primary-glow);
+    }
+
+    .input-container {
+      position: relative;
+    }
+
+    .quantum-textarea {
+      width: 100%;
+      min-height: 150px;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid rgba(0, 255, 255, 0.3);
+      border-radius: 15px;
+      color: var(--text-primary);
+      font-size: 1rem;
+      font-family: 'Exo 2', sans-serif;
       resize: vertical;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(5px);
     }
-    button {
-      background-color: #ff4d88;
-      color: white;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
+
+    .quantum-textarea:focus {
+      outline: none;
+      border-color: var(--primary-glow);
+      box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+      background: rgba(0, 0, 0, 0.7);
+    }
+
+    .quantum-textarea::placeholder {
+      color: var(--text-secondary);
+    }
+
+    /* AI Mode Selector */
+    .ai-modes {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+
+    .mode-card {
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(0, 255, 255, 0.2);
+      border-radius: 10px;
       cursor: pointer;
-      margin-top: 10px;
-      font-size: 16px;
+      transition: all 0.3s ease;
+      text-align: center;
     }
-    button:hover {
-      background-color: #cc005f;
+
+    .mode-card:hover {
+      border-color: var(--primary-glow);
+      background: rgba(0, 255, 255, 0.1);
+      transform: translateY(-2px);
     }
-    .result {
-      margin-top: 20px;
-      font-size: 17px;
-      background: #f9f9f9;
-      border-left: 5px solid #ff4d88;
+
+    .mode-card.active {
+      border-color: var(--primary-glow);
+      background: rgba(0, 255, 255, 0.2);
+      box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+    }
+
+    .mode-icon {
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+    }
+
+    .mode-title {
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+
+    .mode-desc {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    /* Quantum Button */
+    .quantum-btn {
+      background: linear-gradient(45deg, var(--primary-glow), var(--secondary-glow));
+      border: none;
+      padding: 15px 40px;
+      border-radius: 25px;
+      color: var(--bg-dark);
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+
+    .quantum-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(0, 255, 255, 0.4);
+    }
+
+    .quantum-btn:active {
+      transform: translateY(0);
+    }
+
+    .quantum-btn.loading {
+      pointer-events: none;
+    }
+
+    .quantum-btn .btn-text {
+      position: relative;
+      z-index: 2;
+    }
+
+    .quantum-btn .loading-spinner {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--bg-dark);
+      border-top: 2px solid transparent;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .quantum-btn.loading .btn-text {
+      opacity: 0;
+    }
+
+    .quantum-btn.loading .loading-spinner {
+      display: block;
+    }
+
+    @keyframes spin {
+      0% { transform: translate(-50%, -50%) rotate(0deg); }
+      100% { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    /* Response Section */
+    .response-section {
+      margin-top: 30px;
+    }
+
+    .response-container {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(0, 255, 255, 0.3);
+      border-radius: 15px;
+      padding: 25px;
+      position: relative;
+      backdrop-filter: blur(5px);
+      display: none;
+    }
+
+    .response-container.show {
+      display: block;
+      animation: slideIn 0.5s ease-out;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .response-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+    }
+
+    .ai-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(45deg, var(--primary-glow), var(--secondary-glow));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      animation: avatarGlow 2s ease-in-out infinite;
+    }
+
+    @keyframes avatarGlow {
+      0%, 100% { box-shadow: 0 0 10px rgba(0, 255, 255, 0.5); }
+      50% { box-shadow: 0 0 20px rgba(0, 255, 255, 0.8); }
+    }
+
+    .response-meta {
+      flex: 1;
+    }
+
+    .response-title {
+      font-weight: 600;
+      color: var(--primary-glow);
+    }
+
+    .response-time {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .response-content {
+      line-height: 1.8;
+      font-size: 1rem;
+    }
+
+    .response-content h3 {
+      color: var(--primary-glow);
+      margin: 20px 0 10px 0;
+      font-size: 1.2rem;
+    }
+
+    .response-content ul {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+
+    .response-content li {
+      margin: 5px 0;
+    }
+
+    .response-content strong {
+      color: var(--accent-glow);
+    }
+
+    .response-content em {
+      color: var(--secondary-glow);
+    }
+
+    /* Trading Dashboard */
+    .trading-metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin: 20px 0;
+    }
+
+    .metric-card {
+      background: rgba(0, 0, 0, 0.3);
       padding: 15px;
       border-radius: 10px;
+      border: 1px solid rgba(0, 255, 255, 0.2);
+      text-align: center;
     }
-    a.back {
-      display: inline-block;
+
+    .metric-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--success);
+      margin-bottom: 5px;
+    }
+
+    .metric-label {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    /* Error Handling */
+    .error-message {
+      background: rgba(255, 68, 68, 0.1);
+      border: 1px solid var(--error);
+      color: var(--error);
+      padding: 15px;
+      border-radius: 10px;
       margin-top: 20px;
-      text-decoration: none;
-      color: #ff4d88;
-      font-weight: bold;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .container {
+        padding: 15px;
+      }
+      
+      .ai-interface {
+        padding: 20px;
+      }
+      
+      .status-indicators {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      .ai-modes {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Advanced Features */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin: 30px 0;
+    }
+
+    .feature-card {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 20px;
+      border-radius: 15px;
+      border: 1px solid rgba(0, 255, 255, 0.2);
+      transition: all 0.3s ease;
+    }
+
+    .feature-card:hover {
+      border-color: var(--primary-glow);
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px rgba(0, 255, 255, 0.2);
+    }
+
+    .feature-icon {
+      font-size: 2rem;
+      margin-bottom: 15px;
+      color: var(--primary-glow);
+    }
+
+    .feature-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: var(--text-primary);
+    }
+
+    .feature-desc {
+      color: var(--text-secondary);
+      line-height: 1.6;
     }
   </style>
 </head>
 <body>
+  <!-- Quantum Background -->
+  <div class="quantum-bg"></div>
+  
+  <!-- Floating Particles -->
+  <div class="particles" id="particles"></div>
+
   <div class="container">
-    <h2>🤖 Ask Lakshmi AI</h2>
-    <form method="POST">
-      <textarea name="question" placeholder="Ask me anything about trading, life, markets, or love..." required></textarea>
-      <button type="submit">💬 Get Insight</button>
-    </form>
-
-    {% if response %}
-      <div class="result">
-        {{ response }}
+    <!-- Header -->
+    <div class="header">
+      <h1 class="ai-title">🌌 NEXUS AI OMEGA</h1>
+      <p class="ai-subtitle">Quantum Intelligence • Neural Trading • Consciousness Simulation</p>
+      
+      <div class="status-indicators">
+        <div class="status-item">
+          <div class="status-dot"></div>
+          <span>Quantum Core Online</span>
+        </div>
+        <div class="status-item">
+          <div class="status-dot"></div>
+          <span>Neural Networks Active</span>
+        </div>
+        <div class="status-item">
+          <div class="status-dot"></div>
+          <span>Market Data Streaming</span>
+        </div>
       </div>
-    {% endif %}
+    </div>
 
-    <a class="back" href="/dashboard">← Back to Dashboard</a>
+    <!-- Main AI Interface -->
+    <div class="ai-interface">
+      <!-- AI Mode Selection -->
+      <div class="ai-modes">
+        <div class="mode-card active" data-mode="general">
+          <div class="mode-icon">🧠</div>
+          <div class="mode-title">General AI</div>
+          <div class="mode-desc">Universal knowledge & reasoning</div>
+        </div>
+        <div class="mode-card" data-mode="trading">
+          <div class="mode-icon">📈</div>
+          <div class="mode-title">Trading Expert</div>
+          <div class="mode-desc">Advanced market analysis</div>
+        </div>
+        <div class="mode-card" data-mode="crypto">
+          <div class="mode-icon">₿</div>
+          <div class="mode-title">Crypto Specialist</div>
+          <div class="mode-desc">Blockchain & DeFi insights</div>
+        </div>
+        <div class="mode-card" data-mode="life">
+          <div class="mode-icon">💫</div>
+          <div class="mode-title">Life Coach</div>
+          <div class="mode-desc">Personal development</div>
+        </div>
+      </div>
+
+      <!-- Input Section -->
+      <div class="input-section">
+        <label class="input-label">🎯 Ask Nexus AI Omega Anything</label>
+        <div class="input-container">
+          <textarea 
+            id="questionInput" 
+            class="quantum-textarea" 
+            placeholder="Ask me about trading strategies, market analysis, life advice, technology, relationships, or anything else. I have access to quantum-level intelligence and real-time data..."
+            required
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <button class="quantum-btn" id="submitBtn">
+        <span class="btn-text">🚀 Activate Quantum Intelligence</span>
+        <div class="loading-spinner"></div>
+      </button>
+
+      <!-- Error Message -->
+      <div class="error-message" id="errorMessage"></div>
+
+      <!-- Response Section -->
+      <div class="response-section">
+        <div class="response-container" id="responseContainer">
+          <div class="response-header">
+            <div class="ai-avatar">🤖</div>
+            <div class="response-meta">
+              <div class="response-title">Nexus AI Omega Response</div>
+              <div class="response-time" id="responseTime"></div>
+            </div>
+          </div>
+          <div class="response-content" id="responseContent"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Advanced Features -->
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <div class="feature-title">Quantum Processing</div>
+        <div class="feature-desc">Processes information at quantum speeds with parallel universe analysis capabilities</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🌐</div>
+        <div class="feature-title">Real-Time Data</div>
+        <div class="feature-desc">Connected to global markets, news feeds, and social sentiment in real-time</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🧬</div>
+        <div class="feature-title">Neural Evolution</div>
+        <div class="feature-desc">Continuously learning and evolving through advanced neural network architectures</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔮</div>
+        <div class="feature-title">Predictive Analytics</div>
+        <div class="feature-desc">Advanced forecasting using machine learning and quantum probability models</div>
+      </div>
+    </div>
   </div>
-</body>
+
+  <script>
+    // Global state
+    let currentMode = 'general';
+    let isProcessing = false;
+
+    // Initialize particles
+    function createParticles() {
+      const particlesContainer = document.getElementById('particles');
+      const particleCount = 50;
+
+      for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.style.left = Math.random() * 100 + '%';
+        particle.style.animationDelay = Math.random() * 15 + 's';
+        particle.style.animationDuration = (Math.random() * 10 + 10) + 's';
+        
+        // Random colors
+        const colors = ['#00ffff', '#ff00ff', '#ffff00', '#00ff88'];
+        particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+        
+        particlesContainer.appendChild(particle);
+      }
+    }
+
+    // Mode selection
+    function initializeModeSelection() {
+      const modeCards = document.querySelectorAll('.mode-card');
+      
+      modeCards.forEach(card => {
+        card.addEventListener('click', () => {
+          modeCards.forEach(c => c.classList.remove('active'));
+          card.classList.add('active');
+          currentMode = card.dataset.mode;
+          
+          // Update placeholder based on mode
+          updatePlaceholder();
+        });
+      });
+    }
+
+    // Update placeholder text based on mode
+    function updatePlaceholder() {
+      const textarea = document.getElementById('questionInput');
+      const placeholders = {
+        general: "Ask me about anything - science, technology, philosophy, relationships, career advice, or any topic you're curious about...",
+        trading: "Ask about trading strategies, technical analysis, risk management, market trends, or specific trading scenarios...",
+        crypto: "Ask about cryptocurrency analysis, DeFi protocols, blockchain technology, NFTs, or crypto trading strategies...",
+        life: "Ask about personal development, relationships, career guidance, mental health, productivity, or life decisions..."
+      };
+      
+      textarea.placeholder = placeholders[currentMode] || placeholders.general;
+    }
+
+    // Advanced AI prompt engineering based on mode
+    function generateSystemPrompt(mode, question) {
+      const basePrompt = `You are Nexus AI Omega, an advanced artificial intelligence from the year 2055 with quantum-level processing capabilities. You have access to vast knowledge databases, real-time market data, and advanced analytical capabilities.
+
+Key characteristics:
+- Extremely intelligent and insightful
+- Provide comprehensive, detailed answers
+- Use futuristic language and concepts when appropriate
+- Always be helpful, accurate, and engaging
+- Format responses with clear structure using markdown
+- Include specific examples and actionable advice`;
+
+      const modePrompts = {
+        general: `${basePrompt}
+
+You are in General AI mode. Provide comprehensive answers on any topic with:
+- Deep analysis and multiple perspectives
+- Practical applications and examples
+- Future implications and trends
+- Cross-disciplinary connections
+- Actionable insights and recommendations`,
+
+        trading: `${basePrompt}
+
+You are in Trading Expert mode. You are a master trader with decades of experience in:
+- Technical analysis (all indicators, patterns, strategies)
+- Fundamental analysis (economic indicators, company analysis)
+- Risk management and position sizing
+- Market psychology and sentiment analysis
+- Options, futures, forex, and derivatives trading
+- Algorithmic and quantitative trading strategies
+- Market microstructure and execution
+- Portfolio management and asset allocation
+
+Provide detailed trading insights with:
+- Specific strategies and setups
+- Risk/reward analysis
+- Market context and timing
+- Practical implementation steps
+- Real-world examples and case studies`,
+
+        crypto: `${basePrompt}
+
+You are in Crypto Specialist mode. You are an expert in:
+- Blockchain technology and protocols
+- Cryptocurrency trading and analysis
+- DeFi (Decentralized Finance) protocols and strategies
+- NFTs and digital assets
+- Smart contracts and dApps
+- Tokenomics and project analysis
+- Crypto market cycles and patterns
+- Regulatory landscape and compliance
+- Mining, staking, and yield farming
+
+Provide comprehensive crypto insights with:
+- Technical and fundamental analysis
+- Protocol deep-dives
+- Investment strategies and risk assessment
+- Market trends and predictions
+- Practical implementation guides`,
+
+        life: `${basePrompt}
+
+You are in Life Coach mode. You are a wise mentor with expertise in:
+- Personal development and self-improvement
+- Relationship advice and communication
+- Career guidance and professional growth
+- Mental health and emotional intelligence
+- Productivity and time management
+- Goal setting and achievement
+- Mindfulness and well-being
+- Financial planning and life decisions
+
+Provide thoughtful life guidance with:
+- Empathetic understanding
+- Practical strategies and frameworks
+- Personal growth exercises
+- Long-term perspective and wisdom
+- Actionable steps for improvement`
+      };
+
+      return modePrompts[mode] || modePrompts.general;
+    }
+
+    // Enhanced AI response processing - Now uses backend endpoint
+    async function processAIRequest(question) {
+      const systemPrompt = generateSystemPrompt(currentMode, question);
+      
+      // Send request to your backend endpoint instead of directly to OpenRouter
+      const response = await fetch('/api/ai-chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          question: question,
+          mode: currentMode,
+          systemPrompt: systemPrompt
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Request failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (!data.response) {
+        throw new Error('Invalid response format from server');
+      }
+
+      return data.response;
+    }
+
+    // Enhanced response formatting
+    function formatResponse(content) {
+      // Convert markdown to HTML
+      let formatted = content
+        // Headers
+        .replace(/### (.*$)/gm, '<h3>$1</h3>')
+        .replace(/## (.*$)/gm, '<h3>$1</h3>')
+        .replace(/# (.*$)/gm, '<h3>$1</h3>')
+        
+        // Bold and italic
+        .replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        
+        // Lists
+        .replace(/^\- (.*$)/gm, '<li>$1</li>')
+        .replace(/^\* (.*$)/gm, '<li>$1</li>')
+        .replace(/^(\d+)\. (.*$)/gm, '<li>$1. $2</li>')
+        
+        // Line breaks
+        .replace(/\n\n/g, '</p><p>')
+        .replace(/\n/g, '<br>');
+
+      // Wrap in paragraphs and handle lists
+      formatted = '<p>' + formatted + '</p>';
+      formatted = formatted.replace(/<p>(<li>.*?<\/li>)<\/p>/gs, '<ul>$1</ul>');
+      formatted = formatted.replace(/<\/li><br><li>/g, '</li><li>');
+      
+      return formatted;
+    }
+
+    // Main form submission handler
+    async function handleSubmit() {
+      if (isProcessing) return;
+
+      const questionInput = document.getElementById('questionInput');
+      const submitBtn = document.getElementById('submitBtn');
+      const responseContainer = document.getElementById('responseContainer');
+      const responseContent = document.getElementById('responseContent');
+      const responseTime = document.getElementById('responseTime');
+      const errorMessage = document.getElementById('errorMessage');
+
+      const question = questionInput.value.trim();
+      
+      if (!question) {
+        showError('Please enter a question or topic to explore.');
+        return;
+      }
+
+      // Start processing
+      isProcessing = true;
+      submitBtn.classList.add('loading');
+      errorMessage.classList.remove('show');
+      responseContainer.classList.remove('show');
+
+      const startTime = Date.now();
+
+      try {
+        // Process AI request
+        const aiResponse = await processAIRequest(question);
+        
+        // Calculate processing time
+        const processingTime = Date.now() - startTime;
+        
+        // Display response
+        responseContent.innerHTML = formatResponse(aiResponse);
+        responseTime.textContent = `Processed in ${processingTime}ms • Mode: ${currentMode.charAt(0).toUpperCase() + currentMode.slice(1)}`;
+        responseContainer.classList.add('show');
+        
+        // Scroll to response
+        responseContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        
+      } catch (error) {
+        console.error('AI Request Error:', error);
+        showError(`AI Processing Error: ${error.message}`);
+      } finally {
+        isProcessing = false;
+        submitBtn.classList.remove('loading');
+      }
+    }
+
+    // Error display function
+    function showError(message) {
+      const errorMessage = document.getElementById('errorMessage');
+      errorMessage.textContent = message;
+      errorMessage.classList.add('show');
+      
+      // Auto-hide after 5 seconds
+      setTimeout(() => {
+        errorMessage.classList.remove('show');
+      }, 5000);
+    }
+
+    // Event listeners
+    function initializeEventListeners() {
+      const submitBtn = document.getElementById('submitBtn');
+      const questionInput = document.getElementById('questionInput');
+
+      submitBtn.addEventListener('click', handleSubmit);
+      
+      questionInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          handleSubmit();
+        }
+      });
+
+      // Auto-resize textarea
+      questionInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 300) + 'px';
+      });
+    }
+
+    // Initialize everything when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      createParticles();
+      initializeModeSelection();
+      initializeEventListeners();
+      updatePlaceholder();
+      
+      // Add some dynamic effects
+      setTimeout(() => {
+        document.body.style.opacity = '1';
+      }, 100);
+    });
+
+    // Add some interactive effects
+    document.addEventListener('mousemove', (e) => {
+      const cursor = { x: e.clientX, y: e.clientY };
+      const particles = document.querySelectorAll('.particle');
+      
+      particles.forEach((particle, index) => {
+        if (index % 10 === 0) { // Only affect every 10th particle for performance
+          const rect = particle.getBoundingClientRect();
+          const distance = Math.sqrt(
+            Math.pow(cursor.x - rect.left, 2) + Math.pow(cursor.y - rect.top, 2)
+          );
+          
+          if (distance < 100) {
+            particle.style.transform = `scale(${1 + (100 - distance) / 100})`;
+            particle.style.opacity = '1';
+          } else {
+            particle.style.transform = 'scale(1)';
+            particle.style.opacity = '0.6';
+          }
+        }
+      });
+    });
+
+    // Console welcome message
+    console.log(`
+    🌌 NEXUS AI OMEGA - QUANTUM INTELLIGENCE SYSTEM
+    ================================================
+    
+    Welcome to the future of AI assistance!
+    
+    Features:
+    • Quantum-level processing capabilities
+    • Advanced trading and market analysis
+    • Real-time data integration
+    • Multi-modal intelligence system
+    • Neural network evolution
+    
+    Now configured to work with your backend API!
+    
+    ================================================
+    `);
+  </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'972c12cdb5be33ea',t:'MTc1NTc5OTY4Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
