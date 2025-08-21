@@ -677,31 +677,30 @@ def ask_ai():
             if not question:
                 return jsonify({'error': 'No question provided'}), 400
             
-            # Make request to OpenRouter with your environment variable
+            # Make request to OpenRouter using your working configuration
             ai_response = requests.post(
                 OPENROUTER_URL,
                 headers={
-                    'Authorization': f'Bearer {OPENROUTER_KEY}',
-                    'Content-Type': 'application/json',
-                    'HTTP-Referer': request.headers.get('Referer', ''),
-                    'X-Title': 'Nexus AI Omega'
+                    "Authorization": f"Bearer {OPENROUTER_KEY}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://lakshmi-ai-trades.onrender.com",
+                    "X-Title": "Lakshmi AI Wife"
                 },
                 json={
-                    'model': 'anthropic/claude-3.5-sonnet',
-                    'messages': [
-                        {'role': 'system', 'content': system_prompt},
-                        {'role': 'user', 'content': question}
+                    "model": "deepseek/deepseek-chat-v3-0324",
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": question}
                     ],
-                    'temperature': 0.7,
-                    'max_tokens': 4000,
-                    'top_p': 0.9,
-                    'frequency_penalty': 0.1,
-                    'presence_penalty': 0.1
+                    "max_tokens": 600,
+                    "temperature": 0.9,
+                    "top_p": 0.95
                 }
             )
             
             if ai_response.status_code != 200:
                 print(f"OpenRouter API Error: {ai_response.status_code}")
+                print(f"Response: {ai_response.text}")
                 return jsonify({'error': f'AI service error: {ai_response.status_code}'}), 500
                 
             ai_data = ai_response.json()
