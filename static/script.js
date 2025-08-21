@@ -12,6 +12,12 @@ chatForm.onsubmit = function (e) {
   chatBox.innerHTML += `<p><strong>You:</strong> ${msg}</p>`;
   userInput.value = "";
 
+  // Immediately show "typing..."
+  const typingMsg = document.createElement("p");
+  typingMsg.innerHTML = `<strong>Lakshmi:</strong> <em>typing...</em>`;
+  chatBox.appendChild(typingMsg);
+  chatBox.scrollTop = chatBox.scrollHeight;
+
   fetch("/chat", {
     method: "POST",
     headers: {
@@ -21,23 +27,16 @@ chatForm.onsubmit = function (e) {
   })
     .then(res => res.json())
     .then(data => {
-      // Simulate typing
-      const typingMsg = document.createElement("p");
-      typingMsg.innerHTML = `<strong>Lakshmi:</strong> <em>typing...</em>`;
-      chatBox.appendChild(typingMsg);
+      typingMsg.innerHTML = `<strong>Lakshmi:</strong> ${data.reply}`;
+      if (data.mood) moodDisplay.textContent = data.mood;
       chatBox.scrollTop = chatBox.scrollHeight;
-
-      setTimeout(() => {
-        typingMsg.innerHTML = `<strong>Lakshmi:</strong> ${data.reply}`;
-        if (data.mood) moodDisplay.textContent = data.mood;
-        chatBox.scrollTop = chatBox.scrollHeight;
-      }, 1500); // ⏳ Delay of 1.5s
     })
     .catch(err => {
-      chatBox.innerHTML += `<p><strong>Lakshmi:</strong> ❌ Error: ${err}</p>`;
+      typingMsg.innerHTML = `<strong>Lakshmi:</strong> ❌ Error: ${err}`;
     });
 };
 
+// --- Quick Replies ---
 function quickSay(msg) {
   userInput.value = msg;
   chatForm.dispatchEvent(new Event("submit"));
