@@ -1,51 +1,907 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Sign Up — Lakshmi</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Interface Registration — Lakshmi Quantum Network</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-blue: #00f5ff;
+            --neon-purple: #bf00ff;
+            --neon-green: #39ff14;
+            --neon-pink: #ff073a;
+            --quantum-gradient: linear-gradient(45deg, #00f5ff, #bf00ff, #39ff14, #ff073a);
+            --hologram-gradient: linear-gradient(135deg, rgba(0,245,255,0.1), rgba(191,0,255,0.1), rgba(57,255,20,0.1));
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: #000;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+            color: #fff;
+        }
+
+        /* Quantum Field Background */
+        .quantum-field {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 20% 50%, rgba(0,245,255,0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(191,0,255,0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 80%, rgba(57,255,20,0.1) 0%, transparent 50%);
+            animation: quantumShift 20s ease-in-out infinite;
+        }
+
+        @keyframes quantumShift {
+            0%, 100% { transform: rotate(0deg) scale(1); }
+            33% { transform: rotate(120deg) scale(1.1); }
+            66% { transform: rotate(240deg) scale(0.9); }
+        }
+
+        /* Neural Network Grid */
+        .neural-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0,245,255,0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,245,255,0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: gridPulse 4s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes gridPulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Holographic Particles */
+        .holo-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .holo-particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--neon-blue);
+            border-radius: 50%;
+            box-shadow: 0 0 10px currentColor;
+            animation: holoFloat 8s linear infinite;
+        }
+
+        @keyframes holoFloat {
+            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+        }
+
+        /* Main Container */
+        .neural-interface {
+            position: relative;
+            z-index: 10;
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 0;
+            perspective: 1000px;
+        }
+
+        .interface-panel {
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(20px);
+            border: 2px solid transparent;
+            border-radius: 20px;
+            padding: 3rem;
+            position: relative;
+            transform-style: preserve-3d;
+            animation: panelEntry 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 
+                0 0 50px rgba(0,245,255,0.3),
+                inset 0 0 50px rgba(191,0,255,0.1);
+        }
+
+        @keyframes panelEntry {
+            0% { 
+                opacity: 0; 
+                transform: rotateX(-90deg) translateY(50px); 
+            }
+            100% { 
+                opacity: 1; 
+                transform: rotateX(0deg) translateY(0); 
+            }
+        }
+
+        .interface-panel::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: var(--quantum-gradient);
+            border-radius: 20px;
+            z-index: -1;
+            animation: borderGlow 3s ease-in-out infinite;
+        }
+
+        @keyframes borderGlow {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        /* Header */
+        .neural-header {
+            text-align: center;
+            margin-bottom: 3rem;
+            position: relative;
+        }
+
+        .quantum-logo {
+            font-size: 5rem;
+            background: var(--quantum-gradient);
+            background-size: 400% 400%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: quantumPulse 3s ease-in-out infinite;
+            display: block;
+            margin-bottom: 1rem;
+        }
+
+        @keyframes quantumPulse {
+            0%, 100% { background-position: 0% 50%; transform: scale(1); }
+            50% { background-position: 100% 50%; transform: scale(1.1); }
+        }
+
+        .neural-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 2.5rem;
+            font-weight: 900;
+            background: linear-gradient(45deg, var(--neon-blue), var(--neon-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 30px rgba(0,245,255,0.5);
+        }
+
+        .neural-subtitle {
+            color: rgba(255,255,255,0.7);
+            font-size: 1.1rem;
+            font-weight: 300;
+            letter-spacing: 2px;
+        }
+
+        /* Biometric Scanner Animation */
+        .biometric-scanner {
+            width: 100px;
+            height: 100px;
+            margin: 2rem auto;
+            position: relative;
+            border: 2px solid var(--neon-green);
+            border-radius: 50%;
+            animation: scannerRotate 4s linear infinite;
+        }
+
+        @keyframes scannerRotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .scanner-beam {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 2px;
+            height: 40px;
+            background: var(--neon-green);
+            transform-origin: bottom;
+            transform: translate(-50%, -100%) rotate(0deg);
+            box-shadow: 0 0 10px var(--neon-green);
+            animation: beamSweep 2s ease-in-out infinite;
+        }
+
+        @keyframes beamSweep {
+            0%, 100% { transform: translate(-50%, -100%) rotate(-45deg); opacity: 1; }
+            50% { transform: translate(-50%, -100%) rotate(45deg); opacity: 0.3; }
+        }
+
+        /* Form Styling */
+        .neural-form {
+            display: grid;
+            gap: 2rem;
+        }
+
+        .input-matrix {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .input-node {
+            position: relative;
+        }
+
+        .input-node.full-span {
+            grid-column: 1 / -1;
+        }
+
+        .neural-input, .neural-select {
+            width: 100%;
+            padding: 1.5rem;
+            background: rgba(0,0,0,0.6);
+            border: 2px solid rgba(0,245,255,0.3);
+            border-radius: 15px;
+            color: #fff;
+            font-size: 1.1rem;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 500;
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            position: relative;
+            z-index: 1;
+        }
+
+        .neural-input::placeholder {
+            color: rgba(255,255,255,0.4);
+            font-weight: 300;
+        }
+
+        .neural-input:focus, .neural-select:focus {
+            outline: none;
+            border-color: var(--neon-blue);
+            background: rgba(0,245,255,0.1);
+            box-shadow: 
+                0 0 30px rgba(0,245,255,0.3),
+                inset 0 0 20px rgba(0,245,255,0.1);
+            transform: translateY(-5px) scale(1.02);
+        }
+
+        /* Holographic Labels */
+        .holo-label {
+            position: absolute;
+            top: -10px;
+            left: 15px;
+            background: rgba(0,0,0,0.8);
+            color: var(--neon-blue);
+            padding: 0.3rem 0.8rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border-radius: 10px;
+            border: 1px solid var(--neon-blue);
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .neural-input:focus + .holo-label,
+        .neural-input:not(:placeholder-shown) + .holo-label {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Quantum Password Strength */
+        .quantum-strength {
+            margin-top: 1rem;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .strength-quantum {
+            height: 100%;
+            width: 0%;
+            background: var(--quantum-gradient);
+            background-size: 200% 200%;
+            border-radius: 3px;
+            transition: all 0.5s ease;
+            animation: quantumFlow 2s ease-in-out infinite;
+        }
+
+        @keyframes quantumFlow {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        /* Neural Checkbox */
+        .neural-agreement {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 2rem 0;
+            padding: 1.5rem;
+            background: rgba(0,245,255,0.05);
+            border: 1px solid rgba(0,245,255,0.2);
+            border-radius: 15px;
+        }
+
+        .quantum-checkbox {
+            position: relative;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+        }
+
+        .quantum-checkbox input {
+            opacity: 0;
+            position: absolute;
+        }
+
+        .checkbox-hologram {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 30px;
+            height: 30px;
+            background: rgba(0,0,0,0.8);
+            border: 2px solid var(--neon-blue);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .quantum-checkbox input:checked ~ .checkbox-hologram {
+            background: var(--quantum-gradient);
+            border-color: var(--neon-green);
+            box-shadow: 0 0 20px rgba(57,255,20,0.5);
+            animation: checkboxPulse 0.6s ease;
+        }
+
+        @keyframes checkboxPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .checkbox-hologram::after {
+            content: "✓";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            color: #000;
+            font-weight: bold;
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .quantum-checkbox input:checked ~ .checkbox-hologram::after {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .agreement-text {
+            color: rgba(255,255,255,0.8);
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .agreement-text a {
+            color: var(--neon-blue);
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .agreement-text a:hover {
+            color: var(--neon-green);
+            text-shadow: 0 0 10px currentColor;
+        }
+
+        /* Quantum Submit Button */
+        .quantum-submit {
+            width: 100%;
+            padding: 1.8rem;
+            background: transparent;
+            border: 2px solid var(--neon-blue);
+            border-radius: 15px;
+            color: #fff;
+            font-size: 1.3rem;
+            font-weight: 700;
+            font-family: 'Orbitron', monospace;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s ease;
+            margin-top: 1rem;
+        }
+
+        .quantum-submit::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: var(--quantum-gradient);
+            transition: left 0.5s ease;
+            z-index: -1;
+        }
+
+        .quantum-submit:hover {
+            border-color: var(--neon-green);
+            box-shadow: 
+                0 0 40px rgba(57,255,20,0.4),
+                inset 0 0 40px rgba(57,255,20,0.1);
+            transform: translateY(-5px);
+        }
+
+        .quantum-submit:hover::before {
+            left: 0;
+        }
+
+        .quantum-submit:active {
+            transform: translateY(-2px) scale(0.98);
+        }
+
+        /* Loading Animation */
+        .quantum-loader {
+            display: none;
+            width: 30px;
+            height: 30px;
+            margin-right: 1rem;
+            position: relative;
+        }
+
+        .loader-ring {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border: 3px solid transparent;
+            border-top: 3px solid var(--neon-blue);
+            border-radius: 50%;
+            animation: quantumSpin 1s linear infinite;
+        }
+
+        .loader-ring:nth-child(2) {
+            border-top-color: var(--neon-purple);
+            animation-delay: 0.3s;
+            animation-direction: reverse;
+        }
+
+        .loader-ring:nth-child(3) {
+            border-top-color: var(--neon-green);
+            animation-delay: 0.6s;
+        }
+
+        @keyframes quantumSpin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Success Hologram */
+        .success-hologram {
+            display: none;
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .success-icon {
+            font-size: 6rem;
+            background: var(--quantum-gradient);
+            background-size: 400% 400%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: successPulse 2s ease-in-out infinite;
+            margin-bottom: 2rem;
+        }
+
+        @keyframes successPulse {
+            0%, 100% { transform: scale(1); background-position: 0% 50%; }
+            50% { transform: scale(1.2); background-position: 100% 50%; }
+        }
+
+        .success-message {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.5rem;
+            color: var(--neon-green);
+            margin-bottom: 1rem;
+        }
+
+        .success-details {
+            color: rgba(255,255,255,0.7);
+            font-size: 1rem;
+        }
+
+        /* Footer */
+        .neural-footer {
+            text-align: center;
+            margin-top: 3rem;
+            color: rgba(255,255,255,0.6);
+            font-size: 1rem;
+        }
+
+        .neural-footer a {
+            color: var(--neon-blue);
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .neural-footer a:hover {
+            color: var(--neon-green);
+            text-shadow: 0 0 10px currentColor;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .neural-interface {
+                margin: 1rem;
+            }
+
+            .interface-panel {
+                padding: 2rem;
+            }
+
+            .input-matrix {
+                grid-template-columns: 1fr;
+            }
+
+            .neural-title {
+                font-size: 2rem;
+            }
+
+            .quantum-logo {
+                font-size: 4rem;
+            }
+        }
+
+        /* DNA Helix Animation */
+        .dna-helix {
+            position: absolute;
+            top: 20%;
+            right: -50px;
+            width: 100px;
+            height: 200px;
+            opacity: 0.3;
+        }
+
+        .dna-strand {
+            position: absolute;
+            width: 4px;
+            height: 20px;
+            background: var(--neon-blue);
+            border-radius: 2px;
+            animation: dnaRotate 4s linear infinite;
+        }
+
+        @keyframes dnaRotate {
+            0% { transform: rotateY(0deg) translateX(30px); }
+            100% { transform: rotateY(360deg) translateX(30px); }
+        }
+    </style>
 </head>
-<body class="auth-body">
-  <div class="auth-container">
-    <div class="auth-header">
-      <span class="auth-icon">🌸</span>
-      <h2>Create your Lakshmi Account</h2>
+<body>
+    <!-- Quantum Field Background -->
+    <div class="quantum-field"></div>
+    
+    <!-- Neural Network Grid -->
+    <div class="neural-grid"></div>
+    
+    <!-- Holographic Particles -->
+    <div class="holo-particles" id="holoParticles"></div>
+
+    <!-- Main Interface -->
+    <div class="neural-interface">
+        <div class="interface-panel">
+            <!-- DNA Helix -->
+            <div class="dna-helix" id="dnaHelix"></div>
+
+            <div class="neural-header">
+                <span class="quantum-logo">🧬</span>
+                <h1 class="neural-title">NEURAL SYNC</h1>
+                <p class="neural-subtitle">QUANTUM CONSCIOUSNESS INTEGRATION</p>
+                
+                <div class="biometric-scanner">
+                    <div class="scanner-beam"></div>
+                </div>
+            </div>
+
+            <!-- Success State -->
+            <div class="success-hologram" id="successHologram">
+                <div class="success-icon">🌌</div>
+                <div class="success-message">CONSCIOUSNESS SYNCHRONIZED</div>
+                <div class="success-details">Welcome to the Quantum Network, Neural Entity</div>
+            </div>
+
+            <!-- Registration Form -->
+            <form class="neural-form" id="neuralForm">
+                <div class="input-matrix">
+                    <div class="input-node">
+                        <input type="text" name="username" placeholder="Neural Identifier" required class="neural-input" id="username" />
+                        <div class="holo-label">NEURAL ID</div>
+                    </div>
+                    <div class="input-node">
+                        <input type="email" name="email" placeholder="Quantum Address" required class="neural-input" id="email" />
+                        <div class="holo-label">Q-MAIL</div>
+                    </div>
+                </div>
+
+                <div class="input-matrix">
+                    <div class="input-node">
+                        <input type="tel" name="phone" placeholder="Bio-Frequency" required class="neural-input" id="phone" />
+                        <div class="holo-label">BIO-FREQ</div>
+                    </div>
+                    <div class="input-node">
+                        <input type="date" name="dob" required class="neural-input" id="dob" />
+                        <div class="holo-label">BIRTH CYCLE</div>
+                    </div>
+                </div>
+
+                <div class="input-node full-span">
+                    <select name="gender" class="neural-select" required id="gender">
+                        <option value="" disabled selected>Consciousness Type</option>
+                        <option value="female">Feminine Energy</option>
+                        <option value="male">Masculine Energy</option>
+                        <option value="nonbinary">Balanced Energy</option>
+                        <option value="quantum">Quantum State</option>
+                        <option value="transcendent">Transcendent Being</option>
+                    </select>
+                    <div class="holo-label">ENERGY TYPE</div>
+                </div>
+
+                <div class="input-node full-span">
+                    <input type="password" name="password" placeholder="Neural Encryption Key" required class="neural-input" id="password" />
+                    <div class="holo-label">ENCRYPTION</div>
+                    <div class="quantum-strength">
+                        <div class="strength-quantum" id="strengthQuantum"></div>
+                    </div>
+                </div>
+
+                <div class="input-node full-span">
+                    <input type="password" name="confirm_password" placeholder="Confirm Encryption" required class="neural-input" id="confirmPassword" />
+                    <div class="holo-label">VERIFY</div>
+                </div>
+
+                <div class="neural-agreement">
+                    <label class="quantum-checkbox">
+                        <input type="checkbox" name="terms" required id="terms" />
+                        <span class="checkbox-hologram"></span>
+                    </label>
+                    <div class="agreement-text">
+                        I consent to <a href="#" onclick="showQuantumTerms()">Quantum Consciousness Integration</a> and agree to the <a href="#" onclick="showNeuralPrivacy()">Neural Privacy Protocol</a>
+                    </div>
+                </div>
+
+                <button type="submit" class="quantum-submit" id="quantumSubmit">
+                    <div class="quantum-loader" id="quantumLoader">
+                        <div class="loader-ring"></div>
+                        <div class="loader-ring"></div>
+                        <div class="loader-ring"></div>
+                    </div>
+                    <span id="submitText">INITIATE NEURAL SYNC</span>
+                </button>
+            </form>
+
+            <div class="neural-footer">
+                <p>Already synchronized? <a href="#" onclick="accessNeuralNetwork()">Access Neural Network</a></p>
+            </div>
+        </div>
     </div>
 
-    {% if error %}
-      <div class="auth-error">{{ error }}</div>
-    {% endif %}
+    <script>
+        // Create holographic particles
+        function createHoloParticles() {
+            const container = document.getElementById('holoParticles');
+            const colors = ['#00f5ff', '#bf00ff', '#39ff14', '#ff073a'];
+            
+            setInterval(() => {
+                const particle = document.createElement('div');
+                particle.className = 'holo-particle';
+                particle.style.left = Math.random() * window.innerWidth + 'px';
+                particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+                particle.style.animationDuration = (Math.random() * 3 + 5) + 's';
+                container.appendChild(particle);
+                
+                setTimeout(() => {
+                    particle.remove();
+                }, 8000);
+            }, 300);
+        }
 
-    <form method="post">
-      <input type="text" name="username" placeholder="Choose a username" required autofocus class="auth-input" />
+        // Create DNA helix strands
+        function createDNAHelix() {
+            const helix = document.getElementById('dnaHelix');
+            for (let i = 0; i < 10; i++) {
+                const strand = document.createElement('div');
+                strand.className = 'dna-strand';
+                strand.style.top = (i * 20) + 'px';
+                strand.style.animationDelay = (i * 0.2) + 's';
+                strand.style.background = i % 2 === 0 ? '#00f5ff' : '#bf00ff';
+                helix.appendChild(strand);
+            }
+        }
 
-      <input type="email" name="email" placeholder="Email address" required class="auth-input" />
+        // Quantum password strength
+        function analyzeQuantumStrength(password) {
+            const quantum = document.getElementById('strengthQuantum');
+            let strength = 0;
+            
+            if (password.length >= 8) strength += 20;
+            if (password.length >= 12) strength += 20;
+            if (/[a-z]/.test(password)) strength += 15;
+            if (/[A-Z]/.test(password)) strength += 15;
+            if (/[0-9]/.test(password)) strength += 15;
+            if (/[^A-Za-z0-9]/.test(password)) strength += 15;
+            
+            quantum.style.width = strength + '%';
+        }
 
-      <input type="tel" name="phone" placeholder="Phone number" required class="auth-input" />
+        // Neural form validation
+        function validateNeuralInput(input) {
+            const value = input.value.trim();
+            let isValid = false;
 
-      <input type="date" name="dob" placeholder="Date of Birth" class="auth-input" />
+            switch (input.type) {
+                case 'email':
+                    isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+                    break;
+                case 'tel':
+                    isValid = /^[\+]?[1-9][\d]{0,15}$/.test(value.replace(/\s/g, ''));
+                    break;
+                case 'text':
+                    isValid = value.length >= 3;
+                    break;
+                case 'password':
+                    isValid = value.length >= 8;
+                    if (input.id === 'password') {
+                        analyzeQuantumStrength(value);
+                    }
+                    break;
+                default:
+                    isValid = value.length > 0;
+            }
 
-      <select name="gender" class="auth-input" style="color: #555;">
-        <option value="" disabled selected>Select Gender</option>
-        <option value="female">Female</option>
-        <option value="male">Male</option>
-        <option value="nonbinary">Non-Binary</option>
-        <option value="other">Other</option>
-      </select>
+            // Visual feedback
+            if (value.length > 0) {
+                input.style.borderColor = isValid ? '#39ff14' : '#ff073a';
+                input.style.boxShadow = isValid ? 
+                    '0 0 20px rgba(57,255,20,0.3)' : 
+                    '0 0 20px rgba(255,7,58,0.3)';
+            } else {
+                input.style.borderColor = 'rgba(0,245,255,0.3)';
+                input.style.boxShadow = 'none';
+            }
 
-      <input type="password" name="password" placeholder="Choose a password" required class="auth-input" />
+            return isValid;
+        }
 
-      <input type="password" name="confirm_password" placeholder="Confirm password" required class="auth-input" />
+        // Neural sync process
+        function initiateNeuralSync(e) {
+            e.preventDefault();
+            
+            const form = document.getElementById('neuralForm');
+            const submitBtn = document.getElementById('quantumSubmit');
+            const loader = document.getElementById('quantumLoader');
+            const submitText = document.getElementById('submitText');
+            const successHolo = document.getElementById('successHologram');
+            
+            // Validate passwords match
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (password !== confirmPassword) {
+                alert('⚠️ Neural encryption keys do not match! Synchronization failed.');
+                return;
+            }
+            
+            // Start neural sync
+            loader.style.display = 'inline-block';
+            submitText.textContent = 'SYNCHRONIZING CONSCIOUSNESS...';
+            submitBtn.disabled = true;
+            submitBtn.style.borderColor = '#39ff14';
+            
+            // Simulate neural network integration
+            setTimeout(() => {
+                submitText.textContent = 'UPLOADING NEURAL PATTERNS...';
+            }, 1000);
+            
+            setTimeout(() => {
+                submitText.textContent = 'QUANTUM ENTANGLEMENT ACTIVE...';
+            }, 2000);
+            
+            setTimeout(() => {
+                form.style.display = 'none';
+                successHolo.style.display = 'block';
+                
+                setTimeout(() => {
+                    alert('🌌 NEURAL SYNC COMPLETE!\n\nWelcome to the Quantum Consciousness Network. Your neural patterns have been successfully integrated into the Lakshmi Quantum Matrix.');
+                    
+                    // Reset interface
+                    form.style.display = 'grid';
+                    successHolo.style.display = 'none';
+                    loader.style.display = 'none';
+                    submitText.textContent = 'INITIATE NEURAL SYNC';
+                    submitBtn.disabled = false;
+                    submitBtn.style.borderColor = '#00f5ff';
+                    form.reset();
+                }, 3000);
+            }, 3500);
+        }
 
-      <label class="auth-checkbox">
-        <input type="checkbox" name="terms" required />
-        I agree to the <a href="#">terms and conditions</a>.
-      </label>
+        // Utility functions
+        function showQuantumTerms() {
+            alert('🧬 QUANTUM CONSCIOUSNESS INTEGRATION PROTOCOL\n\nBy proceeding, you consent to:\n• Neural pattern analysis and storage\n• Quantum consciousness synchronization\n• Integration with the Lakshmi Quantum Matrix\n• Transcendence of traditional reality boundaries\n\nThis is a demonstration of futuristic UI design.');
+        }
 
-      <button type="submit" class="auth-button">Sign Up 💘</button>
-    </form>
+        function showNeuralPrivacy() {
+            alert('🔒 NEURAL PRIVACY PROTOCOL\n\nYour consciousness data is protected by:\n• Quantum encryption algorithms\n• Multi-dimensional privacy barriers\n• Temporal isolation protocols\n• Consciousness anonymization\n\nThis is a demonstration interface.');
+        }
 
-    <p class="auth-link">Already have an account? <a href="/login">Login here</a></p>
-  </div>
-</body>
-</html
+        function accessNeuralNetwork() {
+            alert('🌐 ACCESSING NEURAL NETWORK...\n\nInitiating quantum tunnel to consciousness interface...\n\nThis would redirect to the login portal in a real application.');
+        }
+
+        // Initialize quantum interface
+        document.addEventListener('DOMContentLoaded', function() {
+            createHoloParticles();
+            createDNAHelix();
+            
+            // Event listeners
+            document.getElementById('neuralForm').addEventListener('submit', initiateNeuralSync);
+            
+            // Real-time neural validation
+            const inputs = document.querySelectorAll('.neural-input');
+            inputs.forEach(input => {
+                input.addEventListener('input', () => validateNeuralInput(input));
+                input.addEventListener('blur', () => validateNeuralInput(input));
+            });
+            
+            // Set quantum date limits
+            const dobInput = document.getElementById('dob');
+            const currentDate = new Date();
+            const maxDate = new Date(currentDate.getFullYear() - 18, currentDate.getMonth(), currentDate.getDate());
+            dobInput.max = maxDate.toISOString().split('T')[0];
+            
+            // Add quantum sound effects (visual feedback only)
+            inputs.forEach(input => {
+                input.addEventListener('focus', () => {
+                    input.style.transform = 'translateY(-5px) scale(1.02)';
+                });
+                
+                input.addEventListener('blur', () => {
+                    input.style.transform = 'translateY(0) scale(1)';
+                });
+            });
+        });
+
+        // Responsive particle adjustment
+        window.addEventListener('resize', () => {
+            // Particles auto-adjust based on screen size
+        });
+
+        // Add quantum glitch effect
+        setInterval(() => {
+            const elements = document.querySelectorAll('.neural-input, .neural-title');
+            const randomElement = elements[Math.floor(Math.random() * elements.length)];
+            
+            randomElement.style.textShadow = '2px 0 #00f5ff, -2px 0 #bf00ff';
+            setTimeout(() => {
+                randomElement.style.textShadow = '';
+            }, 100);
+        }, 5000);
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'972b13eef317f82b',t:'MTc1NTc4OTI0My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
