@@ -790,12 +790,12 @@ Provide thoughtful life guidance with:
       return modePrompts[mode] || modePrompts.general;
     }
 
-    // Enhanced AI response processing - Now uses backend endpoint
+    // Enhanced AI response processing - Updated to use your /ask-ai endpoint
     async function processAIRequest(question) {
       const systemPrompt = generateSystemPrompt(currentMode, question);
       
-      // Send request to your backend endpoint instead of directly to OpenRouter
-      const response = await fetch('/api/ai-chat', {
+      // Send request to your existing ask-ai endpoint
+      const response = await fetch('/ask-ai', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -985,10 +985,10 @@ Provide thoughtful life guidance with:
     • Multi-modal intelligence system
     • Neural network evolution
     
-    Now configured to work with your backend API!
+    Now configured to work with your /ask-ai endpoint!
     
     ================================================
     `);
   </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'972c12cdb5be33ea',t:'MTc1NTc5OTY4Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'972c27e8e066ff9b',t:'MTc1NTgwMDU0Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
