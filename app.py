@@ -334,19 +334,28 @@ def get_strategies():
 def download_strategies():
     return send_file("strategies.csv", as_attachment=True)
 
+# ✅ Candle Predictor page (your HTML file)
+@app.route("/candle")
+def candle_page():
+    return render_template("candle_predictor.html")  # <-- must be in /templates folder
+
+# ✅ Candle Prediction API
 @app.route("/api/candle", methods=["POST"])
 def predict_candle():
     try:
+        # Accept both JSON & HTML form
         if request.is_json:
             data = request.get_json()
         else:
             data = request.form
 
+        # Extract OHLC
         o = float(data["open"])
         h = float(data["high"])
         l = float(data["low"])
         c = float(data["close"])
 
+        # Build prompt
         prompt = f"""
 You are a technical analyst expert.
 
@@ -362,8 +371,10 @@ Next Candle: Likely Bullish/Bearish/Neutral
 Reason: [Short reason]
 """
 
-        OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY")  # ✅ LOAD HERE
-        print("✅ Sending Bearer key:", OPENROUTER_KEY[:10], "...")  # Just first 10 chars
+        # OpenRouter API key
+        OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY")
+        if not OPENROUTER_KEY:
+            return jsonify({"error": "❌ OPENROUTER_API_KEY not set in environment."}), 500
 
         headers = {
             "Authorization": f"Bearer {OPENROUTER_KEY}",
@@ -378,17 +389,25 @@ Reason: [Short reason]
             ]
         }
 
+        # Call OpenRouter API
         res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
 
         if res.status_code == 200:
             reply = res.json()["choices"][0]["message"]["content"].strip()
+
+            # If request came from HTML form → return rendered HTML
+            if not request.is_json:
+                return render_template("candle_predictor.html", result=reply)
+
+            # Else → API JSON response
             return jsonify({"prediction": reply})
+
         else:
             return jsonify({"error": f"❌ OpenRouter error {res.status_code}: {res.text}"})
 
     except Exception as e:
         return jsonify({"error": f"❌ Exception: {str(e)}"})
-        
+
 # --- Chat Endpoint ---
 @app.route("/chat", methods=["POST"])
 def chat():
