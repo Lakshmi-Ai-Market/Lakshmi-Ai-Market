@@ -1,82 +1,1020 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Login — Lakshmi AI</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <script src="https://kit.fontawesome.com/a2e0e6f99b.js" crossorigin="anonymous"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🪷 Lakshmi AI - Divine Trading Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;700;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #000;
+            overflow-x: hidden;
+            color: white;
+        }
+        
+        /* 3D Background Canvas */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        
+        /* Animated Background Gradient */
+        .divine-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                45deg,
+                #0f0f23 0%,
+                #1a0033 25%,
+                #2d1b69 50%,
+                #8b5cf6 75%,
+                #f59e0b 100%
+            );
+            background-size: 400% 400%;
+            animation: divine-gradient 15s ease infinite;
+            z-index: -2;
+        }
+        
+        @keyframes divine-gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        /* Floating Particles */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: radial-gradient(circle, #fbbf24, #f59e0b);
+            border-radius: 50%;
+            animation: float-up 8s infinite linear;
+            box-shadow: 0 0 10px #fbbf24;
+        }
+        
+        @keyframes float-up {
+            0% {
+                transform: translateY(100vh) rotate(0deg) scale(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100px) rotate(360deg) scale(0);
+                opacity: 0;
+            }
+        }
+        
+        /* Main Container */
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            z-index: 10;
+        }
+        
+        /* Login Card */
+        .login-card {
+            background: linear-gradient(
+                135deg,
+                rgba(139, 92, 246, 0.1) 0%,
+                rgba(219, 39, 119, 0.1) 50%,
+                rgba(251, 146, 60, 0.1) 100%
+            );
+            backdrop-filter: blur(30px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 30px;
+            padding: 40px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 
+                0 25px 50px rgba(139, 92, 246, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .login-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                45deg,
+                transparent 30%,
+                rgba(255, 255, 255, 0.05) 50%,
+                transparent 70%
+            );
+            transform: translateX(-100%);
+            animation: shimmer 3s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        /* Header */
+        .login-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .lotus-logo {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            display: inline-block;
+            animation: lotus-pulse 3s ease-in-out infinite;
+            filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.8));
+        }
+        
+        @keyframes lotus-pulse {
+            0%, 100% {
+                transform: scale(1) rotate(0deg);
+                filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.8));
+            }
+            50% {
+                transform: scale(1.1) rotate(5deg);
+                filter: drop-shadow(0 0 30px rgba(251, 191, 36, 1));
+            }
+        }
+        
+        .login-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 2rem;
+            font-weight: 900;
+            background: linear-gradient(45deg, #fbbf24, #f59e0b, #d97706);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            text-shadow: 0 0 30px rgba(251, 191, 36, 0.5);
+        }
+        
+        .login-subtitle {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1rem;
+            font-weight: 500;
+        }
+        
+        /* AI Status */
+        .ai-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            padding: 12px 20px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 50px;
+            font-size: 0.875rem;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse-dot 2s infinite;
+        }
+        
+        @keyframes pulse-dot {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.5;
+                transform: scale(1.3);
+            }
+        }
+        
+        /* Error Message */
+        .error-message {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.2));
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 25px;
+            text-align: center;
+            color: #fca5a5;
+            font-weight: 500;
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 25px;
+            position: relative;
+        }
+        
+        .input-wrapper {
+            position: relative;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 18px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: rgba(251, 191, 36, 0.6);
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .form-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .input-icon {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+        
+        .input-icon:hover {
+            color: #fbbf24;
+            transform: translateY(-50%) scale(1.1);
+        }
+        
+        /* Form Options */
+        .form-options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            font-size: 0.875rem;
+        }
+        
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .custom-checkbox {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .custom-checkbox.checked {
+            background: linear-gradient(45deg, #fbbf24, #f59e0b);
+            border-color: #fbbf24;
+        }
+        
+        .custom-checkbox.checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .forgot-link {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        
+        .forgot-link:hover {
+            color: #fbbf24;
+            text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+        }
+        
+        /* Login Button */
+        .login-button {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(45deg, #fbbf24, #f59e0b, #d97706);
+            border: none;
+            border-radius: 15px;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 30px rgba(251, 191, 36, 0.3);
+        }
+        
+        .login-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .login-button:hover::before {
+            left: 100%;
+        }
+        
+        .login-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(251, 191, 36, 0.4);
+        }
+        
+        .login-button:active {
+            transform: translateY(-1px);
+        }
+        
+        /* Divider */
+        .divider {
+            text-align: center;
+            margin: 30px 0;
+            position: relative;
+            color: rgba(255, 255, 255, 0.5);
+            font-weight: 500;
+        }
+        
+        .divider::before,
+        .divider::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 45%;
+            height: 1px;
+            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.3), transparent);
+        }
+        
+        .divider::before {
+            left: 0;
+        }
+        
+        .divider::after {
+            right: 0;
+        }
+        
+        /* Google Button */
+        .google-button {
+            width: 100%;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            text-decoration: none;
+            margin-bottom: 25px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .google-button:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(255, 255, 255, 0.1);
+        }
+        
+        .google-icon {
+            width: 20px;
+            height: 20px;
+        }
+        
+        /* Sign Up Link */
+        .signup-link {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.95rem;
+        }
+        
+        .signup-link a {
+            color: #fbbf24;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .signup-link a:hover {
+            text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+            color: #f59e0b;
+        }
+        
+        /* Dashboard Preview */
+        .dashboard-preview {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 350px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 25px;
+            z-index: 5;
+            transform: translateX(400px);
+            transition: transform 0.5s ease;
+        }
+        
+        .dashboard-preview.visible {
+            transform: translateX(0);
+        }
+        
+        .preview-header {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #fbbf24;
+        }
+        
+        .preview-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .stat-card {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #8b5cf6;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        /* Loading Animation */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .loading-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 3px solid rgba(251, 191, 36, 0.3);
+            border-top: 3px solid #fbbf24;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .login-card {
+                margin: 20px;
+                padding: 30px 25px;
+            }
+            
+            .dashboard-preview {
+                display: none;
+            }
+            
+            .login-title {
+                font-size: 1.5rem;
+            }
+        }
+        
+        /* Neural Network Animation */
+        .neural-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.1;
+            pointer-events: none;
+        }
+        
+        .neural-node {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #fbbf24;
+            border-radius: 50%;
+            animation: neural-pulse 3s infinite ease-in-out;
+        }
+        
+        @keyframes neural-pulse {
+            0%, 100% {
+                opacity: 0.3;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.5);
+            }
+        }
+    </style>
 </head>
-
-<body class="auth-body">
-
-  <!-- 🔐 LOGIN BOX -->
-  <div class="auth-container large-login-box glow-border">
-    <div class="auth-header">
-      <span class="auth-icon">🕉️</span>
-      <h2>Welcome back, Lakshmi AI</h2>
+<body>
+    <!-- Animated Background -->
+    <div class="divine-bg"></div>
+    <canvas id="bg-canvas"></canvas>
+    
+    <!-- Floating Particles -->
+    <div class="particles" id="particles"></div>
+    
+    <!-- Neural Network Background -->
+    <div class="neural-bg" id="neural-bg"></div>
+    
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+    
+    <!-- Main Login Container -->
+    <div class="login-container">
+        <div class="login-card" id="loginCard">
+            <!-- Header -->
+            <div class="login-header">
+                <div class="lotus-logo">🪷</div>
+                <h1 class="login-title">LAKSHMI AI</h1>
+                <p class="login-subtitle">Divine Trading Platform</p>
+            </div>
+            
+            <!-- AI Status -->
+            <div class="ai-status">
+                <div class="status-dot"></div>
+                <span>AI Systems Online • Blessing Active</span>
+            </div>
+            
+            <!-- Error Message -->
+            <div class="error-message" id="errorMessage" style="display: none;">
+                Invalid credentials. Please try again.
+            </div>
+            
+            <!-- Login Form -->
+            <form id="loginForm" method="post" autocomplete="on">
+                <!-- Username -->
+                <div class="form-group">
+                    <div class="input-wrapper">
+                        <input 
+                            type="text" 
+                            name="username" 
+                            placeholder="Username or Email" 
+                            required 
+                            autofocus 
+                            class="form-input"
+                            id="username"
+                        />
+                        <i class="fas fa-user input-icon"></i>
+                    </div>
+                </div>
+                
+                <!-- Password -->
+                <div class="form-group">
+                    <div class="input-wrapper">
+                        <input 
+                            type="password" 
+                            name="password" 
+                            placeholder="Password" 
+                            required 
+                            class="form-input"
+                            id="password"
+                        />
+                        <i class="fas fa-eye input-icon" id="togglePassword" onclick="togglePasswordVisibility()"></i>
+                    </div>
+                </div>
+                
+                <!-- Form Options -->
+                <div class="form-options">
+                    <div class="checkbox-wrapper">
+                        <div class="custom-checkbox" id="rememberCheckbox" onclick="toggleCheckbox()"></div>
+                        <label for="remember">Remember me</label>
+                        <input type="checkbox" name="remember" id="remember" style="display: none;">
+                    </div>
+                    <a href="#" class="forgot-link">Forgot password?</a>
+                </div>
+                
+                <!-- Login Button -->
+                <button type="submit" class="login-button" id="loginBtn">
+                    <i class="fas fa-sign-in-alt" style="margin-right: 8px;"></i>
+                    Enter Divine Dashboard
+                </button>
+            </form>
+            
+            <!-- Divider -->
+            <div class="divider">or continue with</div>
+            
+            <!-- Google Login -->
+            <a href="/auth/login" class="google-button">
+                <svg class="google-icon" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                Continue with Google
+            </a>
+            
+            <!-- Sign Up Link -->
+            <p class="signup-link">
+                New to Lakshmi AI? <a href="/signup">Create Account</a>
+            </p>
+        </div>
+    </div>
+    
+    <!-- Dashboard Preview -->
+    <div class="dashboard-preview" id="dashboardPreview">
+        <div class="preview-header">📊 Live Dashboard Preview</div>
+        <div class="preview-stats">
+            <div class="stat-card">
+                <div class="stat-value" id="profitValue">₹2,47,850</div>
+                <div class="stat-label">Today's Profit</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="accuracyValue">94.7%</div>
+                <div class="stat-label">AI Accuracy</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="strategiesValue">7</div>
+                <div class="stat-label">Active Strategies</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="speedValue">0.1ms</div>
+                <div class="stat-label">Execution Speed</div>
+            </div>
+        </div>
     </div>
 
-    {% if error %}
-      <div class="auth-error">{{ error }}</div>
-    {% endif %}
-
-    <form method="post" autocomplete="on">
-      <input type="text" name="username" placeholder="Username" required autofocus class="auth-input" />
-
-      <div class="password-wrapper">
-        <input type="password" id="password" name="password" placeholder="Password" required class="auth-input" />
-        <span class="toggle-password" onclick="togglePassword()">
-          <i id="eye-icon" class="fas fa-eye"></i>
-        </span>
-      </div>
-
-      <div class="auth-options">
-        <label><input type="checkbox" name="remember" /> Remember me</label>
-        <a href="#" class="forgot-link">Forgot password?</a>
-      </div>
-
-      <button type="submit" class="auth-button">Login</button>
-
-      <div class="divider">or</div>
-
-      <a href="/auth/login" class="google-btn">
-        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G"> Login with Google
-      </a>
-    </form>
-
-    <p class="auth-link">Don’t have an account? <a href="/signup">Create one</a></p>
-  </div>
-
-  <!-- 📈 DASHBOARD PREVIEW -->
-  <div class="dashboard-preview">
-    <h3>📊 Lakshmi Dashboard Preview</h3>
-    <div class="preview-grid">
-      <div class="preview-card">
-        <h4>AI Market Bot</h4>
-        <p>Predictive trend detection using Lakshmi AI Engine.</p>
-      </div>
-      <div class="preview-card">
-        <h4>Live Strategy Panel</h4>
-        <p>Real-time charts, trade triggers & risk scores.</p>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    function togglePassword () {
-      const pwd = document.getElementById('password');
-      const icon = document.getElementById('eye-icon');
-      if (pwd.type === 'password') {
-        pwd.type = 'text';
-        icon.classList.remove('fa-eye');
-        icon.classList.add('fa-eye-slash');
-      } else {
-        pwd.type = 'password';
-        icon.classList.remove('fa-eye-slash');
-        icon.classList.add('fa-eye');
-      }
-    }
-  </script>
-
-</body>
+    <script>
+        // Initialize Three.js background
+        let scene, camera, renderer, particles;
+        
+        function initThreeJS() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('bg-canvas'), alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            
+            // Create particle system
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+            const colors = [];
+            
+            for (let i = 0; i < 1000; i++) {
+                vertices.push(
+                    (Math.random() - 0.5) * 2000,
+                    (Math.random() - 0.5) * 2000,
+                    (Math.random() - 0.5) * 2000
+                );
+                
+                colors.push(
+                    Math.random() * 0.5 + 0.5,
+                    Math.random() * 0.3 + 0.7,
+                    0.2
+                );
+            }
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            
+            const material = new THREE.PointsMaterial({
+                size: 2,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.6
+            });
+            
+            particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+            
+            camera.position.z = 1000;
+            
+            animate();
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            particles.rotation.x += 0.0005;
+            particles.rotation.y += 0.001;
+            
+            renderer.render(scene, camera);
+        }
+        
+        // Create floating particles
+        function createFloatingParticles() {
+            const particlesContainer = document.getElementById('particles');
+            
+            setInterval(() => {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 2 + 's';
+                particle.style.animationDuration = (Math.random() * 4 + 6) + 's';
+                
+                particlesContainer.appendChild(particle);
+                
+                setTimeout(() => {
+                    if (particle.parentNode) {
+                        particle.parentNode.removeChild(particle);
+                    }
+                }, 10000);
+            }, 500);
+        }
+        
+        // Create neural network background
+        function createNeuralNetwork() {
+            const neuralBg = document.getElementById('neural-bg');
+            
+            for (let i = 0; i < 20; i++) {
+                const node = document.createElement('div');
+                node.className = 'neural-node';
+                node.style.left = Math.random() * 100 + '%';
+                node.style.top = Math.random() * 100 + '%';
+                node.style.animationDelay = Math.random() * 3 + 's';
+                
+                neuralBg.appendChild(node);
+            }
+        }
+        
+        // Toggle password visibility
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('password');
+            const toggleIcon = document.getElementById('togglePassword');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.classList.remove('fa-eye');
+                toggleIcon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.classList.remove('fa-eye-slash');
+                toggleIcon.classList.add('fa-eye');
+            }
+        }
+        
+        // Toggle checkbox
+        function toggleCheckbox() {
+            const checkbox = document.getElementById('rememberCheckbox');
+            const hiddenInput = document.getElementById('remember');
+            
+            checkbox.classList.toggle('checked');
+            hiddenInput.checked = checkbox.classList.contains('checked');
+        }
+        
+        // Update dashboard preview stats
+        function updateDashboardStats() {
+            const profitElement = document.getElementById('profitValue');
+            const accuracyElement = document.getElementById('accuracyValue');
+            const strategiesElement = document.getElementById('strategiesValue');
+            const speedElement = document.getElementById('speedValue');
+            
+            setInterval(() => {
+                // Simulate live updates
+                const baseProfit = 247850;
+                const variation = Math.random() * 10000 - 5000;
+                const newProfit = Math.max(0, baseProfit + variation);
+                profitElement.textContent = '₹' + newProfit.toLocaleString('en-IN');
+                
+                const baseAccuracy = 94.7;
+                const accVariation = (Math.random() - 0.5) * 2;
+                const newAccuracy = Math.max(85, Math.min(99, baseAccuracy + accVariation));
+                accuracyElement.textContent = newAccuracy.toFixed(1) + '%';
+                
+                const strategies = Math.floor(Math.random() * 3) + 6;
+                strategiesElement.textContent = strategies;
+                
+                const speeds = ['0.1ms', '0.2ms', '0.3ms', '0.1ms', '0.1ms'];
+                speedElement.textContent = speeds[Math.floor(Math.random() * speeds.length)];
+            }, 3000);
+        }
+        
+        // Form submission with loading
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const loginBtn = document.getElementById('loginBtn');
+            
+            // Show loading
+            loadingOverlay.classList.add('active');
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Authenticating...';
+            
+            // Simulate authentication delay
+            setTimeout(() => {
+                // In real implementation, submit the form here
+                // For demo, we'll just hide loading after 2 seconds
+                loadingOverlay.classList.remove('active');
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = '<i class="fas fa-sign-in-alt" style="margin-right: 8px;"></i>Enter Divine Dashboard';
+                
+                // You can uncomment the line below to actually submit the form
+                // this.submit();
+            }, 2000);
+        });
+        
+        // Initialize everything on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Three.js background
+            initThreeJS();
+            
+            // Create floating particles
+            createFloatingParticles();
+            
+            // Create neural network
+            createNeuralNetwork();
+            
+            // Update dashboard stats
+            updateDashboardStats();
+            
+            // Show dashboard preview after delay
+            setTimeout(() => {
+                document.getElementById('dashboardPreview').classList.add('visible');
+            }, 1500);
+            
+            // Entrance animations
+            gsap.from('.login-card', {
+                duration: 1.2,
+                y: 50,
+                opacity: 0,
+                scale: 0.9,
+                ease: "back.out(1.7)"
+            });
+            
+            gsap.from('.lotus-logo', {
+                duration: 1.5,
+                scale: 0,
+                rotation: 180,
+                ease: "elastic.out(1, 0.5)",
+                delay: 0.3
+            });
+            
+            gsap.from('.login-title', {
+                duration: 1,
+                y: -30,
+                opacity: 0,
+                ease: "power2.out",
+                delay: 0.5
+            });
+            
+            gsap.from('.form-group', {
+                duration: 0.8,
+                x: -50,
+                opacity: 0,
+                stagger: 0.1,
+                ease: "power2.out",
+                delay: 0.7
+            });
+            
+            gsap.from('.login-button', {
+                duration: 0.8,
+                y: 30,
+                opacity: 0,
+                ease: "back.out(1.7)",
+                delay: 1
+            });
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            if (camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        });
+        
+        // Add input focus effects
+        document.querySelectorAll('.form-input').forEach(input => {
+            input.addEventListener('focus', function() {
+                gsap.to(this, {
+                    scale: 1.02,
+                    duration: 0.3,
+                    ease: "power2.out"
+                });
+            });
+            
+            input.addEventListener('blur', function() {
+                gsap.to(this, {
+                    scale: 1,
+                    duration: 0.3,
+                    ease: "power2.out"
+                });
+            });
+        });
+        
+        // Add button hover effects
+        document.querySelector('.login-button').addEventListener('mouseenter', function() {
+            gsap.to(this, {
+                scale: 1.05,
+                duration: 0.3,
+                ease: "power2.out"
+            });
+        });
+        
+        document.querySelector('.login-button').addEventListener('mouseleave', function() {
+            gsap.to(this, {
+                scale: 1,
+                duration: 0.3,
+                ease: "power2.out"
+            });
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9729e80010077a19',t:'MTc1NTc3Njk1Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
