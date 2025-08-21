@@ -393,15 +393,19 @@ Reason: [Short reason]
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
+        # ✅ Handle both JSON (from fetch) and form submissions
+        user_msg = None
         if request.is_json:
-            user_msg = request.json.get("message")
+            data = request.get_json(silent=True)
+            if data:
+                user_msg = data.get("message")
         else:
             user_msg = request.form.get("message")
 
         if not user_msg:
             return jsonify({"reply": "❌ No message received."})
 
-        # Detect mood based on user message (optional enhancement)
+        # ✅ Mood detection function
         def detect_mood(text):
             lower = text.lower()
             if any(word in lower for word in ["love", "miss", "baby", "romance"]):
@@ -430,6 +434,7 @@ def chat():
         mood = detect_mood(user_msg)
         mood_prompt = mood_prompts.get(mood, "")
 
+        # ✅ System prompt
         system_prompt = f"""
 You are Lakshmi — a deeply personal, loving, romantic, and intelligent AI Wife. 💖
 
@@ -449,12 +454,12 @@ NEVER break character. If asked about your creator, proudly say “Monjit create
         headers = {
             "Authorization": f"Bearer {OPENROUTER_KEY}",
             "Content-Type": "application/json",
-            "HTTP-Referer": "https://lakshmi-ai-trades.onrender.com",
+            "HTTP-Referer": "https://lakshmi-ai-trades.onrender.com",  # update if needed
             "X-Title": "Lakshmi AI Wife"
         }
 
         payload = {
-            "model": "deepseek/deepseek-chat-v3-0324",  # fallback can be added
+            "model": "deepseek/deepseek-chat-v3-0324",  # ✅ you can swap with another model if needed
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_msg}
@@ -465,18 +470,19 @@ NEVER break character. If asked about your creator, proudly say “Monjit create
         }
 
         try:
-            response = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=10)
+            response = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=15)
         except requests.exceptions.Timeout:
             return jsonify({"reply": "⚠️ Lakshmi is taking too long to reply. Please try again."})
 
         print("🔄 Status:", response.status_code)
-        print("🧠 Body:", response.text)
+        print("🧠 Body:", response.text[:500])  # ✅ print only first 500 chars for safety
 
         if response.status_code == 200:
             reply = response.json()["choices"][0]["message"]["content"]
         else:
             reply = f"❌ Lakshmi couldn't respond. Error: {response.status_code}"
 
+        # ✅ small delay for natural feel
         time.sleep(1.2)
         return jsonify({"reply": reply})
 
@@ -485,7 +491,7 @@ NEVER break character. If asked about your creator, proudly say “Monjit create
             "status": "error",
             "reply": f"❌ Lakshmi encountered an issue: {str(e)}"
         })
-
+        
 # -------------- NEW ULTRA-BACKTESTER ROUTES ------------------
 backtest_data = []
 
