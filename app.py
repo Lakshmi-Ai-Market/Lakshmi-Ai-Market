@@ -662,13 +662,68 @@ def strategy_matrix():
 def ask_ai():
     response = None
     if request.method == "POST":
-        question = request.form["question"]
-        if "psychology" in question.lower():
-            response = "Successful trading requires emotional discipline and patience. 💡"
-        elif "trend" in question.lower():
-            response = "Current trend seems bullish based on past few candles. 📈"
-        else:
-            response = "Lakshmi needs more data to give a proper answer 😅"
+        try:
+            # Get data from form or JSON
+            if request.is_json:
+                data = request.get_json()
+                question = data.get('question')
+                mode = data.get('mode', 'general')
+                system_prompt = data.get('systemPrompt', '')
+            else:
+                question = request.form.get("question")
+                mode = request.form.get("mode", "general")
+                system_prompt = request.form.get("systemPrompt", "")
+            
+            if not question:
+                return jsonify({'error': 'No question provided'}), 400
+            
+            # Make request to OpenRouter with your environment variable
+            ai_response = requests.post(
+                OPENROUTER_URL,
+                headers={
+                    'Authorization': f'Bearer {OPENROUTER_KEY}',
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': request.headers.get('Referer', ''),
+                    'X-Title': 'Nexus AI Omega'
+                },
+                json={
+                    'model': 'anthropic/claude-3.5-sonnet',
+                    'messages': [
+                        {'role': 'system', 'content': system_prompt},
+                        {'role': 'user', 'content': question}
+                    ],
+                    'temperature': 0.7,
+                    'max_tokens': 4000,
+                    'top_p': 0.9,
+                    'frequency_penalty': 0.1,
+                    'presence_penalty': 0.1
+                }
+            )
+            
+            if ai_response.status_code != 200:
+                print(f"OpenRouter API Error: {ai_response.status_code}")
+                return jsonify({'error': f'AI service error: {ai_response.status_code}'}), 500
+                
+            ai_data = ai_response.json()
+            response = ai_data['choices'][0]['message']['content']
+            
+            # Return JSON for AJAX requests
+            if request.is_json or request.headers.get('Content-Type') == 'application/json':
+                return jsonify({'response': response})
+            
+            # Return HTML template for regular form submissions
+            return render_template("ask_ai.html", response=response)
+            
+        except Exception as e:
+            print(f"AI Chat Error: {e}")
+            error_msg = f"AI Processing Error: {str(e)}"
+            
+            if request.is_json or request.headers.get('Content-Type') == 'application/json':
+                return jsonify({'error': error_msg}), 500
+            else:
+                return render_template("ask_ai.html", response=error_msg)
+    
+    # GET request - show the form
     return render_template("ask_ai.html", response=response)
 
 @app.route("/option-chain")
