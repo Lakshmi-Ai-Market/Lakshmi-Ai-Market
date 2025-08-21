@@ -234,56 +234,54 @@
   <footer style="text-align:center; padding:24px;">  
     🌷 Made with love from the creator Monjit 💖  
   </footer>  
-  
-  <script>  
-    function toggleMenu() {  
-      const menu = document.getElementById("menu-dropdown");  
-      menu.style.display = (menu.style.display === "block") ? "none" : "block";  
-    }  
-  
-    function quickSay(text) {  
-      document.querySelector('input[name="message"]').value = text;  
-      document.getElementById("chat-form").dispatchEvent(new Event('submit'));  
-    }  
-  
-    function startVoice() {  
-      alert("🎤 Voice feature not available yet in this version.");  
-    }  
-  
-    document.getElementById("chat-form").addEventListener("submit", async function(e) {  
-      e.preventDefault();  
-      const input = document.querySelector('input[name="message"]');  
-      const message = input.value.trim();  
-      if (!message) return;  
-  
-      const formData = new FormData();  
-      formData.append("message", message);  
-  
-      const res = await fetch("/chat", {  
-        method: "POST",  
-        body: formData  
-      });  
-  
-      const data = await res.json();  
-      const chatBox = document.getElementById("chat-box");  
-      chatBox.innerHTML += `<p><strong>You:</strong> ${message}</p>`;  
-      chatBox.innerHTML += `<p><strong>Lakshmi:</strong> ${data.reply}</p>`;  
-      input.value = "";  
-      chatBox.scrollTop = chatBox.scrollHeight;  
+  <script>
+  function toggleMenu() {  
+    const menu = document.getElementById("menu-dropdown");  
+    menu.style.display = (menu.style.display === "block") ? "none" : "block";  
+  }  
+
+  function quickSay(text) {  
+    document.querySelector('input[name="message"]').value = text;  
+    document.getElementById("chat-form").dispatchEvent(new Event('submit'));  
+  }  
+
+  function startVoice() {  
+    alert("🎤 Voice feature not available yet in this version.");  
+  }  
+
+  // ✅ FIXED CHAT HANDLER
+  document.getElementById("chat-form").addEventListener("submit", async function(e) {  
+    e.preventDefault();  
+    const input = document.querySelector('input[name="message"]');  
+    const message = input.value.trim();  
+    if (!message) return;  
+
+    // ✅ Send JSON instead of FormData
+    const res = await fetch("/chat", {  
+      method: "POST",  
+      headers: { "Content-Type": "application/json" },  
+      body: JSON.stringify({ message })  
     });  
-  
-    document.getElementById("strategy-form").addEventListener("submit", async function(e) {  
-      e.preventDefault();  
-      const input = document.querySelector('input[name="symbol"]');  
-      const symbol = input.value.trim().toUpperCase();  
-      const res = await fetch("/api/strategy", {  
-        method: "POST",  
-        body: symbol  
-      });  
-      const data = await res.json();  
-      const resultBox = document.getElementById("strategy-result");  
-      resultBox.innerHTML = data.reply;  
+
+    const data = await res.json();  
+    const chatBox = document.getElementById("chat-box");  
+    chatBox.innerHTML += `<p><strong>You:</strong> ${message}</p>`;  
+    chatBox.innerHTML += `<p><strong>Lakshmi:</strong> ${data.reply}</p>`;  
+    input.value = "";  
+    chatBox.scrollTop = chatBox.scrollHeight;  
+  });  
+
+  document.getElementById("strategy-form").addEventListener("submit", async function(e) {  
+    e.preventDefault();  
+    const input = document.querySelector('input[name="symbol"]');  
+    const symbol = input.value.trim().toUpperCase();  
+    const res = await fetch("/api/strategy", {  
+      method: "POST",  
+      body: symbol  
     });  
-  </script>  
-</body>  
-      </html>
+    const data = await res.json();  
+    const resultBox = document.getElementById("strategy-result");  
+    resultBox.innerHTML = data.reply;  
+  });  
+                          </script>
+  
