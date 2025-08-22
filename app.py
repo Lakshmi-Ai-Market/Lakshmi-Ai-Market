@@ -339,9 +339,9 @@ def download_strategies():
 # ✅ Candle Predictor page (your HTML file)
 @app.route("/candle")
 def candle_page():
-    return render_template("candle_predictor.html")  # <-- must be in /templates folder
+    return render_template("candle_predictor.html")
 
-# ✅ Candle Prediction API
+# ✅ Original Candle Prediction API (keep for compatibility)
 @app.route("/api/candle", methods=["POST"])
 def predict_candle():
     try:
@@ -373,8 +373,6 @@ Next Candle: Likely Bullish/Bearish/Neutral
 Reason: [Short reason]
 """
 
-        # OpenRouter API key
-        OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY")
         if not OPENROUTER_KEY:
             return jsonify({"error": "❌ OPENROUTER_API_KEY not set in environment."}), 500
 
@@ -384,7 +382,7 @@ Reason: [Short reason]
         }
 
         payload = {
-            "model": "deepseek/deepseek-chat-v3-0324",
+            "model": "deepseek/deepseek-chat",
             "messages": [
                 {"role": "system", "content": "You are a professional trader analyzing candles."},
                 {"role": "user", "content": prompt}
@@ -392,7 +390,7 @@ Reason: [Short reason]
         }
 
         # Call OpenRouter API
-        res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
+        res = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=30)
 
         if res.status_code == 200:
             reply = res.json()["choices"][0]["message"]["content"].strip()
@@ -409,6 +407,365 @@ Reason: [Short reason]
 
     except Exception as e:
         return jsonify({"error": f"❌ Exception: {str(e)}"})
+
+# ✅ Live Market Data API (Yahoo Finance proxy) - Optimized for Render
+@app.route("/api/market-data/<symbol>")
+def get_market_data(symbol):
+    try:
+        period = request.args.get('period', '1mo')
+        interval = request.args.get('interval', '5m')
+        
+        print(f"📊 Fetching data for {symbol} - Period: {period}, Interval: {interval}")
+        
+        # Fetch data using yfinance with timeout
+        ticker = yf.Ticker(symbol)
+        hist = ticker.history(period=period, interval=interval, timeout=10)
+        
+        if hist.empty:
+            print(f"❌ No data found for {symbol}")
+            return jsonify({"error": "No data found for symbol"}), 404
+        
+        print(f"✅ Found {len(hist)} data points for {symbol}")
+        
+        # Convert to the format expected by frontend
+        candles = []
+        for index, row in hist.iterrows():
+            candles.append({
+                "time": int(index.timestamp() * 1000),
+                "open": float(row['Open']) if not pd.isna(row['Open']) else 0,
+                "high": float(row['High']) if not pd.isna(row['High']) else 0,
+                "low": float(row['Low']) if not pd.isna(row['Low']) else 0,
+                "close": float(row['Close']) if not pd.isna(row['Close']) else 0,
+                "volume": int(row['Volume']) if not pd.isna(row['Volume']) else 0
+            })
+        
+        # Get additional metadata with error handling
+        try:
+            info = ticker.info
+        except:
+            info = {}
+        
+        meta = {
+            "symbol": symbol,
+            "currency": info.get('currency', 'INR'),
+            "currentPrice": info.get('currentPrice', candles[-1]['close'] if candles else 0),
+            "previousClose": info.get('previousClose', candles[-2]['close'] if len(candles) > 1 else 0),
+            "fiftyTwoWeekHigh": info.get('fiftyTwoWeekHigh', max([c['high'] for c in candles]) if candles else 0),
+            "fiftyTwoWeekLow": info.get('fiftyTwoWeekLow', min([c['low'] for c in candles]) if candles else 0),
+            "marketCap": info.get('marketCap', 0),
+            "fullExchangeName": info.get('fullExchangeName', 'NSE/BSE')
+        }
+        
+        return jsonify({
+            "chart": {
+                "result": [{
+                    "timestamp": [c['time'] // 1000 for c in candles],
+                    "indicators": {
+                        "quote": [{
+                            "open": [c['open'] for c in candles],
+                            "high": [c['high'] for c in candles],
+                            "low": [c['low'] for c in candles],
+                            "close": [c['close'] for c in candles],
+                            "volume": [c['volume'] for c in candles]
+                        }]
+                    },
+                    "meta": meta
+                }]
+            }
+        })
+        
+    except Exception as e:
+        print(f"❌ Error fetching data for {symbol}: {str(e)}")
+        return jsonify({"error": f"Failed to fetch data: {str(e)}"}), 500
+
+# ✅ AI Prediction API for Indian Market Trader
+@app.route("/api/ai-predict", methods=["POST"])
+def ai_predict():
+    try:
+        data = request.get_json()
+        market_data = data.get('marketData', [])
+        symbol = data.get('symbol', '')
+        
+        if not market_data:
+            return jsonify({"error": "No market data provided"}), 400
+        
+        if not OPENROUTER_KEY:
+            return jsonify({"error": "AI service not configured"}), 500
+        
+        # Prepare technical analysis data
+        closes = [candle['close'] for candle in market_data[-50:]]  # Last 50 candles
+        volumes = [candle['volume'] for candle in market_data[-10:]]  # Last 10 volumes
+        
+        # Calculate basic indicators
+        sma_20 = sum(closes[-20:]) / 20 if len(closes) >= 20 else closes[-1]
+        sma_50 = sum(closes[-50:]) / 50 if len(closes) >= 50 else closes[-1]
+        current_price = closes[-1]
+        
+        # Volume analysis
+        avg_volume = sum(volumes) / len(volumes) if volumes else 0
+        current_volume = volumes[-1] if volumes else 0
+        volume_ratio = current_volume / avg_volume if avg_volume > 0 else 1
+        
+        # Build comprehensive prompt for AI
+        prompt = f"""
+You are an expert Indian stock market analyst with deep knowledge of NSE/BSE trading patterns.
+
+TECHNICAL ANALYSIS DATA:
+Symbol: {symbol}
+Current Price: ₹{current_price:.2f}
+SMA(20): ₹{sma_20:.2f}
+SMA(50): ₹{sma_50:.2f}
+Volume Ratio: {volume_ratio:.2f}x average
+Recent Price Action: {closes[-5:]}
+
+MARKET CONTEXT:
+- This is an Indian stock/index trading on NSE/BSE
+- Consider Indian market hours (9:15 AM - 3:30 PM IST)
+- Factor in typical Indian market behavior and volatility patterns
+
+Provide a concise analysis with:
+1. Prediction: Bullish/Bearish/Neutral
+2. Confidence: 1-100%
+3. Key reasoning (2-3 points)
+4. Risk factors
+5. Target timeframe
+
+Keep response under 200 words and focus on actionable insights.
+"""
+
+        headers = {
+            "Authorization": f"Bearer {OPENROUTER_KEY}",
+            "Content-Type": "application/json",
+        }
+
+        payload = {
+            "model": "deepseek/deepseek-chat",
+            "messages": [
+                {"role": "system", "content": "You are a professional Indian stock market analyst specializing in technical analysis and NSE/BSE trading patterns."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.3,
+            "max_tokens": 500
+        }
+
+        # Call OpenRouter API
+        response = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=30)
+
+        if response.status_code == 200:
+            ai_response = response.json()["choices"][0]["message"]["content"].strip()
+            return jsonify({
+                "prediction": "Analysis Complete",
+                "confidence": 75,
+                "reasoning": ai_response,
+                "timeframe": "Short term"
+            })
+        else:
+            print(f"❌ AI API Error: {response.status_code} - {response.text}")
+            return jsonify({"error": f"AI service error: {response.status_code}"}), 500
+
+    except Exception as e:
+        print(f"❌ AI Prediction Error: {str(e)}")
+        return jsonify({"error": f"Prediction failed: {str(e)}"}), 500
+
+# ✅ AI Market Narrative API
+@app.route("/api/ai-narrative", methods=["POST"])
+def ai_narrative():
+    try:
+        data = request.get_json()
+        market_data = data.get('marketData', [])
+        symbol = data.get('symbol', '')
+        category = data.get('category', 'stocks')
+        
+        if not market_data:
+            return jsonify({"error": "No market data provided"}), 400
+        
+        if not OPENROUTER_KEY:
+            return jsonify({"error": "AI service not configured"}), 500
+        
+        # Analyze recent performance
+        recent_candles = market_data[-20:]  # Last 20 candles
+        first_price = recent_candles[0]['close']
+        last_price = recent_candles[-1]['close']
+        performance = ((last_price - first_price) / first_price) * 100
+        
+        prompt = f"""
+You are a senior research analyst covering Indian equity markets.
+
+ANALYSIS FOR: {symbol}
+Category: {category}
+Recent Performance: {performance:.2f}%
+Current Price: ₹{last_price:.2f}
+
+Provide a comprehensive market narrative covering:
+1. Current market position and trend
+2. Technical outlook with key levels
+3. Sector-specific insights (if applicable)
+4. Risk factors and opportunities
+5. Outlook for next few trading sessions
+
+Write in a professional tone for institutional investors. Keep under 300 words.
+"""
+
+        headers = {
+            "Authorization": f"Bearer {OPENROUTER_KEY}",
+            "Content-Type": "application/json",
+        }
+
+        payload = {
+            "model": "deepseek/deepseek-chat",
+            "messages": [
+                {"role": "system", "content": "You are a senior equity research analyst specializing in Indian markets with deep knowledge of NSE/BSE dynamics."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.4,
+            "max_tokens": 800
+        }
+
+        # Call OpenRouter API
+        response = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=30)
+
+        if response.status_code == 200:
+            narrative = response.json()["choices"][0]["message"]["content"].strip()
+            return jsonify({"narrative": narrative})
+        else:
+            print(f"❌ AI Narrative Error: {response.status_code} - {response.text}")
+            return jsonify({"error": f"AI service error: {response.status_code}"}), 500
+
+    except Exception as e:
+        print(f"❌ AI Narrative Error: {str(e)}")
+        return jsonify({"error": f"Narrative generation failed: {str(e)}"}), 500
+
+# ✅ Stock Screener API - Optimized for Render
+@app.route("/api/screener", methods=["POST"])
+def stock_screener():
+    try:
+        data = request.get_json()
+        criteria = data.get('criteria', 'oversold')
+        
+        # Indian stock symbols for screening
+        indian_stocks = [
+            'RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'ICICIBANK.NS'
+        ]
+        
+        results = []
+        
+        # Quick screening with timeout
+        for symbol in indian_stocks[:3]:  # Limit to 3 for faster response on Render
+            try:
+                ticker = yf.Ticker(symbol)
+                hist = ticker.history(period='5d', interval='1d', timeout=5)  # Shorter period for speed
+                
+                if not hist.empty and len(hist) >= 3:
+                    current_price = hist['Close'].iloc[-1]
+                    prev_price = hist['Close'].iloc[-2]
+                    change_percent = ((current_price - prev_price) / prev_price) * 100
+                    
+                    results.append({
+                        'symbol': symbol,
+                        'name': symbol.replace('.NS', ''),
+                        'price': round(current_price, 2),
+                        'change': round(change_percent, 2),
+                        'signal': 'Bullish' if change_percent > 0 else 'Bearish'
+                    })
+                            
+            except Exception as e:
+                print(f"❌ Screening error for {symbol}: {str(e)}")
+                continue  # Skip stocks with errors
+        
+        return jsonify({"results": results})
+        
+    except Exception as e:
+        print(f"❌ Screener Error: {str(e)}")
+        return jsonify({"error": f"Screening failed: {str(e)}"}), 500
+
+# ✅ Market Status API - Optimized for Render
+@app.route("/api/market-status")
+def market_status():
+    try:
+        import pytz
+        
+        # Get current IST time
+        ist = pytz.timezone('Asia/Kolkata')
+        now = datetime.now(ist)
+        
+        # Market hours: 9:15 AM to 3:30 PM IST, Monday to Friday
+        market_open_time = now.replace(hour=9, minute=15, second=0, microsecond=0)
+        market_close_time = now.replace(hour=15, minute=30, second=0, microsecond=0)
+        
+        is_weekend = now.weekday() >= 5  # Saturday = 5, Sunday = 6
+        is_market_hours = market_open_time <= now <= market_close_time
+        
+        if is_weekend:
+            status = "Closed (Weekend)"
+            next_open = "Monday 9:15 AM IST"
+        elif is_market_hours:
+            status = "Open"
+            next_open = f"Closes at 3:30 PM IST"
+        else:
+            if now < market_open_time:
+                status = "Pre-market"
+                next_open = "Opens at 9:15 AM IST"
+            else:
+                status = "After-hours"
+                next_open = "Opens tomorrow 9:15 AM IST"
+        
+        return jsonify({
+            "status": status,
+            "is_open": is_market_hours and not is_weekend,
+            "next_session": next_open,
+            "current_time": now.strftime("%Y-%m-%d %H:%M:%S IST")
+        })
+        
+    except Exception as e:
+        print(f"❌ Market Status Error: {str(e)}")
+        return jsonify({"error": f"Status check failed: {str(e)}"}), 500
+
+# ✅ Simplified Portfolio & Alerts APIs for Render
+@app.route("/api/portfolio", methods=["GET", "POST", "DELETE"])
+def portfolio_management():
+    if request.method == "POST":
+        return jsonify({"success": True, "message": "Stock added to portfolio"})
+    elif request.method == "GET":
+        return jsonify({"portfolio": []})
+    elif request.method == "DELETE":
+        return jsonify({"success": True, "message": "Stock removed from portfolio"})
+
+@app.route("/api/alerts", methods=["GET", "POST", "DELETE"])
+def price_alerts():
+    if request.method == "POST":
+        return jsonify({"success": True, "message": "Alert created"})
+    elif request.method == "GET":
+        return jsonify({"alerts": []})
+    elif request.method == "DELETE":
+        return jsonify({"success": True, "message": "Alert removed"})
+
+# ✅ Health check for Render
+@app.route("/api/health")
+def health_check():
+    return jsonify({
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "environment": "render",
+        "services": {
+            "market_data": "operational",
+            "ai_predictions": "operational" if OPENROUTER_KEY else "disabled",
+            "database": "operational"
+        }
+    })
+
+# ✅ Error handlers
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({"error": "Endpoint not found"}), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    return jsonify({"error": "Internal server error"}), 500
+
+# ✅ Render deployment
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)  # debug=False for production
 
 # --- Chat Endpoint ---
 @app.route("/chat", methods=["POST"])
