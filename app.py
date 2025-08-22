@@ -4,6 +4,8 @@ import csv
 import os
 import requests
 import time
+import json
+import numpy as np
 from datetime import datetime, timedelta
 from tools.strategy_switcher import select_strategy
 import pandas as pd
