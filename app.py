@@ -337,6 +337,7 @@ def download_strategies():
     return send_file("strategies.csv", as_attachment=True)
 
 # ✅ Candle Predictor page (your HTML file)
+@app.route("/")
 @app.route("/candle")
 def candle_page():
     return render_template("candle_predictor.html")
@@ -752,20 +753,6 @@ def health_check():
             "database": "operational"
         }
     })
-
-# ✅ Error handlers
-@app.errorhandler(404)
-def not_found(error):
-    return jsonify({"error": "Endpoint not found"}), 404
-
-@app.errorhandler(500)
-def internal_error(error):
-    return jsonify({"error": "Internal server error"}), 500
-
-# ✅ Render deployment
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)  # debug=False for production
 
 # --- Chat Endpoint ---
 @app.route("/chat", methods=["POST"])
