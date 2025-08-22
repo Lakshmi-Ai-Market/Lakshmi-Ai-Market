@@ -15,6 +15,7 @@ from utils import detect_mood_from_text  # optional helper for mood detection
 import yfinance as yf
 from dotenv import load_dotenv
 from pathlib import Path
+import ta
 
 # Load environment variables safely
 env_path = Path(__file__).parent / ".env"
@@ -32,6 +33,13 @@ app.config['UPLOAD_FOLDER'] = 'static/voice_notes'
 OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY")
 print("🔑 OPENROUTER_KEY:", OPENROUTER_KEY)  # ✅ Should now print the key
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+app = Flask(__name__)
+CORS(app)
+
+# Cache system matching your Version 8 pattern
+cache = {}
+cache_timeout = 300
 
 # --- Google OAuth Settings ---
 GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
