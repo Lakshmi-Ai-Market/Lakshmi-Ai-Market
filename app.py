@@ -281,11 +281,7 @@ def dashboard():
 
     name = session.get("username") or session.get("email")
     return render_template("index.html", name=name, mood=current_mood)
-
-@app.route("/candle")
-def candle_ui():
-    return render_template("dashboard.html")
-    
+   
 @app.route("/strategy")
 def strategy_page():
     if 'username' not in session:
@@ -337,7 +333,6 @@ def download_strategies():
     return send_file("strategies.csv", as_attachment=True)
 
 # ✅ Candle Predictor page (your HTML file)
-@app.route("/")
 @app.route("/candle")
 def candle_page():
     return render_template("candle_predictor.html")
