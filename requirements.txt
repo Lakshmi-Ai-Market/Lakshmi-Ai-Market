@@ -1,12 +1,13 @@
-Flask==2.3.2
+Flask==2.3.3
 gunicorn==21.2.0
 numpy==1.26.4
 pandas==2.2.2
 nltk==3.8.1
-requests
+requests==2.31.0
 openai
-yfinance
+yfinance==0.2.18
 beautifulsoup4
 matplotlib
-python-dotenv
+python-dotenv==1.0.0
+pytz==2023.3
 ta==0.11.0
