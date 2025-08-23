@@ -1692,26 +1692,6 @@ def economic_impact_predictor():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/health', methods=['GET'])
-def health_check():
-    """Health check endpoint"""
-    return jsonify({
-        'status': 'healthy',
-        'timestamp': datetime.now().isoformat(),
-        'version': '2.0.0',
-        'features': [
-            'Level 5: Quantum AI Trading Engine',
-            'Level 6: Neural Market Intelligence', 
-            'Level 7: Predictive Analytics Suite',
-            'Level 8: Real-Time Intelligence Network',
-            'Level 9: Advanced Risk Management',
-            'Level 10: Global Market Intelligence',
-            'Level 11: AI Trading Assistant',
-            'Level 12: Quantum Data Fusion'
-        ]
-    })
-
-
 @app.route("/ask-ai", methods=["GET", "POST"])
 def ask_ai():
     response = None
