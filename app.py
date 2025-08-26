@@ -540,10 +540,11 @@ def get_real_insider_data(period):
         return {'error': str(e)}
 
 # ------------------ ROUTES ------------------
-
 @app.route("/")
 def home():
-    return redirect(url_for("dashboard"))
+    if "user_id" in session:
+        return redirect(url_for("dashboard"))
+    return redirect(url_for("login_page"))
 
 # ---------- LOGIN / SIGNUP ----------
 
