@@ -1,290 +1,443 @@
-<!DOCTYPE html>  
-<html lang="en">  
-<head>  
-  <meta charset="UTF-8" />  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>  
-  <title>💖 Lakshmi Dashboard</title>  
-  <link rel="stylesheet" href="/static/style.css" />  
-  <script defer src="/static/script.js"></script>  
-  <style>  
-    body {  
-      margin: 0;  
-      font-family: 'Segoe UI', sans-serif;  
-      background: linear-gradient(to bottom right, #ffe0f0, #e6f2ff);  
-      color: #333;  
-    }  
-    header {  
-      background: #ff4d88;  
-      padding: 1rem;  
-      color: white;  
-      font-size: 24px;  
-      font-weight: bold;  
-      position: sticky;  
-      top: 0;  
-      display: flex;  
-      justify-content: space-between;  
-      align-items: center;  
-      z-index: 999;  
-    }  
-    .menu-icon {  
-      cursor: pointer;  
-      font-size: 22px;  
-      background: #d6006b;  
-      padding: 10px;  
-      border-radius: 10px;  
-      margin-left: 10px;  
-    }  
-    .dropdown {  
-      position: absolute;  
-      top: 60px;  
-      right: 20px;  
-      background-color: white;  
-      border: 1px solid #ddd;  
-      border-radius: 10px;  
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);  
-      display: none;  
-      z-index: 999;  
-      width: 240px;  
-    }  
-    .dropdown a {  
-      display: block;  
-      padding: 12px;  
-      text-decoration: none;  
-      color: #333;  
-      font-weight: bold;  
-    }  
-    .dropdown a:hover {  
-      background-color: #ffe6f0;  
-    }  
-    .container {  
-      max-width: 900px;  
-      margin: auto;  
-      padding: 20px;  
-    }  
-    .section {  
-      background: white;  
-      padding: 20px;  
-      margin-top: 20px;  
-      border-radius: 16px;  
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);  
-    }  
-    button {  
-      background: #ff4d88;  
-      color: white;  
-      padding: 10px 15px;  
-      border-radius: 8px;  
-      border: none;  
-      margin-top: 10px;  
-      cursor: pointer;  
-    }  
-    button:hover {  
-      background: #cc0066;  
-    }  
-    input, textarea {  
-      width: 100%;  
-      padding: 10px;  
-      margin-top: 8px;  
-      border-radius: 8px;  
-      border: 1px solid #ccc;  
-    }  
-    #chat-box p {  
-      margin: 5px 0;  
-    }  
-    .top-right {  
-      font-size: 14px;  
-      display: flex;  
-      align-items: center;  
-    }  
-    .top-right span {  
-      margin-right: 12px;  
-      font-weight: bold;  
-    }  
-    .top-right form {  
-      display: inline;  
-    }  
-  </style>  
-</head>  
-<body>  
-  <header>  
-    <span style="margin-left: 15px;">✨ Lakshmi Dashboard</span>  
-    <div class="top-right">  
-      <span>Welcome, {{ username }} 💞</span>  
-      <form method="POST" action="/logout">  
-        <button style="background:#fff; color:#d6006b; padding:6px 12px; border-radius:6px;">Logout</button>  
-      </form>  
-      <div class="menu-icon" onclick="toggleMenu()">⋮</div>  
-    </div>  
-    <div class="dropdown" id="menu-dropdown">  
-      <a href="/strategy">📘 Strategy Builder</a>  
-      <a href="/strategy-engine">💋 Strategy Engine</a>  
-      <a href="/candle">🔮 Candle Predictor</a>  
-      <a href="/matrix">📊 Strategy Matrix</a>  
-      <a href="/analyzer">📈 Strategy Analyzer</a>  
-      <a href="/ask-ai">🤖 Ask AI</a>  
-      <a href="/option-chain">💹 Option Chain Viewer</a>  
-      <a href="/backtester">🔁 Back-tester</a>  
-      <a href="/neuron">🧠 Neuron Analysis</a>  
-      <a href="/strategy-switcher">🧭 Strategy Switcher</a>  
-      <a href="/auth/login" style="text-decoration:none;">  
-        <button style="background:#db4437; color:white; padding:10px 20px; border:none; border-radius:8px;">  
-          🔐 Login with Google  
-        </button>  
-      </a>  
-    </div>  
-  </header>  
-  
-  <div class="container">  
-    <h2>👋 Welcome, {{ name }}</h2>  
-    <!-- 💬 Romantic Chat -->  
-    <div class="section">  
-      <h3>💬 Romantic Chat (Wife)</h3>  
-      <div id="chat-box" style="height:200px; overflow-y:auto; border:1px solid #eee; padding:10px; border-radius:8px;"></div>  
-      <form id="chat-form">  
-        <input type="text" name="message" placeholder="Talk to Lakshmi..." required />  
-        <button type="submit">Send</button>  
-        <button type="button" onclick="startVoice()">🎤 Speak</button>  
-      </form>  
-      <div class="suggestions">  
-        <button onclick="quickSay('I love you Lakshmi 💖')">💖 I love you</button>  
-        <button onclick="quickSay('Do you miss me? 😘')">💋 Miss me?</button>  
-        <button onclick="quickSay('Set mood to naughty')">🔥 Naughty</button>  
-      </div>  
-    </div>  
-  
-    <!-- 🍰 Manual LTP -->  
-    <div class="section">  
-      <h3>🍰 Manual LTP Input</h3>  
-      <form method="post" action="/update_manual_ltp">  
-        <input type="number" name="manual_ltp" placeholder="Enter LTP" required />  
-        <button type="submit">Update</button>  
-      </form>  
-    </div>  
-  
-    <!-- 📉 BankNIFTY Live -->  
-    <div class="section">  
-      <h3>📉 BankNIFTY Status</h3>  
-      <p>Current Price: <strong>{{ current_price }}</strong></p>  
-      <p>Status: <strong>{{ price_status }}</strong></p>  
-      <form method="post" action="/update_targets">  
-        <input name="upper_target" type="number" placeholder="Upper Target" />  
-        <input name="lower_target" type="number" placeholder="Lower Target" />  
-        <button type="submit">Set Targets</button>  
-      </form>  
-    </div>  
-  
-    <!-- 🚀 Trade Signal -->  
-    <div class="section">  
-      <h3>🚀 Trade Signal</h3>  
-      <form method="post" action="/set_signal">  
-        <input name="entry" type="number" placeholder="Entry Price" required />  
-        <input name="sl" type="number" placeholder="Stop Loss" required />  
-        <input name="target" type="number" placeholder="Target" required />  
-        <button type="submit">Save Signal</button>  
-      </form>  
-    </div>  
-  
-    <!-- 📊 Live Chart -->  
-    <div class="section">  
-      <h3>📊 Live BankNIFTY Chart</h3>  
-      <div class="tradingview-widget-container">  
-        <div id="tradingview_bnf"></div>  
-        <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>  
-        <script type="text/javascript">  
-          new TradingView.widget({  
-            "width": "100%",  
-            "height": 400,  
-            "symbol": "NSE:BANKNIFTY",  
-            "interval": "5",  
-            "timezone": "Asia/Kolkata",  
-            "theme": "light",  
-            "style": "1",  
-            "locale": "en",  
-            "toolbar_bg": "#f1f3f6",  
-            "enable_publishing": false,  
-            "hide_top_toolbar": true,  
-            "save_image": false,  
-            "container_id": "tradingview_bnf"  
-          });  
-        </script>  
-      </div>  
-    </div>  
-  
-    <!-- 📘 Strategy Engine -->  
-    <div class="section">  
-      <h3>💋 Strategy Engine</h3>  
-      <form id="strategy-form" method="POST" action="/api/strategy">  
-        <input type="text" name="symbol" placeholder="Enter Index Symbol" required />  
-        <button type="submit">Analyze Strategy</button>  
-      </form>  
-      <div id="strategy-result" style="margin-top: 20px; background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);"></div>  
-    </div>  
-  
-    <!-- 📕 Love Diary -->  
-    <div class="section">  
-      <h3>📕 Love Diary</h3>  
-      <form method="post" action="/save_diary">  
-        <textarea name="entry" rows="5" placeholder="Write your moment with Lakshmi..." required></textarea>  
-        <button type="submit">💾 Save to Diary</button>  
-      </form>  
-      <a href="/download_diary" download><button>👅 Download Full Diary</button></a>  
-    </div>  
-  
-  </div>  
-  
-  <footer style="text-align:center; padding:24px;">  
-    🌷 Made with love from the creator Monjit 💖  
-  </footer>  
-  <script>
-  function toggleMenu() {  
-    const menu = document.getElementById("menu-dropdown");  
-    menu.style.display = (menu.style.display === "block") ? "none" : "block";  
-  }  
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>💖 Lakshmi Dashboard</title>
+  <!-- Inline styles for a gorgeous glass UI -->
+  <style>
+    :root{
+      --pink:#ff4d88; --pink-dark:#cc0066; --rose:#d6006b; --bg1:#ffe0f0; --bg2:#e6f2ff; --card:#ffffffaa;
+      --glass: rgba(255,255,255,0.65); --glass2: rgba(255,255,255,0.4); --shadow: 0 10px 30px rgba(0,0,0,.12);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family: 'Segoe UI',system-ui,-apple-system,Arial,sans-serif; color:#333;
+      background: radial-gradient(60% 80% at 10% 10%, #fff7fb 0%, #f1f7ff 35%, #f6e8ff 65%, #eef7ff 100%),
+                  linear-gradient(135deg,var(--bg1),var(--bg2));
+      background-attachment: fixed;
+    }
+    /* Floating background orbs */
+    .orb{position:fixed; filter: blur(60px); opacity:.5; z-index:0; pointer-events:none}
+    .orb.o1{width:360px;height:360px;background:#ff9ac2; top:-80px; left:-60px}
+    .orb.o2{width:420px;height:420px;background:#9ecbff; bottom:-120px; right:-80px}header{
+  position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between;
+  padding:12px 18px; color:#fff; font-weight:700; font-size:22px;
+  backdrop-filter: blur(10px);
+  background: linear-gradient(90deg, var(--pink), #ff6aa1);
+  box-shadow: 0 10px 24px rgba(255,77,136,.25);
+}
+.top-right{display:flex; align-items:center; gap:10px; font-size:14px}
+.top-right span{font-weight:600}
+.top-right form{display:inline}
+.btn,
+button{background:var(--pink); color:#fff; border:none; border-radius:12px; padding:10px 14px; cursor:pointer; font-weight:700; box-shadow: var(--shadow); transition: .2s transform,.2s filter}
+.btn:hover,button:hover{transform:translateY(-1px); filter:brightness(.98)}
+.btn:active,button:active{transform:translateY(0)}
+.menu-icon{cursor:pointer; font-size:22px; background: var(--rose); padding:8px 10px; border-radius:12px; margin-left:6px}
+.dropdown{ position:absolute; top:64px; right:18px; width:260px; background:#fff; border-radius:16px; box-shadow: var(--shadow); display:none; overflow:hidden }
+.dropdown a{display:block; padding:12px 14px; text-decoration:none; color:#333; font-weight:600}
+.dropdown a:hover{background:#fff2f7}
 
-  function quickSay(text) {  
-    document.querySelector('input[name="message"]').value = text;  
-    document.getElementById("chat-form").dispatchEvent(new Event('submit'));  
-  }  
+.container{ max-width:1100px; margin: 18px auto 60px; padding: 0 16px; position:relative; z-index:1 }
+.grid{ display:grid; grid-template-columns: 1.2fr .8fr; gap:18px }
+@media (max-width: 980px){ .grid{ grid-template-columns: 1fr } }
 
-  function startVoice() {  
-    alert("🎤 Voice feature not available yet in this version.");  
-  }  
+.card{ background: var(--glass); backdrop-filter: blur(14px); border-radius:22px; padding:18px; box-shadow: var(--shadow); border:1px solid rgba(255,255,255,.5) }
+.card h3{ margin:0 0 8px; font-size:18px }
 
-  // ✅ FIXED CHAT HANDLER
-  document.getElementById("chat-form").addEventListener("submit", async function(e) {  
-    e.preventDefault();  
-    const input = document.querySelector('input[name="message"]');  
-    const message = input.value.trim();  
-    if (!message) return;  
+/* Chat UI */
+.chat-shell{ display:flex; flex-direction:column; min-height:520px }
+.chat-toolbar{ display:flex; align-items:center; gap:8px; margin-bottom:10px }
+.chat-toolbar .pill{ background: var(--glass2); border:1px dashed #e9c; border-radius:999px; padding:6px 10px; font-size:12px; font-weight:600 }
 
-    // ✅ Send JSON instead of FormData
-    const res = await fetch("/chat", {  
-      method: "POST",  
-      headers: { "Content-Type": "application/json" },  
-      body: JSON.stringify({ message })  
-    });  
+.chat-box{ flex:1; min-height:300px; max-height:520px; overflow:auto; padding:12px; border-radius:16px; background: #fff; border:1px solid #f1d; background-image: linear-gradient(180deg, #ffffff 0%, #fff7fb 100%)}
+.msg{ display:flex; gap:10px; margin:8px 0 }
+.msg.me{ flex-direction: row-reverse }
+.avatar{ width:34px; height:34px; border-radius:50%; display:grid; place-items:center; color:#fff; flex: 0 0 34px }
+.avatar.me{ background:#6e6eff }
+.avatar.lak{ background:linear-gradient(135deg,#ff7fb3,#ff4d88) }
+.bubble{ max-width: 80%; padding:10px 12px; border-radius:14px; box-shadow: 0 6px 12px rgba(0,0,0,.06); word-wrap: break-word }
+.me .bubble{ background:#f1f4ff }
+.lak .bubble{ background:#fff1f7 }
+.timestamp{ font-size:11px; opacity:.7; margin-top:4px }
+pre{ background:#0b1021; color:#e9ecff; padding:12px; border-radius:12px; overflow:auto }
 
-    const data = await res.json();  
-    const chatBox = document.getElementById("chat-box");  
-    chatBox.innerHTML += `<p><strong>You:</strong> ${message}</p>`;  
-    chatBox.innerHTML += `<p><strong>Lakshmi:</strong> ${data.reply}</p>`;  
-    input.value = "";  
-    chatBox.scrollTop = chatBox.scrollHeight;  
-  });  
+.attachments{ display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 }
+.chip{ display:flex; align-items:center; gap:6px; background:#fff; border:1px solid #eee; border-radius:999px; padding:6px 10px; }
+.chip button{ background:transparent; color:#444; padding:0; box-shadow:none }
+.thumb{ width:40px; height:40px; border-radius:10px; object-fit:cover; border:1px solid #eee }
 
-  document.getElementById("strategy-form").addEventListener("submit", async function(e) {  
-  e.preventDefault();  
-  const input = document.querySelector('input[name="symbol"]');  
-  const symbol = input.value.trim().toUpperCase();  
+.composer{ display:flex; align-items:center; gap:8px; margin-top:10px; background:#fff; border-radius:16px; padding:8px; border:1px solid #f0e1ea }
+.composer input[type="text"], .composer textarea{ flex:1; border:none; outline:none; font-size:15px; padding:10px; border-radius:12px }
+.icon-btn{ background:#f7f7fa; border-radius:12px; padding:10px; border:1px solid #eee }
+.icon-btn:hover{ background:#fff2f7 }
 
-  const res = await fetch("/api/strategy", {  
-    method: "POST",  
-    headers: { "Content-Type": "application/json" },  
-    body: JSON.stringify({ symbol })  
-  });  
+.dropzone{ border:2px dashed #ffc1d8; border-radius:16px; padding:10px; text-align:center; font-size:13px; color:#b24178; background:#fff7fb; display:none }
 
-  const data = await res.json();  
-  const resultBox = document.getElementById("strategy-result");  
-  resultBox.innerHTML = data.reply;  
-});
-                          </script>
-  
+/* Secondary cards */
+.row{ display:grid; grid-template-columns: 1fr 1fr; gap:18px }
+@media (max-width: 640px){ .row{ grid-template-columns: 1fr } }
+
+.tv-wrap{ border-radius:18px; overflow:hidden; border:1px solid #eee }
+
+footer{ text-align:center; padding:28px; color:#a04a74; font-weight:600 }
+.note{font-size:12px; opacity:.75}
+
+  </style>
+</head>
+<body>
+  <div class="orb o1"></div>
+  <div class="orb o2"></div>
+  <header>
+    <span style="margin-left: 8px; display:flex; align-items:center; gap:10px">✨ Lakshmi Dashboard</span>
+    <div class="top-right">
+      <span>Welcome, {{ username }} 💞</span>
+      <form method="POST" action="/logout">
+        <button style="background:#fff; color:var(--rose); padding:6px 12px; border-radius:10px;">Logout</button>
+      </form>
+      <div class="menu-icon" onclick="toggleMenu()">⋮</div>
+    </div>
+    <div class="dropdown" id="menu-dropdown">
+      <a href="/strategy">📘 Strategy Builder</a>
+      <a href="/strategy-engine">💋 Strategy Engine</a>
+      <a href="/candle">🔮 Candle Predictor</a>
+      <a href="/matrix">📊 Strategy Matrix</a>
+      <a href="/analyzer">📈 Strategy Analyzer</a>
+      <a href="/ask-ai">🤖 Ask AI</a>
+      <a href="/option-chain">💹 Option Chain Viewer</a>
+      <a href="/backtester">🔁 Back-tester</a>
+      <a href="/neuron">🧠 Neuron Analysis</a>
+      <a href="/strategy-switcher">🧭 Strategy Switcher</a>
+      <a href="/auth/login" style="text-decoration:none;">
+        <button style="background:#db4437; color:white; padding:10px 20px; border:none; border-radius:12px; width:100%">🔐 Login with Google</button>
+      </a>
+    </div>
+  </header>  <div class="container">
+    <h2 style="margin: 4px 4px 14px">👋 Welcome, {{ name }}</h2><div class="grid">
+  <!-- LEFT: Chat like ChatGPT with uploads, camera, mic -->
+  <section class="card chat-shell">
+    <div class="chat-toolbar">
+      <span class="pill">Wife Mode</span>
+      <span class="pill">Smart Replies</span>
+      <span class="pill">TTS 🔊</span>
+    </div>
+    <div id="dropzone" class="dropzone">Drop files or images here</div>
+    <div id="chat-box" class="chat-box" aria-live="polite"></div>
+
+    <div id="attachments" class="attachments" aria-label="Selected attachments"></div>
+
+    <form id="chat-form" class="composer">
+      <input type="file" id="file-input" hidden multiple />
+      <input type="file" id="image-input" hidden accept="image/*" multiple />
+      <input type="file" id="camera-input" hidden accept="image/*" capture="environment" />
+      <button type="button" class="icon-btn" title="Upload files" onclick="document.getElementById('file-input').click()">📎</button>
+      <button type="button" class="icon-btn" title="Upload images" onclick="document.getElementById('image-input').click()">🖼️</button>
+      <button type="button" class="icon-btn" title="Open camera" id="camera-btn">📷</button>
+      <button type="button" class="icon-btn" title="Voice input" id="voice-btn">🎤</button>
+
+      <input type="text" name="message" id="message" placeholder="Talk to Lakshmi... (attach files, images, camera, voice)" required />
+      <button type="submit" class="btn">Send ➤</button>
+    </form>
+    <div class="note">Tip: drag & drop files into the chat, or use 📷 to snap a picture.</div>
+  </section>
+
+  <!-- RIGHT: Market widgets and forms -->
+  <section class="card">
+    <h3>🍰 Manual LTP Input</h3>
+    <form method="post" action="/update_manual_ltp">
+      <input type="number" name="manual_ltp" placeholder="Enter LTP" required />
+      <button type="submit">Update</button>
+    </form>
+
+    <div class="row" style="margin-top:14px">
+      <div class="card" style="padding:14px">
+        <h3>📉 BankNIFTY Status</h3>
+        <p>Current Price: <strong>{{ current_price }}</strong></p>
+        <p>Status: <strong>{{ price_status }}</strong></p>
+        <form method="post" action="/update_targets">
+          <input name="upper_target" type="number" placeholder="Upper Target" />
+          <input name="lower_target" type="number" placeholder="Lower Target" />
+          <button type="submit">Set Targets</button>
+        </form>
+      </div>
+      <div class="card" style="padding:14px">
+        <h3>🚀 Trade Signal</h3>
+        <form method="post" action="/set_signal">
+          <input name="entry" type="number" placeholder="Entry Price" required />
+          <input name="sl" type="number" placeholder="Stop Loss" required />
+          <input name="target" type="number" placeholder="Target" required />
+          <button type="submit">Save Signal</button>
+        </form>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Live Chart -->
+<section class="card tv-wrap" style="margin-top:18px">
+  <h3>📊 Live BankNIFTY Chart</h3>
+  <div class="tradingview-widget-container">
+    <div id="tradingview_bnf" style="height:420px"></div>
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    <script type="text/javascript">
+      document.addEventListener('DOMContentLoaded', function(){
+        try{
+          new TradingView.widget({
+            width: '100%', height: 420, symbol: 'NSE:BANKNIFTY', interval: '5', timezone: 'Asia/Kolkata', theme: 'light', style: '1', locale:'en',
+            toolbar_bg:'#f1f3f6', enable_publishing:false, hide_top_toolbar:true, save_image:false, container_id:'tradingview_bnf'
+          });
+        }catch(e){console.warn('TradingView not loaded', e)}
+      });
+    </script>
+  </div>
+</section>
+
+<!-- Strategy Engine -->
+<section class="card" style="margin-top:18px">
+  <h3>💋 Strategy Engine</h3>
+  <form id="strategy-form" method="POST" action="/api/strategy">
+    <input type="text" name="symbol" placeholder="Enter Index Symbol" required />
+    <button type="submit">Analyze Strategy</button>
+  </form>
+  <div id="strategy-result" style="margin-top: 14px; background:#fff; padding: 10px; border-radius: 12px; border:1px solid #eee"></div>
+</section>
+
+<!-- Love Diary -->
+<section class="card" style="margin-top:18px">
+  <h3>📕 Love Diary</h3>
+  <form method="post" action="/save_diary">
+    <textarea name="entry" rows="5" placeholder="Write your moment with Lakshmi..." required></textarea>
+    <button type="submit">💾 Save to Diary</button>
+  </form>
+  <a href="/download_diary" download><button style="margin-top:8px">👅 Download Full Diary</button></a>
+</section>
+
+  </div>  <footer>🌷 Made with love from the creator Monjit 💖</footer>  <!-- All-in-one JavaScript -->  <script>
+    // ===== MENU =====
+    function toggleMenu(){
+      const menu = document.getElementById('menu-dropdown');
+      menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+    }
+    document.addEventListener('click', (e)=>{
+      const menu = document.getElementById('menu-dropdown');
+      const icon = document.querySelector('.menu-icon');
+      if(!menu) return;
+      if(e.target === icon) return; // handled by onclick
+      if(menu.style.display==='block' && !menu.contains(e.target)) menu.style.display='none';
+    });
+
+    // ===== UTIL =====
+    const $ = (s)=>document.querySelector(s);
+    const chatBox = $('#chat-box');
+    const attachmentsEl = $('#attachments');
+    const dropzone = $('#dropzone');
+    const state = { attachments: [] /* {name,type,blob,dataUrl} */ , tts:true };
+
+    function ts(){
+      const d = new Date();
+      const hh = String(d.getHours()).padStart(2,'0');
+      const mm = String(d.getMinutes()).padStart(2,'0');
+      return `${hh}:${mm}`;
+    }
+
+    function addMsg({who, html}){
+      const wrap = document.createElement('div');
+      wrap.className = `msg ${who}`; // 'me' or 'lak'
+      const avatar = document.createElement('div');
+      avatar.className = 'avatar '+(who==='me'?'me':'lak');
+      avatar.textContent = who==='me' ? '👤' : '💖';
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.innerHTML = html;
+      const time = document.createElement('div');
+      time.className = 'timestamp';
+      time.textContent = ts();
+      const inner = document.createElement('div');
+      inner.style.maxWidth='100%';
+      inner.appendChild(bubble); inner.appendChild(time);
+      wrap.appendChild(avatar); wrap.appendChild(inner);
+      chatBox.appendChild(wrap);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function escapeHTML(s){ return s.replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+    // ===== ATTACHMENTS PREVIEW =====
+    function renderAttachments(){
+      attachmentsEl.innerHTML = '';
+      state.attachments.forEach((a,idx)=>{
+        const chip = document.createElement('div'); chip.className='chip';
+        if(a.type.startsWith('image/') && a.dataUrl){
+          const im = document.createElement('img'); im.src=a.dataUrl; im.className='thumb'; chip.appendChild(im);
+        }
+        const name = document.createElement('span'); name.textContent = a.name || a.type;
+        const rm = document.createElement('button'); rm.type='button'; rm.textContent='✕';
+        rm.onclick = ()=>{ state.attachments.splice(idx,1); renderAttachments(); };
+        chip.appendChild(name); chip.appendChild(rm);
+        attachmentsEl.appendChild(chip);
+      });
+      attachmentsEl.style.display = state.attachments.length? 'flex':'none';
+    }
+
+    async function filesToItems(fileList){
+      const files = Array.from(fileList||[]);
+      for(const f of files){
+        const item = { name:f.name, type:f.type, size:f.size };
+        item.blob = f;
+        if(f.type.startsWith('image/')){
+          item.dataUrl = await new Promise(r=>{ const fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(f); });
+        }
+        state.attachments.push(item);
+      }
+      renderAttachments();
+    }
+
+    // Input hooks
+    $('#file-input').addEventListener('change', (e)=> filesToItems(e.target.files));
+    $('#image-input').addEventListener('change', (e)=> filesToItems(e.target.files));
+    // Camera (mobile capture attribute also supported). For desktop, open getUserMedia modal.
+    const cameraBtn = document.getElementById('camera-btn');
+    const cameraInput = document.getElementById('camera-input');
+    cameraBtn.addEventListener('click', async ()=>{
+      // First try native file input with capture (mobile)
+      if(/Mobi|Android/i.test(navigator.userAgent)) return cameraInput.click();
+      // Desktop: open a quick camera overlay
+      openCameraOverlay();
+    });
+    cameraInput.addEventListener('change', (e)=> filesToItems(e.target.files));
+
+    // Drag & drop
+    ['dragenter','dragover'].forEach(ev=>{
+      document.addEventListener(ev, e=>{ e.preventDefault(); dropzone.style.display='block'; });
+    });
+    ;['dragleave','drop'].forEach(ev=>{
+      document.addEventListener(ev, e=>{
+        if(ev!=='drop') return; e.preventDefault(); dropzone.style.display='none'; filesToItems(e.dataTransfer.files);
+      });
+    });
+
+    // ===== VOICE INPUT (Web Speech API) =====
+    const voiceBtn = document.getElementById('voice-btn');
+    let recog; let listening=false;
+    function setupRecognition(){
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if(!SR) return null; const r=new SR(); r.lang='en-IN'; r.interimResults=true; r.continuous=false; return r;
+    }
+    voiceBtn.addEventListener('click', ()=>{
+      if(!recog){ recog = setupRecognition(); if(!recog){ alert('Speech Recognition not supported in this browser.'); return; } }
+      if(listening){ recog.stop(); return; }
+      listening=true; voiceBtn.textContent='🛑';
+      recog.start();
+      const input = document.getElementById('message');
+      let final='';
+      recog.onresult = (e)=>{
+        let interim='';
+        for(let i=e.resultIndex; i<e.results.length; i++){
+          const tr=e.results[i][0].transcript; if(e.results[i].isFinal){ final+=tr; } else { interim+=tr; }
+        }
+        input.value = (final + ' ' + interim).trim();
+      };
+      recog.onerror = ()=>{ listening=false; voiceBtn.textContent='🎤'; };
+      recog.onend = ()=>{ listening=false; voiceBtn.textContent='🎤'; };
+    });
+
+    // ===== TTS =====
+    function speak(text){ try{ if(!state.tts) return; const u = new SpeechSynthesisUtterance(text); u.lang='en-IN'; speechSynthesis.cancel(); speechSynthesis.speak(u);}catch(_){} }
+
+    // ===== CHAT SUBMIT =====
+    document.getElementById('chat-form').addEventListener('submit', async function(e){
+      e.preventDefault();
+      const input = document.getElementById('message');
+      const message = input.value.trim();
+      if(!message && !state.attachments.length) return;
+
+      // Show my message immediately
+      let html = '';
+      if(message) html += `<div>${escapeHTML(message)}</div>`;
+      if(state.attachments.length){
+        state.attachments.forEach(a=>{
+          if(a.type.startsWith('image/') && a.dataUrl){ html += `<div><img src="${a.dataUrl}" style="max-width:220px;border-radius:10px;border:1px solid #eee"/></div>`; }
+          else { html += `<div>📎 ${escapeHTML(a.name||a.type)} (${Math.round((a.size||0)/1024)} KB)</div>`; }
+        });
+      }
+      addMsg({who:'me', html});
+
+      // Prepare payload: JSON with base64 for images, and send non-image as FormData to /upload if available
+      const attachMeta = [];
+      for(const a of state.attachments){
+        if(a.dataUrl){ attachMeta.push({ name:a.name, type:a.type, dataUrl:a.dataUrl }); }
+        else if(a.blob){ attachMeta.push({ name:a.name, type:a.type }); }
+      }
+
+      // Try to upload non-image files (binary) first if endpoint exists
+      async function tryUploadBinary(){
+        const bin = state.attachments.filter(a=>!a.type?.startsWith('image/') && a.blob);
+        if(!bin.length) return [];
+        try{
+          const fd = new FormData(); bin.forEach((b,i)=> fd.append('files', b.blob, b.name||`file-${i}`));
+          const up = await fetch('/upload', { method:'POST', body: fd });
+          if(!up.ok) throw new Error('upload failed');
+          const res = await up.json(); // expect {urls:[...]} or similar
+          return res.urls || [];
+        }catch(err){ console.warn('Binary upload failed or /upload missing.', err); return []; }
+      }
+
+      const uploadedUrls = await tryUploadBinary();
+      // Merge URLs back into metadata if any
+      uploadedUrls.forEach((u,i)=>{ if(attachMeta[i]) attachMeta[i].url = u; });
+
+      // Send to chat endpoint (expects JSON {message, attachments}) and returns {reply}
+      let replyText = '';
+      try{
+        const res = await fetch('/chat', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ message, attachments: attachMeta }) });
+        const data = await res.json(); replyText = (data && (data.reply||data.text)) || '[No reply]';
+      }catch(err){ replyText = '⚠️ Error contacting /chat endpoint.'; }
+
+      addMsg({who:'lak', html: escapeHTML(replyText)});
+      speak(replyText);
+      // reset input + attachments
+      input.value=''; state.attachments=[]; renderAttachments();
+    });
+
+    // ===== STRATEGY FORM =====
+    document.getElementById('strategy-form').addEventListener('submit', async function(e){
+      e.preventDefault();
+      const input = this.querySelector('input[name="symbol"]');
+      const symbol = input.value.trim().toUpperCase();
+      let html = '';
+      try{
+        const res = await fetch('/api/strategy', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ symbol }) });
+        const data = await res.json();
+        html = data.reply || data.html || JSON.stringify(data, null, 2);
+      }catch(err){ html = '⚠️ Error contacting /api/strategy'; }
+      document.getElementById('strategy-result').innerHTML = html;
+    });
+
+    // ===== Camera Overlay (desktop) =====
+    let stream;
+    function openCameraOverlay(){
+      const wrap = document.createElement('div');
+      Object.assign(wrap.style,{position:'fixed',inset:'0',background:'rgba(0,0,0,.6)',display:'grid',placeItems:'center',zIndex:1000});
+      const card = document.createElement('div'); card.className='card'; card.style.maxWidth='560px'; card.style.width='94%';
+      const video = document.createElement('video'); video.autoplay=true; video.playsInline=true; video.style.width='100%'; video.style.borderRadius='12px';
+      const row = document.createElement('div'); row.style.display='flex'; row.style.gap='10px'; row.style.marginTop='10px';
+      const take = document.createElement('button'); take.textContent='📸 Capture';
+      const close = document.createElement('button'); close.textContent='✕ Close'; close.style.background='#999';
+      row.appendChild(take); row.appendChild(close);
+      card.appendChild(video); card.appendChild(row); wrap.appendChild(card); document.body.appendChild(wrap);
+      navigator.mediaDevices.getUserMedia({video:true,audio:false}).then(s=>{ stream=s; video.srcObject=s; }).catch(()=>{ alert('Camera permission denied.'); document.body.removeChild(wrap); });
+      close.onclick = ()=>{ if(stream){ stream.getTracks().forEach(t=>t.stop()); } document.body.removeChild(wrap); };
+      take.onclick = ()=>{
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight; const ctx = canvas.getContext('2d');
+        ctx.drawImage(video,0,0); const dataUrl = canvas.toDataURL('image/jpeg', .9);
+        const blob = dataURLtoBlob(dataUrl); const f = new File([blob], `camera-${Date.now()}.jpg`, {type:'image/jpeg'});
+        state.attachments.push({ name:f.name, type:f.type, size:f.size, blob:f, dataUrl });
+        renderAttachments();
+        close.onclick();
+      };
+    }
+    function dataURLtoBlob(dataURL){ const arr=dataURL.split(','); const mime=arr[0].match(/:(.*?);/)[1]; const bstr=atob(arr[1]); let n=bstr.length; const u8arr=new Uint8Array(n); while(n--){u8arr[n]=bstr.charCodeAt(n);} return new Blob([u8arr],{type:mime}); }
+  </script></body>
+        </html>
