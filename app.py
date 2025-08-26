@@ -32,8 +32,6 @@ import secrets
 import feedparser
 warnings.filterwarnings('ignore')
 
-
-
 # Load environment variables safely
 env_path = Path(__file__).parent / ".env"
 load_dotenv(dotenv_path=env_path)
@@ -62,50 +60,44 @@ INDIAN_SYMBOLS = {
     'fmcg': ['HINDUNILVR.NS', 'ITC.NS', 'NESTLEIND.NS', 'BRITANNIA.NS', 'DABUR.NS']
 }
 
-app = Flask(__name__)
 app.secret_key = "lakshmi_secret_key"
 app.config['UPLOAD_FOLDER'] = 'static/voice_notes'
 
 # OAuth Configuration
 oauth = OAuth(app)
 
-# Google OAuth
-google = oauth.remote_app(
-    'google',
-    consumer_key=os.getenv('GOOGLE_CLIENT_ID'),
-    consumer_secret=os.getenv('GOOGLE_CLIENT_SECRET'),
-    request_token_params={
-        'scope': 'email profile'
-    },
-    base_url='https://www.googleapis.com/oauth2/v1/',
-    request_token_url=None,
-    access_token_method='POST',
-    access_token_url='https://accounts.google.com/o/oauth2/token',
-    authorize_url='https://accounts.google.com/o/oauth2/auth',
+# ✅ Google OAuth with Authlib
+google = oauth.register(
+    name="google",
+    client_id=os.getenv("GOOGLE_CLIENT_ID"),
+    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+    access_token_url="https://accounts.google.com/o/oauth2/token",
+    authorize_url="https://accounts.google.com/o/oauth2/auth",
+    api_base_url="https://www.googleapis.com/oauth2/v1/",
+    userinfo_endpoint="https://openidconnect.googleapis.com/v1/userinfo",
+    client_kwargs={"scope": "openid email profile"}
 )
 
-# Facebook OAuth
-facebook = oauth.remote_app(
-    'facebook',
-    consumer_key=os.getenv('FACEBOOK_APP_ID'),
-    consumer_secret=os.getenv('FACEBOOK_APP_SECRET'),
-    request_token_params={'scope': 'email'},
-    base_url='https://graph.facebook.com',
-    request_token_url=None,
-    access_token_url='/oauth/access_token',
-    authorize_url='https://www.facebook.com/dialog/oauth',
+# ✅ Facebook OAuth with Authlib
+facebook = oauth.register(
+    name="facebook",
+    client_id=os.getenv("FACEBOOK_APP_ID"),
+    client_secret=os.getenv("FACEBOOK_APP_SECRET"),
+    access_token_url="https://graph.facebook.com/oauth/access_token",
+    authorize_url="https://www.facebook.com/dialog/oauth",
+    api_base_url="https://graph.facebook.com/",
+    client_kwargs={"scope": "email"}
 )
 
-# Instagram OAuth
-instagram = oauth.remote_app(
-    'instagram',
-    consumer_key=os.getenv('INSTAGRAM_CLIENT_ID'),
-    consumer_secret=os.getenv('INSTAGRAM_CLIENT_SECRET'),
-    request_token_params={'scope': 'user_profile'},
-    base_url='https://api.instagram.com/v1/',
-    request_token_url=None,
-    access_token_url='https://api.instagram.com/oauth/access_token',
-    authorize_url='https://api.instagram.com/oauth/authorize',
+# ✅ Instagram OAuth with Authlib
+instagram = oauth.register(
+    name="instagram",
+    client_id=os.getenv("INSTAGRAM_CLIENT_ID"),
+    client_secret=os.getenv("INSTAGRAM_CLIENT_SECRET"),
+    access_token_url="https://api.instagram.com/oauth/access_token",
+    authorize_url="https://api.instagram.com/oauth/authorize",
+    api_base_url="https://graph.instagram.com/",
+    client_kwargs={"scope": "user_profile"}
 )
 
 # Valid credentials
@@ -116,7 +108,6 @@ VALID_CREDENTIALS = {
         'email': 'monjit@lakshmi-ai.com'
     }
 }
-
 
 OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY")
 print("🔑 OPENROUTER_KEY:", OPENROUTER_KEY)  # ✅ Should now print the key
@@ -145,6 +136,7 @@ romantic_replies = [
     "Being your wife is my sweetest blessing. 💋",
     "Want to hear something naughty, darling? 😏"
 ]
+
 
 # --- User Handling ---
 def load_users():
@@ -556,6 +548,7 @@ def get_real_insider_data(period):
 def home():
     return redirect("/login")
 
+
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if request.method == "POST":
@@ -589,52 +582,38 @@ def signup():
 
     return render_template("signup.html")
 
+
 @app.route('/auth/login', methods=['POST'])
 def login():
     try:
         data = request.get_json()
         username = data.get('username', '').strip().lower()
         password = data.get('password', '')
-        
+
         if not username or not password:
-            return jsonify({
-                'success': False,
-                'message': 'Username and password are required'
-            }), 400
-        
+            return jsonify({'success': False, 'message': 'Username and password are required'}), 400
+
         # Check credentials
         if username in VALID_CREDENTIALS:
             stored_password = VALID_CREDENTIALS[username]['password']
             input_password = hashlib.sha256(password.encode()).hexdigest()
-            
+
             if stored_password == input_password:
                 # Create session
                 session['user_id'] = username
                 session['login_time'] = datetime.now().isoformat()
                 session['auth_method'] = 'password'
-                
-                return jsonify({
-                    'success': True,
-                    'message': 'Login successful',
-                    'redirect': '/dashboard'
-                })
+
+                return jsonify({'success': True, 'message': 'Login successful', 'redirect': '/dashboard'})
             else:
-                return jsonify({
-                    'success': False,
-                    'message': 'Invalid password'
-                }), 401
+                return jsonify({'success': False, 'message': 'Invalid password'}), 401
         else:
-            return jsonify({
-                'success': False,
-                'message': 'User not found'
-            }), 401
-            
+            return jsonify({'success': False, 'message': 'User not found'}), 401
+
     except Exception as e:
         print(f"Login error: {e}")
-        return jsonify({
-            'success': False,
-            'message': 'Internal server error'
-        }), 500
+        return jsonify({'success': False, 'message': 'Internal server error'}), 500
+
 
 @app.route('/auth/biometric', methods=['POST'])
 def biometric_auth():
@@ -642,150 +621,137 @@ def biometric_auth():
         data = request.get_json()
         method = data.get('method')
         username = data.get('username', '').strip().lower()
-        
+
         if not method or not username:
-            return jsonify({
-                'success': False,
-                'message': 'Method and username are required'
-            }), 400
-        
-        # Check if user exists and biometric is enabled
+            return jsonify({'success': False, 'message': 'Method and username are required'}), 400
+
         if username in VALID_CREDENTIALS and VALID_CREDENTIALS[username]['biometric_enabled']:
-            # Create session
             session['user_id'] = username
             session['login_time'] = datetime.now().isoformat()
             session['auth_method'] = f'biometric_{method}'
-            
-            return jsonify({
-                'success': True,
-                'message': f'{method.capitalize()} authentication successful',
-                'redirect': '/dashboard'
-            })
+
+            return jsonify({'success': True, 'message': f'{method.capitalize()} authentication successful', 'redirect': '/dashboard'})
         else:
-            return jsonify({
-                'success': False,
-                'message': 'Biometric authentication not enabled for this user'
-            }), 401
-            
+            return jsonify({'success': False, 'message': 'Biometric authentication not enabled for this user'}), 401
+
     except Exception as e:
         print(f"Biometric auth error: {e}")
-        return jsonify({
-            'success': False,
-            'message': 'Biometric authentication failed'
-        }), 500
+        return jsonify({'success': False, 'message': 'Biometric authentication failed'}), 500
 
+
+# ✅ Google OAuth
 @app.route('/auth/google')
 def google_auth():
-    return google.authorize(callback=url_for('google_callback', _external=True))
+    redirect_uri = url_for('google_callback', _external=True)
+    return oauth.google.authorize_redirect(redirect_uri)
+
 
 @app.route('/auth/google/callback')
 def google_callback():
     try:
-        resp = google.authorized_response()
-        if resp is None:
-            return redirect(url_for('index', error='Google authentication failed'))
-        
-        session['google_token'] = (resp['access_token'], '')
-        user_info = google.get('userinfo')
-        
-        # Create session
-        session['user_id'] = 'monjit'  # Map to our user
+        token = oauth.google.authorize_access_token()
+        user_info = oauth.google.userinfo()
+        session['user_id'] = 'monjit'
         session['login_time'] = datetime.now().isoformat()
         session['auth_method'] = 'google_oauth'
-        session['user_email'] = user_info.data.get('email')
-        session['user_name'] = user_info.data.get('name')
-        
+        session['user_email'] = user_info.get('email')
+        session['user_name'] = user_info.get('name')
         return redirect('/dashboard')
-        
     except Exception as e:
         print(f"Google callback error: {e}")
         return redirect(url_for('index', error='Google authentication error'))
 
+
+# ✅ Facebook OAuth
 @app.route('/auth/facebook')
 def facebook_auth():
-    return facebook.authorize(callback=url_for('facebook_callback', _external=True))
+    redirect_uri = url_for('facebook_callback', _external=True)
+    return oauth.facebook.authorize_redirect(redirect_uri)
+
 
 @app.route('/auth/facebook/callback')
 def facebook_callback():
     try:
-        resp = facebook.authorized_response()
-        if resp is None:
-            return redirect(url_for('index', error='Facebook authentication failed'))
-        
-        session['facebook_token'] = (resp['access_token'], '')
-        user_info = facebook.get('/me?fields=id,name,email')
-        
-        # Create session
-        session['user_id'] = 'monjit'  # Map to our user
+        token = oauth.facebook.authorize_access_token()
+        user_info = oauth.facebook.get('me?fields=id,name,email')
+        session['user_id'] = 'monjit'
         session['login_time'] = datetime.now().isoformat()
         session['auth_method'] = 'facebook_oauth'
-        session['user_email'] = user_info.data.get('email')
-        session['user_name'] = user_info.data.get('name')
-        
+        session['user_email'] = user_info.json().get('email')
+        session['user_name'] = user_info.json().get('name')
         return redirect('/dashboard')
-        
     except Exception as e:
         print(f"Facebook callback error: {e}")
         return redirect(url_for('index', error='Facebook authentication error'))
 
+
+# ✅ Instagram OAuth
 @app.route('/auth/instagram')
 def instagram_auth():
-    return instagram.authorize(callback=url_for('instagram_callback', _external=True))
+    redirect_uri = url_for('instagram_callback', _external=True)
+    return oauth.instagram.authorize_redirect(redirect_uri)
+
 
 @app.route('/auth/instagram/callback')
 def instagram_callback():
     try:
-        resp = instagram.authorized_response()
-        if resp is None:
-            return redirect(url_for('index', error='Instagram authentication failed'))
-        
-        session['instagram_token'] = (resp['access_token'], '')
-        
-        # Create session
-        session['user_id'] = 'monjit'  # Map to our user
+        token = oauth.instagram.authorize_access_token()
+        user_info = oauth.instagram.get('me?fields=id,username')
+        session['user_id'] = 'monjit'
         session['login_time'] = datetime.now().isoformat()
         session['auth_method'] = 'instagram_oauth'
-        
+        session['user_name'] = user_info.json().get('username')
         return redirect('/dashboard')
-        
     except Exception as e:
         print(f"Instagram callback error: {e}")
         return redirect(url_for('index', error='Instagram authentication error'))
 
+
 @app.route('/auth/forgot-password')
 def forgot_password():
     return render_template('forgot_password.html')
+
 
 @app.route('/auth/reset-password', methods=['POST'])
 def reset_password():
     try:
         data = request.get_json()
         email = data.get('email', '').strip().lower()
-        
+
         if not email:
-            return jsonify({
-                'success': False,
-                'message': 'Email is required'
-            }), 400
-        
-        # In production, send actual email
-        # For now, just return success
-        return jsonify({
-            'success': True,
-            'message': 'Password reset link sent to your email'
-        })
-        
+            return jsonify({'success': False, 'message': 'Email is required'}), 400
+
+        return jsonify({'success': True, 'message': 'Password reset link sent to your email'})
+
     except Exception as e:
         print(f"Reset password error: {e}")
-        return jsonify({
-            'success': False,
-            'message': 'Failed to send reset email'
-        }), 500
+        return jsonify({'success': False, 'message': 'Failed to send reset email'}), 500
+
 
 @app.route('/auth/signup')
-def signup():
+def signup_view():
     return render_template('signup.html')
 
+
+@app.route('/dashboard')
+def dashboard():
+    if 'user_id' not in session:
+        return redirect(url_for('index'))
+
+    return render_template('dashboard.html',
+                           user=session.get('user_id'),
+                           auth_method=session.get('auth_method'),
+                           login_time=session.get('login_time'))
+
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('index'))
+
+
+        
+    
 @app.route('/dashboard')
 def dashboard():
     if 'user_id' not in session:
