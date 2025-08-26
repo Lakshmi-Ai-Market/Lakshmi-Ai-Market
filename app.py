@@ -545,9 +545,11 @@ def home():
     return redirect(url_for("dashboard"))
 
 # ✅ Login Page
-@app.route("/login", methods=["GET"])
-def login_page():
-    return render_template("login.html")
+@app.route("/")
+def home():
+    if "user_id" in session or "username" in session or "email" in session:
+        return redirect(url_for("dashboard"))
+    return redirect(url_for("login_page"))
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
