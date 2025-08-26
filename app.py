@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 import random
 import csv
 import os
@@ -29,10 +29,6 @@ from newsapi import NewsApiClient
 from authlib.integrations.flask_client import OAuth
 import hashlib
 import secrets
-import sqlite3
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 import feedparser
 warnings.filterwarnings('ignore')
 
@@ -64,92 +60,50 @@ INDIAN_SYMBOLS = {
     'fmcg': ['HINDUNILVR.NS', 'ITC.NS', 'NESTLEIND.NS', 'BRITANNIA.NS', 'DABUR.NS']
 }
 
-# Flask app
-app = Flask(__name__, static_folder="static", template_folder="templates")
-app.secret_key = os.getenv("SECRET_KEY", secrets.token_hex(32))
+app.secret_key = "lakshmi_secret_key"
+app.config['UPLOAD_FOLDER'] = 'static/voice_notes'
 
-# Database initialization
-def init_db():
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            biometric_enabled BOOLEAN DEFAULT 0,
-            face_data TEXT,
-            retinal_data TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            last_login TIMESTAMP,
-            is_active BOOLEAN DEFAULT 1,
-            reset_token TEXT,
-            reset_expires TIMESTAMP
-        )
-    ''')
-    
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS oauth_users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            provider TEXT NOT NULL,
-            provider_id TEXT NOT NULL,
-            email TEXT,
-            name TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(provider, provider_id)
-        )
-    ''')
-    
-    # Insert default user if not exists
-    cursor.execute('SELECT * FROM users WHERE username = ?', ('monjit',))
-    if not cursor.fetchone():
-        password_hash = hashlib.sha256('love123'.encode()).hexdigest()
-        cursor.execute('''
-            INSERT INTO users (username, email, password_hash, biometric_enabled)
-            VALUES (?, ?, ?, ?)
-        ''', ('monjit', 'monjit@example.com', password_hash, 1))
-    
-    conn.commit()
-    conn.close()
-
-# Initialize database
-init_db()
-
-# OAuth initialization
+# --- OAuth Config ---
 oauth = OAuth(app)
 
-# --- OAuth Providers ---
-oauth.register(
+google = oauth.register(
     name="google",
     client_id=os.getenv("GOOGLE_CLIENT_ID"),
     client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
-    access_token_url="https://oauth2.googleapis.com/token",
-    authorize_url="https://accounts.google.com/o/oauth2/v2/auth",
-    api_base_url="https://www.googleapis.com/",
-    client_kwargs={"scope": "openid email profile"},
-    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    access_token_url="https://accounts.google.com/o/oauth2/token",
+    authorize_url="https://accounts.google.com/o/oauth2/auth",
+    api_base_url="https://www.googleapis.com/oauth2/v1/",
+    client_kwargs={"scope": "openid email profile"}
 )
 
-oauth.register(
+facebook = oauth.register(
     name="facebook",
     client_id=os.getenv("FACEBOOK_APP_ID"),
     client_secret=os.getenv("FACEBOOK_APP_SECRET"),
     access_token_url="https://graph.facebook.com/oauth/access_token",
-    authorize_url="https://www.facebook.com/v10.0/dialog/oauth",
+    authorize_url="https://www.facebook.com/dialog/oauth",
     api_base_url="https://graph.facebook.com/",
-    client_kwargs={"scope": "email"},
+    client_kwargs={"scope": "email"}
 )
 
-oauth.register(
+instagram = oauth.register(
     name="instagram",
     client_id=os.getenv("INSTAGRAM_CLIENT_ID"),
     client_secret=os.getenv("INSTAGRAM_CLIENT_SECRET"),
     access_token_url="https://api.instagram.com/oauth/access_token",
     authorize_url="https://api.instagram.com/oauth/authorize",
     api_base_url="https://graph.instagram.com/",
-    client_kwargs={"scope": "user_profile"},
+    client_kwargs={"scope": "user_profile"}
 )
+
+# --- Dummy user for testing ---
+VALID_CREDENTIALS = {
+    'monjit': {
+        'password': hashlib.sha256('love123'.encode()).hexdigest(),
+        'biometric_enabled': True,
+        'email': 'monjit@lakshmi-ai.com'
+    }
+}
 
 OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY")
 print("🔑 OPENROUTER_KEY:", OPENROUTER_KEY)  # ✅ Should now print the key
@@ -181,89 +135,21 @@ romantic_replies = [
 
 
 # --- User Handling ---
-def get_user_by_username(username):
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM users WHERE username = ? AND is_active = 1', (username,))
-    user = cursor.fetchone()
-    conn.close()
-    return user
-
-def get_user_by_email(email):
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM users WHERE email = ? AND is_active = 1', (email,))
-    user = cursor.fetchone()
-    conn.close()
-    return user
-
-def create_user(username, email, password):
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    password_hash = hashlib.sha256(password.encode()).hexdigest()
+def load_users():
     try:
-        cursor.execute('''
-            INSERT INTO users (username, email, password_hash)
-            VALUES (?, ?, ?)
-        ''', (username, email, password_hash))
-        conn.commit()
-        user_id = cursor.lastrowid
-        conn.close()
-        return user_id
-    except sqlite3.IntegrityError:
-        conn.close()
-        return None
+        with open('users.csv', newline='') as f:
+            return list(csv.DictReader(f))
+    except FileNotFoundError:
+        return []
 
-def update_last_login(username):
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    cursor.execute('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE username = ?', (username,))
-    conn.commit()
-    conn.close()
+def save_user(username, password):
+    file_exists = os.path.isfile("users.csv")
+    with open('users.csv', 'a', newline='') as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow(["username", "password"])
+        writer.writerow([username, password])
 
-def send_reset_email(email, reset_token):
-    try:
-        smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
-        smtp_port = int(os.getenv("SMTP_PORT", 587))
-        smtp_username = os.getenv("SMTP_USERNAME")
-        smtp_password = os.getenv("SMTP_PASSWORD")
-        
-        if not all([smtp_username, smtp_password]):
-            return False
-            
-        msg = MIMEMultipart()
-        msg['From'] = smtp_username
-        msg['To'] = email
-        msg['Subject'] = "Password Reset - Lakshmi AI"
-        
-        reset_url = url_for('reset_password', token=reset_token, _external=True)
-        body = f"""
-        Hello,
-        
-        You requested a password reset for your Lakshmi AI account.
-        Click the link below to reset your password:
-        
-        {reset_url}
-        
-        This link will expire in 1 hour.
-        
-        If you didn't request this, please ignore this email.
-        
-        Best regards,
-        Lakshmi AI Team
-        """
-        
-        msg.attach(MIMEText(body, 'plain'))
-        
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()
-        server.login(smtp_username, smtp_password)
-        server.send_message(msg)
-        server.quit()
-        return True
-    except Exception as e:
-        print(f"Email error: {e}")
-        return False
 
 # === Detect F&O symbol from user input ===
 def extract_symbol_from_text(user_input):
@@ -656,476 +542,187 @@ def get_real_insider_data(period):
 # --- Routes ---
 @app.route("/")
 def root():
-    if "user_id" in session:
-        return redirect(url_for("dashboard"))
+    # public root -> login page
     return redirect(url_for("login_page"))
+
 
 @app.route("/login", methods=["GET"])
 def login_page():
+    # Renders templates/login.html
     return render_template("login.html")
 
-# ✅ FIXED: Create Account Endpoint
-@app.route("/auth/create-account", methods=["POST"])
-def create_account():
-    try:
-        data = request.get_json() if request.is_json else request.form
-        username = data.get("username", "").strip().lower()
-        email = data.get("email", "").strip().lower()
-        password = data.get("password", "")
-        confirm_password = data.get("confirm_password", "")
-        
-        # Validation
-        if not all([username, email, password, confirm_password]):
-            return jsonify({"success": False, "message": "All fields are required"}), 400
-            
-        if password != confirm_password:
-            return jsonify({"success": False, "message": "Passwords do not match"}), 400
-            
-        if len(password) < 6:
-            return jsonify({"success": False, "message": "Password must be at least 6 characters"}), 400
-            
-        # Check if user exists
-        if get_user_by_username(username):
-            return jsonify({"success": False, "message": "Username already exists"}), 400
-            
-        if get_user_by_email(email):
-            return jsonify({"success": False, "message": "Email already registered"}), 400
-            
-        # Create user
-        user_id = create_user(username, email, password)
-        if user_id:
-            session["user_id"] = username
-            session["user_name"] = username
-            session["user_email"] = email
-            session["auth_method"] = "password"
-            session["login_time"] = datetime.utcnow().isoformat()
-            
-            return jsonify({"success": True, "message": "Account created successfully", "redirect": "/dashboard"})
-        else:
-            return jsonify({"success": False, "message": "Failed to create account"}), 500
-            
-    except Exception as e:
-        print(f"Create account error: {e}")
-        return jsonify({"success": False, "message": "Server error"}), 500
-
-# ✅ FIXED: Forgot Password Endpoint
-@app.route("/auth/forgot-password", methods=["POST"])
-def forgot_password():
-    try:
-        data = request.get_json() if request.is_json else request.form
-        email = data.get("email", "").strip().lower()
-        
-        if not email:
-            return jsonify({"success": False, "message": "Email is required"}), 400
-            
-        user = get_user_by_email(email)
-        if not user:
-            # Don't reveal if email exists for security
-            return jsonify({"success": True, "message": "If the email exists, a reset link has been sent"})
-            
-        # Generate reset token
-        reset_token = secrets.token_urlsafe(32)
-        expires = datetime.utcnow() + timedelta(hours=1)
-        
-        # Save reset token
-        conn = sqlite3.connect('users.db')
-        cursor = conn.cursor()
-        cursor.execute('''
-            UPDATE users SET reset_token = ?, reset_expires = ?
-            WHERE email = ?
-        ''', (reset_token, expires, email))
-        conn.commit()
-        conn.close()
-        
-        # Send email
-        if send_reset_email(email, reset_token):
-            return jsonify({"success": True, "message": "Password reset link sent to your email"})
-        else:
-            return jsonify({"success": True, "message": "If the email exists, a reset link has been sent"})
-            
-    except Exception as e:
-        print(f"Forgot password error: {e}")
-        return jsonify({"success": False, "message": "Server error"}), 500
-
-# ✅ FIXED: Reset Password Page
-@app.route("/reset-password/<token>", methods=["GET", "POST"])
-def reset_password(token):
-    if request.method == "GET":
-        # Verify token
-        conn = sqlite3.connect('users.db')
-        cursor = conn.cursor()
-        cursor.execute('''
-            SELECT username FROM users 
-            WHERE reset_token = ? AND reset_expires > CURRENT_TIMESTAMP
-        ''', (token,))
-        user = cursor.fetchone()
-        conn.close()
-        
-        if not user:
-            flash("Invalid or expired reset token", "error")
-            return redirect(url_for("login_page"))
-            
-        return render_template("reset_password.html", token=token)
-        
-    elif request.method == "POST":
-        password = request.form.get("password")
-        confirm_password = request.form.get("confirm_password")
-        
-        if not password or password != confirm_password:
-            flash("Passwords do not match", "error")
-            return render_template("reset_password.html", token=token)
-            
-        if len(password) < 6:
-            flash("Password must be at least 6 characters", "error")
-            return render_template("reset_password.html", token=token)
-            
-        # Update password
-        conn = sqlite3.connect('users.db')
-        cursor = conn.cursor()
-        password_hash = hashlib.sha256(password.encode()).hexdigest()
-        cursor.execute('''
-            UPDATE users SET password_hash = ?, reset_token = NULL, reset_expires = NULL
-            WHERE reset_token = ? AND reset_expires > CURRENT_TIMESTAMP
-        ''', (password_hash, token))
-        
-        if cursor.rowcount > 0:
-            conn.commit()
-            conn.close()
-            flash("Password reset successfully", "success")
-            return redirect(url_for("login_page"))
-        else:
-            conn.close()
-            flash("Invalid or expired reset token", "error")
-            return redirect(url_for("login_page"))
-
-@app.route("/signup", methods=["GET", "POST"])
-def signup():
-    if request.method == "POST":
-        username = request.form.get("username", "").strip().lower()
-        email = request.form.get("email", "").strip().lower()
-        password = request.form.get("password")
-        confirm = request.form.get("confirm_password")
-        terms = request.form.get("terms")
-
-        if not terms:
-            return render_template("signup.html", error="Accept terms & conditions.")
-        if password != confirm:
-            return render_template("signup.html", error="Passwords do not match.")
-
-        user_id = create_user(username, email, password)
-        if user_id:
-            session["user_id"] = username
-            session["user_name"] = username
-            session["user_email"] = email
-            session["login_time"] = datetime.utcnow().isoformat()
-            return redirect(url_for("dashboard"))
-        else:
-            return render_template("signup.html", error="Username or email already exists.")
-
-    return render_template("signup.html")
 
 @app.route("/auth/login", methods=["POST"])
 def login():
+    """
+    Accepts either JSON {username,password} (AJAX) or form POST (traditional).
+    On success returns JSON {success: True, redirect: "/dashboard"} or performs redirect.
+    """
     try:
-        data = request.get_json() if request.is_json else request.form
-        username = data.get("username", "").strip().lower()
-        password = data.get("password", "")
+        if request.is_json:
+            data = request.get_json()
+            username = data.get("username", "").strip().lower()
+            password = data.get("password", "")
+        else:
+            username = request.form.get("username", "").strip().lower()
+            password = request.form.get("password", "")
 
-        user = get_user_by_username(username)
-        if user:
-            stored_hash = user[3]  # password_hash column
-            if stored_hash == hashlib.sha256(password.encode()).hexdigest():
-                update_last_login(username)
-                session["user_id"] = username
-                session["user_name"] = username
-                session["user_email"] = user[2]  # email column
-                session["auth_method"] = "password"
-                session["login_time"] = datetime.utcnow().isoformat()
-                
+        if not username or not password:
+            return jsonify({'success': False, 'message': 'Username and password required'}), 400
+
+        if username in VALID_CREDENTIALS:
+            stored = VALID_CREDENTIALS[username]['password']
+            if stored == hashlib.sha256(password.encode()).hexdigest():
+                session['user_id'] = username
+                session['user_name'] = username
+                session['auth_method'] = 'password'
+                session['login_time'] = datetime.utcnow().isoformat()
                 if request.is_json:
-                    return jsonify({"success": True, "redirect": "/dashboard"})
-                return redirect("/dashboard")
-            return jsonify({"success": False, "message": "Invalid password"}), 401
-        return jsonify({"success": False, "message": "User not found"}), 401
+                    return jsonify({'success': True, 'redirect': '/dashboard'})
+                return redirect('/dashboard')
+            else:
+                return jsonify({'success': False, 'message': 'Invalid password'}), 401
+        else:
+            return jsonify({'success': False, 'message': 'User not found'}), 401
     except Exception as e:
         print("Login error:", e)
-        return jsonify({"success": False, "message": "Server error"}), 500
+        return jsonify({'success': False, 'message': 'Server error'}), 500
 
-# ✅ FIXED: Real Biometric Authentication with Camera Access
+
 @app.route("/auth/biometric", methods=["POST"])
 def biometric_auth():
+    """
+    Called from frontend after simulated/real biometric success.
+    Expects JSON: { method: 'face'|'retinal'|'fingerprint'|'voice', username: 'monjit' }
+    """
     try:
-        data = request.get_json()
-        method = data.get("method")  # 'face' or 'retinal'
-        username = data.get("username", "").strip().lower()
-        biometric_data = data.get("biometric_data")  # Base64 image data from camera
-        
-        if not all([method, username, biometric_data]):
-            return jsonify({"success": False, "message": "Missing biometric data"}), 400
-            
-        user = get_user_by_username(username)
-        if not user:
-            return jsonify({"success": False, "message": "User not found"}), 401
-            
-        if not user[4]:  # biometric_enabled column
-            return jsonify({"success": False, "message": "Biometric authentication not enabled"}), 401
-            
-        # In a real implementation, you would:
-        # 1. Process the biometric_data (face/retinal scan)
-        # 2. Compare with stored biometric template
-        # 3. Use ML models for verification
-        
-        # For now, we'll simulate successful biometric verification
-        # You should replace this with actual biometric processing
-        if len(biometric_data) > 100:  # Basic validation that we received image data
-            update_last_login(username)
-            session["user_id"] = username
-            session["user_name"] = username
-            session["user_email"] = user[2]
-            session["auth_method"] = f"biometric_{method}"
-            session["login_time"] = datetime.utcnow().isoformat()
-            
-            # Store/update biometric data
-            conn = sqlite3.connect('users.db')
-            cursor = conn.cursor()
-            if method == "face":
-                cursor.execute('UPDATE users SET face_data = ? WHERE username = ?', (biometric_data, username))
-            elif method == "retinal":
-                cursor.execute('UPDATE users SET retinal_data = ? WHERE username = ?', (biometric_data, username))
-            conn.commit()
-            conn.close()
-            
-            return jsonify({"success": True, "redirect": "/dashboard"})
-        else:
-            return jsonify({"success": False, "message": "Invalid biometric data"}), 400
-            
-    except Exception as e:
-        print("Biometric auth error:", e)
-        return jsonify({"success": False, "message": "Server error"}), 500
-
-# ✅ FIXED: Enable Biometric Endpoint
-@app.route("/auth/enable-biometric", methods=["POST"])
-def enable_biometric():
-    try:
-        if "user_id" not in session:
-            return jsonify({"success": False, "message": "Not authenticated"}), 401
-            
         data = request.get_json()
         method = data.get("method")
-        biometric_data = data.get("biometric_data")
-        
-        username = session["user_id"]
-        
-        conn = sqlite3.connect('users.db')
-        cursor = conn.cursor()
-        
-        if method == "face":
-            cursor.execute('''
-                UPDATE users SET biometric_enabled = 1, face_data = ?
-                WHERE username = ?
-            ''', (biometric_data, username))
-        elif method == "retinal":
-            cursor.execute('''
-                UPDATE users SET biometric_enabled = 1, retinal_data = ?
-                WHERE username = ?
-            ''', (biometric_data, username))
-        
-        conn.commit()
-        conn.close()
-        
-        return jsonify({"success": True, "message": f"{method.title()} biometric enabled successfully"})
-        
-    except Exception as e:
-        print("Enable biometric error:", e)
-        return jsonify({"success": False, "message": "Server error"}), 500
+        username = data.get("username", "").strip().lower()
 
-# ✅ FIXED: Google OAuth
+        if not method or not username:
+            return jsonify({'success': False, 'message': 'Missing method or username'}), 400
+
+        if username in VALID_CREDENTIALS and VALID_CREDENTIALS[username].get('biometric_enabled', False):
+            # Create session (demo)
+            session['user_id'] = username
+            session['user_name'] = username
+            session['auth_method'] = f'biometric_{method}'
+            session['login_time'] = datetime.utcnow().isoformat()
+            return jsonify({'success': True, 'redirect': '/dashboard'})
+        else:
+            return jsonify({'success': False, 'message': 'Biometric not enabled for this user'}), 401
+    except Exception as e:
+        print("Biometric auth error:", e)
+        return jsonify({'success': False, 'message': 'Server error'}), 500
+
+
+# ---- OAuth (Google) ----
 @app.route("/auth/google")
 def google_login():
-    try:
-        redirect_uri = url_for("google_callback", _external=True)
-        return oauth.google.authorize_redirect(redirect_uri)
-    except Exception as e:
-        print(f"Google login error: {e}")
-        flash("Google login temporarily unavailable", "error")
-        return redirect(url_for("login_page"))
+    redirect_uri = url_for("google_callback", _external=True)
+    return oauth.google.authorize_redirect(redirect_uri)
+
 
 @app.route("/auth/google/callback")
 def google_callback():
     try:
         token = oauth.google.authorize_access_token()
-        user_json = oauth.google.get("userinfo", token=token).json()
-        
+        # Authlib provides userinfo endpoint; .userinfo() is a convenience; fallback to get endpoint
+        user_info = None
+        try:
+            user_info = oauth.google.userinfo(token=token)
+            user_json = user_info.json()
+        except Exception:
+            user_json = oauth.google.get("oauth2/v2/userinfo", token=token).json()
+
+        # Create session (map to your user logic)
         email = user_json.get("email")
         name = user_json.get("name") or email
-        provider_id = user_json.get("sub")
-        
-        if not email:
-            flash("Failed to get user information from Google", "error")
-            return redirect(url_for("login_page"))
-            
-        # Store OAuth user
-        conn = sqlite3.connect('users.db')
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT OR REPLACE INTO oauth_users (provider, provider_id, email, name)
-            VALUES (?, ?, ?, ?)
-        ''', ("google", provider_id, email, name))
-        conn.commit()
-        conn.close()
-        
-        session["user_id"] = email
-        session["user_name"] = name
-        session["user_email"] = email
-        session["auth_method"] = "google"
-        session["login_time"] = datetime.utcnow().isoformat()
-        session["google_token"] = token
-        
-        return redirect("/dashboard")
+        session['user_id'] = email or "google_user"
+        session['user_name'] = name
+        session['user_email'] = email
+        session['auth_method'] = 'google'
+        session['login_time'] = datetime.utcnow().isoformat()
+        # store token if you need later
+        session['google_token'] = token
+        return redirect('/dashboard')
     except Exception as e:
         print("Google callback error:", e)
-        flash("Google authentication failed", "error")
         return redirect(url_for("login_page"))
 
-# ✅ FIXED: Facebook OAuth
+
+# ---- OAuth (Facebook) ----
 @app.route("/auth/facebook")
 def facebook_login():
-    try:
-        redirect_uri = url_for("facebook_callback", _external=True)
-        return oauth.facebook.authorize_redirect(redirect_uri)
-    except Exception as e:
-        print(f"Facebook login error: {e}")
-        flash("Facebook login temporarily unavailable", "error")
-        return redirect(url_for("login_page"))
+    redirect_uri = url_for("facebook_callback", _external=True)
+    return oauth.facebook.authorize_redirect(redirect_uri)
+
 
 @app.route("/auth/facebook/callback")
 def facebook_callback():
     try:
         token = oauth.facebook.authorize_access_token()
         user_json = oauth.facebook.get("me?fields=id,name,email", token=token).json()
-        
         email = user_json.get("email")
-        name = user_json.get("name")
-        provider_id = user_json.get("id")
-        
-        if not provider_id:
-            flash("Failed to get user information from Facebook", "error")
-            return redirect(url_for("login_page"))
-            
-        # Store OAuth user
-        conn = sqlite3.connect('users.db')
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT OR REPLACE INTO oauth_users (provider, provider_id, email, name)
-            VALUES (?, ?, ?, ?)
-        ''', ("facebook", provider_id, email, name))
-        conn.commit()
-        conn.close()
-        
-        session["user_id"] = email or f"facebook_{provider_id}"
-        session["user_name"] = name or "Facebook User"
-        session["user_email"] = email
-        session["auth_method"] = "facebook"
-        session["login_time"] = datetime.utcnow().isoformat()
-        session["facebook_token"] = token
-        
-        return redirect("/dashboard")
+        name = user_json.get("name") or email
+        session['user_id'] = email or "facebook_user"
+        session['user_name'] = name
+        session['user_email'] = email
+        session['auth_method'] = 'facebook'
+        session['login_time'] = datetime.utcnow().isoformat()
+        session['facebook_token'] = token
+        return redirect('/dashboard')
     except Exception as e:
         print("Facebook callback error:", e)
-        flash("Facebook authentication failed", "error")
         return redirect(url_for("login_page"))
 
-# ✅ FIXED: Instagram OAuth
+
+# ---- OAuth (Instagram) ----
 @app.route("/auth/instagram")
 def instagram_login():
-    try:
-        redirect_uri = url_for("instagram_callback", _external=True)
-        return oauth.instagram.authorize_redirect(redirect_uri)
-    except Exception as e:
-        print(f"Instagram login error: {e}")
-        flash("Instagram login temporarily unavailable", "error")
-        return redirect(url_for("login_page"))
+    redirect_uri = url_for("instagram_callback", _external=True)
+    return oauth.instagram.authorize_redirect(redirect_uri)
+
 
 @app.route("/auth/instagram/callback")
 def instagram_callback():
     try:
         token = oauth.instagram.authorize_access_token()
+        # Get basic profile
         user_json = oauth.instagram.get("me?fields=id,username", token=token).json()
-        
-        username = user_json.get("username")
-        provider_id = user_json.get("id")
-        
-        if not provider_id:
-            flash("Failed to get user information from Instagram", "error")
-            return redirect(url_for("login_page"))
-            
-        # Store OAuth user
-        conn = sqlite3.connect('users.db')
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT OR REPLACE INTO oauth_users (provider, provider_id, email, name)
-            VALUES (?, ?, ?, ?)
-        ''', ("instagram", provider_id, None, username))
-        conn.commit()
-        conn.close()
-        
-        session["user_id"] = f"instagram_{provider_id}"
-        session["user_name"] = username or "Instagram User"
-        session["auth_method"] = "instagram"
-        session["login_time"] = datetime.utcnow().isoformat()
-        session["instagram_token"] = token
-        
-        return redirect("/dashboard")
+        username = user_json.get("username") or "instagram_user"
+        session['user_id'] = username
+        session['user_name'] = username
+        session['auth_method'] = 'instagram'
+        session['login_time'] = datetime.utcnow().isoformat()
+        session['instagram_token'] = token
+        return redirect('/dashboard')
     except Exception as e:
         print("Instagram callback error:", e)
-        flash("Instagram authentication failed", "error")
         return redirect(url_for("login_page"))
+
 
 @app.route("/dashboard")
 def dashboard():
-    if "user_id" not in session:
+    if 'user_id' not in session:
         return redirect(url_for("login_page"))
-    name = session.get("user_name") or session.get("user_email") or session.get("user_id")
+
+    name = session.get("user_name") or session.get("user_email") or session.get('user_id')
+    # Render your real dashboard template here
     return render_template("index.html", name=name, mood="happy")
 
-# ✅ FIXED: Logout Endpoint
-@app.route("/auth/logout", methods=["POST", "GET"])
-def logout():
-    try:
-        # Clear all session data
-        session.clear()
-        
-        if request.is_json:
-            return jsonify({"success": True, "message": "Logged out successfully", "redirect": "/login"})
-        else:
-            flash("You have been logged out successfully", "success")
-            return redirect(url_for("login_page"))
-            
-    except Exception as e:
-        print(f"Logout error: {e}")
-        if request.is_json:
-            return jsonify({"success": False, "message": "Logout failed"}), 500
-        else:
-            flash("Logout failed", "error")
-            return redirect(url_for("dashboard"))
 
-# ✅ Additional API endpoints for frontend
-@app.route("/api/user/profile", methods=["GET"])
-def get_user_profile():
-    if "user_id" not in session:
-        return jsonify({"success": False, "message": "Not authenticated"}), 401
-        
-    return jsonify({
-        "success": True,
-        "user": {
-            "id": session.get("user_id"),
-            "name": session.get("user_name"),
-            "email": session.get("user_email"),
-            "auth_method": session.get("auth_method"),
-            "login_time": session.get("login_time")
-        }
-    })
-    
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login_page"))
+
+
+if __name__ == "__main__":
+    # For local debug only. On Render use Gunicorn: `gunicorn app:app`
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=True)
+
 @app.route("/strategy")
 def strategy_page():
     if 'username' not in session:
@@ -2862,5 +2459,4 @@ api_key = os.environ.get("OPENROUTER_API_KEY")
 
 # ------------------ RUN ------------------
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=True)
- 
+    app.run(debug=True)
