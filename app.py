@@ -737,11 +737,6 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
         
-@app.route('/logout')
-def logout():
-    session.clear()
-    return redirect(url_for('index'))
-
 @google.tokengetter
 def get_google_oauth_token():
     return session.get('google_token')
