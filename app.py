@@ -546,6 +546,10 @@ def get_real_insider_data(period):
 # --- Routes ---
 @app.route("/")
 def home():
+    return redirect(url_for("dashboard"))
+
+@app.route("/")
+def home():
     return redirect("/login")
 
 
