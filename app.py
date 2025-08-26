@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify 
 import random
 import csv
 import os
@@ -539,107 +539,87 @@ def get_real_insider_data(period):
     except Exception as e:
         return {'error': str(e)}
 
-# ------------------ ROUTES ------------------
+# --- Routes ---
 @app.route("/")
-def home():
-    if "user_id" in session:
-        return redirect(url_for("dashboard"))
+def root():
+    # public root -> login page
     return redirect(url_for("login_page"))
 
-# ---------- LOGIN / SIGNUP ----------
 
 @app.route("/login", methods=["GET"])
 def login_page():
+    # Renders templates/login.html
     return render_template("login.html")
-
-
-@app.route("/signup", methods=["GET", "POST"])
-def signup():
-    if request.method == "POST":
-        username = request.form["username"].strip().lower()
-        email = request.form.get("email", "").strip().lower()
-        phone = request.form.get("phone", "").strip()
-        dob = request.form.get("dob", "").strip()
-        gender = request.form.get("gender", "").strip()
-        password = request.form["password"]
-        confirm_password = request.form.get("confirm_password")
-        terms_agreed = request.form.get("terms")
-
-        if not terms_agreed:
-            return render_template("signup.html", error="Please accept terms and conditions.")
-        if password != confirm_password:
-            return render_template("signup.html", error="Passwords do not match.")
-
-        # save into csv
-        file_exists = os.path.isfile("users.csv")
-        with open("users.csv", "a", newline='') as f:
-            writer = csv.writer(f)
-            if not file_exists:
-                writer.writerow(["username", "email", "phone", "dob", "gender", "password"])
-            writer.writerow([username, email, phone, dob, gender, hashlib.sha256(password.encode()).hexdigest()])
-
-        session["user_id"] = username
-        session["username"] = username
-        session["user_email"] = email
-        session["login_time"] = datetime.now().isoformat()
-        return redirect("/dashboard")
-
-    return render_template("signup.html")
 
 
 @app.route("/auth/login", methods=["POST"])
 def login():
+    """
+    Accepts either JSON {username,password} (AJAX) or form POST (traditional).
+    On success returns JSON {success: True, redirect: "/dashboard"} or performs redirect.
+    """
     try:
-        data = request.get_json()
-        username = data.get("username", "").strip().lower()
-        password = data.get("password", "")
+        if request.is_json:
+            data = request.get_json()
+            username = data.get("username", "").strip().lower()
+            password = data.get("password", "")
+        else:
+            username = request.form.get("username", "").strip().lower()
+            password = request.form.get("password", "")
 
         if not username or not password:
-            return jsonify({"success": False, "message": "Username and password are required"}), 400
+            return jsonify({'success': False, 'message': 'Username and password required'}), 400
 
         if username in VALID_CREDENTIALS:
-            stored_password = VALID_CREDENTIALS[username]['password']
-            input_password = hashlib.sha256(password.encode()).hexdigest()
-            if stored_password == input_password:
-                session["user_id"] = username
-                session["username"] = username
-                session["user_email"] = VALID_CREDENTIALS[username]['email']
-                session["login_time"] = datetime.now().isoformat()
-                session["auth_method"] = "password"
-                return jsonify({"success": True, "message": "Login successful", "redirect": "/dashboard"})
+            stored = VALID_CREDENTIALS[username]['password']
+            if stored == hashlib.sha256(password.encode()).hexdigest():
+                session['user_id'] = username
+                session['user_name'] = username
+                session['auth_method'] = 'password'
+                session['login_time'] = datetime.utcnow().isoformat()
+                if request.is_json:
+                    return jsonify({'success': True, 'redirect': '/dashboard'})
+                return redirect('/dashboard')
             else:
-                return jsonify({"success": False, "message": "Invalid password"}), 401
+                return jsonify({'success': False, 'message': 'Invalid password'}), 401
         else:
-            return jsonify({"success": False, "message": "User not found"}), 401
-
+            return jsonify({'success': False, 'message': 'User not found'}), 401
     except Exception as e:
-        print(f"Login error: {e}")
-        return jsonify({"success": False, "message": "Internal server error"}), 500
+        print("Login error:", e)
+        return jsonify({'success': False, 'message': 'Server error'}), 500
 
 
 @app.route("/auth/biometric", methods=["POST"])
 def biometric_auth():
+    """
+    Called from frontend after simulated/real biometric success.
+    Expects JSON: { method: 'face'|'retinal'|'fingerprint'|'voice', username: 'monjit' }
+    """
     try:
         data = request.get_json()
         method = data.get("method")
         username = data.get("username", "").strip().lower()
 
-        if username in VALID_CREDENTIALS and VALID_CREDENTIALS[username]['biometric_enabled']:
-            session["user_id"] = username
-            session["username"] = username
-            session["auth_method"] = f"biometric_{method}"
-            session["login_time"] = datetime.now().isoformat()
-            return jsonify({"success": True, "message": f"{method.capitalize()} authentication successful", "redirect": "/dashboard"})
+        if not method or not username:
+            return jsonify({'success': False, 'message': 'Missing method or username'}), 400
+
+        if username in VALID_CREDENTIALS and VALID_CREDENTIALS[username].get('biometric_enabled', False):
+            # Create session (demo)
+            session['user_id'] = username
+            session['user_name'] = username
+            session['auth_method'] = f'biometric_{method}'
+            session['login_time'] = datetime.utcnow().isoformat()
+            return jsonify({'success': True, 'redirect': '/dashboard'})
         else:
-            return jsonify({"success": False, "message": "Biometric authentication not enabled for this user"}), 401
+            return jsonify({'success': False, 'message': 'Biometric not enabled for this user'}), 401
     except Exception as e:
-        print(f"Biometric auth error: {e}")
-        return jsonify({"success": False, "message": "Biometric authentication failed"}), 500
+        print("Biometric auth error:", e)
+        return jsonify({'success': False, 'message': 'Server error'}), 500
 
-# ---------- OAUTH ----------
 
+# ---- OAuth (Google) ----
 @app.route("/auth/google")
-def google_auth():
+def google_login():
     redirect_uri = url_for("google_callback", _external=True)
     return oauth.google.authorize_redirect(redirect_uri)
 
@@ -648,21 +628,33 @@ def google_auth():
 def google_callback():
     try:
         token = oauth.google.authorize_access_token()
-        resp = oauth.google.get("userinfo")
-        user_info = resp.json()
-        session["user_id"] = user_info.get("email")
-        session["username"] = user_info.get("name")
-        session["user_email"] = user_info.get("email")
-        session["auth_method"] = "google_oauth"
-        session["login_time"] = datetime.now().isoformat()
-        return redirect("/dashboard")
+        # Authlib provides userinfo endpoint; .userinfo() is a convenience; fallback to get endpoint
+        user_info = None
+        try:
+            user_info = oauth.google.userinfo(token=token)
+            user_json = user_info.json()
+        except Exception:
+            user_json = oauth.google.get("oauth2/v2/userinfo", token=token).json()
+
+        # Create session (map to your user logic)
+        email = user_json.get("email")
+        name = user_json.get("name") or email
+        session['user_id'] = email or "google_user"
+        session['user_name'] = name
+        session['user_email'] = email
+        session['auth_method'] = 'google'
+        session['login_time'] = datetime.utcnow().isoformat()
+        # store token if you need later
+        session['google_token'] = token
+        return redirect('/dashboard')
     except Exception as e:
-        print(f"Google callback error: {e}")
+        print("Google callback error:", e)
         return redirect(url_for("login_page"))
 
 
+# ---- OAuth (Facebook) ----
 @app.route("/auth/facebook")
-def facebook_auth():
+def facebook_login():
     redirect_uri = url_for("facebook_callback", _external=True)
     return oauth.facebook.authorize_redirect(redirect_uri)
 
@@ -671,21 +663,24 @@ def facebook_auth():
 def facebook_callback():
     try:
         token = oauth.facebook.authorize_access_token()
-        resp = oauth.facebook.get("me?fields=id,name,email")
-        user_info = resp.json()
-        session["user_id"] = user_info.get("id")
-        session["username"] = user_info.get("name")
-        session["user_email"] = user_info.get("email")
-        session["auth_method"] = "facebook_oauth"
-        session["login_time"] = datetime.now().isoformat()
-        return redirect("/dashboard")
+        user_json = oauth.facebook.get("me?fields=id,name,email", token=token).json()
+        email = user_json.get("email")
+        name = user_json.get("name") or email
+        session['user_id'] = email or "facebook_user"
+        session['user_name'] = name
+        session['user_email'] = email
+        session['auth_method'] = 'facebook'
+        session['login_time'] = datetime.utcnow().isoformat()
+        session['facebook_token'] = token
+        return redirect('/dashboard')
     except Exception as e:
-        print(f"Facebook callback error: {e}")
+        print("Facebook callback error:", e)
         return redirect(url_for("login_page"))
 
 
+# ---- OAuth (Instagram) ----
 @app.route("/auth/instagram")
-def instagram_auth():
+def instagram_login():
     redirect_uri = url_for("instagram_callback", _external=True)
     return oauth.instagram.authorize_redirect(redirect_uri)
 
@@ -694,41 +689,27 @@ def instagram_auth():
 def instagram_callback():
     try:
         token = oauth.instagram.authorize_access_token()
-        resp = oauth.instagram.get("me?fields=id,username")
-        user_info = resp.json()
-        session["user_id"] = user_info.get("id")
-        session["username"] = user_info.get("username")
-        session["auth_method"] = "instagram_oauth"
-        session["login_time"] = datetime.now().isoformat()
-        return redirect("/dashboard")
+        # Get basic profile
+        user_json = oauth.instagram.get("me?fields=id,username", token=token).json()
+        username = user_json.get("username") or "instagram_user"
+        session['user_id'] = username
+        session['user_name'] = username
+        session['auth_method'] = 'instagram'
+        session['login_time'] = datetime.utcnow().isoformat()
+        session['instagram_token'] = token
+        return redirect('/dashboard')
     except Exception as e:
-        print(f"Instagram callback error: {e}")
+        print("Instagram callback error:", e)
         return redirect(url_for("login_page"))
 
-# ---------- PASSWORD RESET ----------
-
-@app.route("/auth/forgot-password", methods=["GET"])
-def forgot_password():
-    return render_template("forgot_password.html")
-
-
-@app.route("/auth/reset-password", methods=["POST"])
-def reset_password():
-    data = request.get_json()
-    email = data.get("email", "").strip().lower()
-    if not email:
-        return jsonify({"success": False, "message": "Email is required"}), 400
-    # TODO: send email logic here
-    return jsonify({"success": True, "message": "Password reset link sent"})
-
-
-# ---------- DASHBOARD / LOGOUT ----------
 
 @app.route("/dashboard")
 def dashboard():
-    if "user_id" not in session:
-        return redirect("/login")
-    name = session.get("username") or session.get("user_email")
+    if 'user_id' not in session:
+        return redirect(url_for("login_page"))
+
+    name = session.get("user_name") or session.get("user_email") or session.get('user_id')
+    # Render your real dashboard template here
     return render_template("index.html", name=name, mood="happy")
 
 
@@ -736,6 +717,7 @@ def dashboard():
 def logout():
     session.clear()
     return redirect(url_for("login_page"))
+
 
 if __name__ == "__main__":
     # For local debug only. On Render use Gunicorn: `gunicorn app:app`
@@ -2478,3 +2460,4 @@ api_key = os.environ.get("OPENROUTER_API_KEY")
 # ------------------ RUN ------------------
 if __name__ == "__main__":
     app.run(debug=True)
+ 
