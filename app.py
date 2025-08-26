@@ -737,18 +737,6 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
         
-@google.tokengetter
-def get_google_oauth_token():
-    return session.get('google_token')
-
-@facebook.tokengetter
-def get_facebook_oauth_token():
-    return session.get('facebook_token')
-
-@instagram.tokengetter
-def get_instagram_oauth_token():
-    return session.get('instagram_token')
-
 @app.route("/dashboard")
 def dashboard():
     if "username" not in session and "email" not in session:
