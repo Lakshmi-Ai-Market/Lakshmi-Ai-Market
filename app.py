@@ -539,17 +539,18 @@ def get_real_insider_data(period):
     except Exception as e:
         return {'error': str(e)}
 
-
 # ------------------ ROUTES ------------------
 
 @app.route("/")
 def home():
-    return redirect(url_for("login_page"))
+    return redirect(url_for("dashboard"))
 
 # ---------- LOGIN / SIGNUP ----------
+
 @app.route("/login", methods=["GET"])
 def login_page():
     return render_template("login.html")
+
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
@@ -584,41 +585,144 @@ def signup():
 
     return render_template("signup.html")
 
+
 @app.route("/auth/login", methods=["POST"])
 def login():
-    data = request.get_json()
-    username = data.get("username", "").strip().lower()
-    password = data.get("password", "")
+    try:
+        data = request.get_json()
+        username = data.get("username", "").strip().lower()
+        password = data.get("password", "")
 
-    if not username or not password:
-        return jsonify({"success": False, "message": "Username and password are required"}), 400
+        if not username or not password:
+            return jsonify({"success": False, "message": "Username and password are required"}), 400
 
-    if username in VALID_CREDENTIALS:
-        stored_password = VALID_CREDENTIALS[username]['password']
-        input_password = hashlib.sha256(password.encode()).hexdigest()
-        if stored_password == input_password:
+        if username in VALID_CREDENTIALS:
+            stored_password = VALID_CREDENTIALS[username]['password']
+            input_password = hashlib.sha256(password.encode()).hexdigest()
+            if stored_password == input_password:
+                session["user_id"] = username
+                session["username"] = username
+                session["user_email"] = VALID_CREDENTIALS[username]['email']
+                session["login_time"] = datetime.now().isoformat()
+                session["auth_method"] = "password"
+                return jsonify({"success": True, "message": "Login successful", "redirect": "/dashboard"})
+            else:
+                return jsonify({"success": False, "message": "Invalid password"}), 401
+        else:
+            return jsonify({"success": False, "message": "User not found"}), 401
+
+    except Exception as e:
+        print(f"Login error: {e}")
+        return jsonify({"success": False, "message": "Internal server error"}), 500
+
+
+@app.route("/auth/biometric", methods=["POST"])
+def biometric_auth():
+    try:
+        data = request.get_json()
+        method = data.get("method")
+        username = data.get("username", "").strip().lower()
+
+        if username in VALID_CREDENTIALS and VALID_CREDENTIALS[username]['biometric_enabled']:
             session["user_id"] = username
             session["username"] = username
-            session["user_email"] = VALID_CREDENTIALS[username]['email']
+            session["auth_method"] = f"biometric_{method}"
             session["login_time"] = datetime.now().isoformat()
-            session["auth_method"] = "password"
-            return jsonify({"success": True, "message": "Login successful", "redirect": "/dashboard"})
+            return jsonify({"success": True, "message": f"{method.capitalize()} authentication successful", "redirect": "/dashboard"})
         else:
-            return jsonify({"success": False, "message": "Invalid password"}), 401
-    else:
-        return jsonify({"success": False, "message": "User not found"}), 401
+            return jsonify({"success": False, "message": "Biometric authentication not enabled for this user"}), 401
+    except Exception as e:
+        print(f"Biometric auth error: {e}")
+        return jsonify({"success": False, "message": "Biometric authentication failed"}), 500
 
-@app.route("/auth/forgot-password", methods=["GET", "POST"])
+# ---------- OAUTH ----------
+
+@app.route("/auth/google")
+def google_auth():
+    redirect_uri = url_for("google_callback", _external=True)
+    return oauth.google.authorize_redirect(redirect_uri)
+
+
+@app.route("/auth/google/callback")
+def google_callback():
+    try:
+        token = oauth.google.authorize_access_token()
+        resp = oauth.google.get("userinfo")
+        user_info = resp.json()
+        session["user_id"] = user_info.get("email")
+        session["username"] = user_info.get("name")
+        session["user_email"] = user_info.get("email")
+        session["auth_method"] = "google_oauth"
+        session["login_time"] = datetime.now().isoformat()
+        return redirect("/dashboard")
+    except Exception as e:
+        print(f"Google callback error: {e}")
+        return redirect(url_for("login_page"))
+
+
+@app.route("/auth/facebook")
+def facebook_auth():
+    redirect_uri = url_for("facebook_callback", _external=True)
+    return oauth.facebook.authorize_redirect(redirect_uri)
+
+
+@app.route("/auth/facebook/callback")
+def facebook_callback():
+    try:
+        token = oauth.facebook.authorize_access_token()
+        resp = oauth.facebook.get("me?fields=id,name,email")
+        user_info = resp.json()
+        session["user_id"] = user_info.get("id")
+        session["username"] = user_info.get("name")
+        session["user_email"] = user_info.get("email")
+        session["auth_method"] = "facebook_oauth"
+        session["login_time"] = datetime.now().isoformat()
+        return redirect("/dashboard")
+    except Exception as e:
+        print(f"Facebook callback error: {e}")
+        return redirect(url_for("login_page"))
+
+
+@app.route("/auth/instagram")
+def instagram_auth():
+    redirect_uri = url_for("instagram_callback", _external=True)
+    return oauth.instagram.authorize_redirect(redirect_uri)
+
+
+@app.route("/auth/instagram/callback")
+def instagram_callback():
+    try:
+        token = oauth.instagram.authorize_access_token()
+        resp = oauth.instagram.get("me?fields=id,username")
+        user_info = resp.json()
+        session["user_id"] = user_info.get("id")
+        session["username"] = user_info.get("username")
+        session["auth_method"] = "instagram_oauth"
+        session["login_time"] = datetime.now().isoformat()
+        return redirect("/dashboard")
+    except Exception as e:
+        print(f"Instagram callback error: {e}")
+        return redirect(url_for("login_page"))
+
+# ---------- PASSWORD RESET ----------
+
+@app.route("/auth/forgot-password", methods=["GET"])
 def forgot_password():
-    if request.method == "POST":
-        email = request.form.get("email", "").strip().lower()
-        if not email:
-            return render_template("forgot_password.html", error="Email is required")
-        # TODO: send email logic here
-        return render_template("forgot_password.html", success="Password reset link sent to your email")
     return render_template("forgot_password.html")
 
+
+@app.route("/auth/reset-password", methods=["POST"])
+def reset_password():
+    data = request.get_json()
+    email = data.get("email", "").strip().lower()
+    if not email:
+        return jsonify({"success": False, "message": "Email is required"}), 400
+    # TODO: send email logic here
+    return jsonify({"success": True, "message": "Password reset link sent"})
+
+
 # ---------- DASHBOARD / LOGOUT ----------
+
 @app.route("/dashboard")
 def dashboard():
     if "user_id" not in session:
@@ -626,11 +730,12 @@ def dashboard():
     name = session.get("username") or session.get("user_email")
     return render_template("index.html", name=name, mood="happy")
 
+
 @app.route("/logout")
 def logout():
     session.clear()
-    return redirect("/login")
-       
+    return redirect(url_for("login_page"))
+
 if __name__ == "__main__":
     # For local debug only. On Render use Gunicorn: `gunicorn app:app`
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=True)
