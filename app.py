@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash
 import random
 import csv
 import os
@@ -29,6 +29,10 @@ from newsapi import NewsApiClient
 from authlib.integrations.flask_client import OAuth
 import hashlib
 import secrets
+import sqlite3
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 import feedparser
 warnings.filterwarnings('ignore')
 
