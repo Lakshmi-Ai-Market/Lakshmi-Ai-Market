@@ -824,11 +824,12 @@
             showTypingIndicator();
 
             try {
-                // Make real API call to your backend
-                const response = await fetch('/api/chat', {
+                // Use your actual API endpoint
+                const response = await fetch('https://lakshmi-ai-trades.onrender.com/api/chat', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Accept': 'application/json'
                     },
                     body: JSON.stringify({
                         message: message,
@@ -837,6 +838,10 @@
                     })
                 });
 
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
                 const data = await response.json();
                 removeTypingIndicator();
                 
@@ -844,7 +849,7 @@
                     throw new Error(data.error);
                 }
                 
-                const aiResponse = data.response || data.message || 'I received your message but had trouble generating a response. Please try again.';
+                const aiResponse = data.response || data.message || data.reply || 'I received your message successfully!';
                 addMessageToChat(aiResponse, 'ai');
                 
                 // Save to history
@@ -859,6 +864,30 @@
             } catch (error) {
                 removeTypingIndicator();
                 console.error('API Error:', error);
+                
+                // Fallback to your ask-ai endpoint if main chat fails
+                try {
+                    const fallbackResponse = await fetch('https://lakshmi-ai-trades.onrender.com/ask-ai', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            question: message,
+                            conversation_id: conversationId
+                        })
+                    });
+                    
+                    if (fallbackResponse.ok) {
+                        const fallbackData = await fallbackResponse.json();
+                        const aiResponse = fallbackData.response || fallbackData.answer || 'I received your message!';
+                        addMessageToChat(aiResponse, 'ai');
+                        return;
+                    }
+                } catch (fallbackError) {
+                    console.error('Fallback API Error:', fallbackError);
+                }
+                
                 addMessageToChat('I apologize, but I\'m having trouble connecting to my AI services right now. Please check your connection and try again.', 'ai');
                 showNotification('Connection error. Please try again.', 'error');
             }
@@ -1061,10 +1090,11 @@
                 
                 showTypingIndicator();
                 
-                const response = await fetch('/api/chat', {
+                const response = await fetch('https://lakshmi-ai-trades.onrender.com/api/chat', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Accept': 'application/json'
                     },
                     body: JSON.stringify({
                         message: `I've uploaded a file named "${file.name}". Please analyze this ${file.type.includes('image') ? 'image' : 'document'} and provide insights.`,
@@ -1250,5 +1280,5 @@
             }, 5000);
         }
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9755586d453fa738',t:'MTc1NjIzMjQ1MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97556c7b904ea73f',t:'MTc1NjIzMzI3Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
