@@ -548,11 +548,6 @@ def get_real_insider_data(period):
 def home():
     return redirect(url_for("dashboard"))
 
-@app.route("/")
-def home():
-    return redirect("/login")
-
-
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if request.method == "POST":
