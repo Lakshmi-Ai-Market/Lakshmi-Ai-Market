@@ -26,7 +26,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 import scipy.stats as stats
 from newsapi import NewsApiClient
-from flask_oauthlib.client import OAuth
+from authlib.integrations.flask_client import OAuth
 import hashlib
 import secrets
 import feedparser
