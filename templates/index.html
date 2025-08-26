@@ -3,1500 +3,1252 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lakshmi AI - Advanced Intelligence Platform</title>
+    <title>Lakshmi AI - Advanced AI Assistant</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary: #6366f1;
-            --primary-dark: #4f46e5;
-            --secondary: #8b5cf6;
-            --accent: #06b6d4;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --error: #ef4444;
-            --bg-primary: #0f172a;
-            --bg-secondary: #1e293b;
-            --bg-tertiary: #334155;
-            --text-primary: #f8fafc;
-            --text-secondary: #cbd5e1;
-            --text-muted: #64748b;
-            --border: #334155;
-            --border-light: #475569;
-            --glass-bg: rgba(15, 23, 42, 0.8);
-            --glass-border: rgba(203, 213, 225, 0.1);
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        * { font-family: 'Inter', sans-serif; }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        
+        .neon-glow {
+            box-shadow: 0 0 30px rgba(236, 72, 153, 0.4);
         }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, 
-                #0f172a 0%, 
-                #1e293b 25%,
-                #334155 50%,
-                #1e293b 75%,
-                #0f172a 100%);
-            color: var(--text-primary);
-            line-height: 1.6;
-            overflow-x: hidden;
-            min-height: 100vh;
+        
+        .floating-animation {
+            animation: float 6s ease-in-out infinite;
         }
-
-        /* LAKSHMI GODDESS BACKGROUND SYSTEM */
-        .background-system {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            background: linear-gradient(135deg, 
-                #0f172a 0%, 
-                #1e293b 25%,
-                #334155 50%,
-                #1e293b 75%,
-                #0f172a 100%);
-            overflow: hidden;
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(5deg); }
         }
-
-        /* LAKSHMI DIVINE ELEMENTS */
-        .lakshmi-elements {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            opacity: 0.4;
+        
+        .chat-message {
+            animation: slideIn 0.3s ease-out;
         }
-
-        .lotus-petals {
-            position: absolute;
-            width: 100%;
-            height: 100%;
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-
-        .lotus-petal {
-            position: absolute;
-            width: 60px;
-            height: 120px;
-            background: linear-gradient(135deg, 
-                rgba(255, 182, 193, 0.8) 0%, 
-                rgba(255, 105, 180, 0.6) 50%,
-                rgba(219, 112, 147, 0.4) 100%);
-            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-            animation: floatPetal 20s ease-in-out infinite;
+        
+        .typing-indicator {
+            animation: typing 1.4s infinite;
         }
-
-        .lotus-petal:nth-child(1) {
-            top: 10%;
-            left: 15%;
-            animation-delay: 0s;
-            transform: rotate(45deg);
+        
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
         }
-
-        .lotus-petal:nth-child(2) {
-            top: 60%;
-            right: 20%;
-            animation-delay: -5s;
-            transform: rotate(-30deg);
-        }
-
-        .lotus-petal:nth-child(3) {
-            bottom: 20%;
-            left: 25%;
-            animation-delay: -10s;
-            transform: rotate(120deg);
-        }
-
-        .lotus-petal:nth-child(4) {
-            top: 30%;
-            right: 10%;
-            animation-delay: -15s;
-            transform: rotate(-60deg);
-        }
-
-        @keyframes floatPetal {
-            0%, 100% {
-                transform: translateY(0) rotate(var(--rotation, 0deg)) scale(1);
-                opacity: 0.6;
-            }
-            50% {
-                transform: translateY(-20px) rotate(calc(var(--rotation, 0deg) + 10deg)) scale(1.1);
-                opacity: 0.8;
-            }
-        }
-
-        /* DIVINE COINS */
-        .divine-coins {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-        }
-
-        .gold-coin {
-            position: absolute;
-            width: 40px;
-            height: 40px;
-            background: radial-gradient(circle, 
-                #ffd700 0%, 
-                #ffed4e 30%, 
-                #f59e0b 70%, 
-                #d97706 100%);
-            border-radius: 50%;
-            box-shadow: 
-                0 0 20px rgba(255, 215, 0, 0.5),
-                inset 0 2px 4px rgba(255, 255, 255, 0.3);
-            animation: coinFloat 15s ease-in-out infinite;
-        }
-
-        .gold-coin::before {
-            content: '₹';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #92400e;
-            font-size: 20px;
-            font-weight: bold;
-        }
-
-        .gold-coin:nth-child(1) {
-            top: 20%;
-            left: 10%;
-            animation-delay: 0s;
-        }
-
-        .gold-coin:nth-child(2) {
-            top: 70%;
-            right: 15%;
-            animation-delay: -3s;
-        }
-
-        .gold-coin:nth-child(3) {
-            bottom: 30%;
-            left: 20%;
-            animation-delay: -6s;
-        }
-
-        .gold-coin:nth-child(4) {
-            top: 40%;
-            right: 25%;
-            animation-delay: -9s;
-        }
-
-        @keyframes coinFloat {
-            0%, 100% {
-                transform: translateY(0) rotate(0deg);
-                box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
-            }
-            50% {
-                transform: translateY(-15px) rotate(180deg);
-                box-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
-            }
-        }
-
-        /* PROSPERITY WAVES */
-        .prosperity-waves {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: 
-                radial-gradient(circle at 20% 80%, rgba(255, 215, 0, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(255, 105, 180, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 40% 40%, rgba(138, 43, 226, 0.08) 0%, transparent 50%);
-            animation: waveShimmer 12s ease-in-out infinite;
-        }
-
-        @keyframes waveShimmer {
-            0%, 100% {
-                opacity: 0.3;
-                transform: scale(1);
-            }
-            50% {
-                opacity: 0.6;
-                transform: scale(1.05);
-            }
-        }
-
-        /* Premium Glass Morphism */
-        .glass {
-            background: rgba(15, 23, 42, 0.85);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(25px) saturate(200%);
-            -webkit-backdrop-filter: blur(25px) saturate(200%);
-            box-shadow: 
-                0 8px 32px rgba(0, 0, 0, 0.3),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
-        }
-
-        .glass-strong {
-            background: rgba(15, 23, 42, 0.92);
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            backdrop-filter: blur(30px) saturate(180%);
-            -webkit-backdrop-filter: blur(30px) saturate(180%);
-            box-shadow: 
-                0 12px 40px rgba(0, 0, 0, 0.25),
-                inset 0 1px 0 rgba(255, 255, 255, 0.15);
-        }
-
-        /* Header Excellence */
-        .header {
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            padding: 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            background: rgba(15, 23, 42, 0.08);
-            backdrop-filter: blur(30px) saturate(180%);
-            -webkit-backdrop-filter: blur(30px) saturate(180%);
-        }
-
-        .header-content {
-            max-width: 1920px;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 16px 32px;
-            height: 72px;
-        }
-
-        .logo-section {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .logo-icon {
-            width: 48px;
-            height: 48px;
-            background: linear-gradient(135deg, 
-                #ffd700 0%, 
-                #ff6b9d 30%, 
-                #c44569 60%, 
-                #8b2635 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            font-weight: 700;
-            color: white;
-            box-shadow: 
-                0 8px 25px rgba(255, 215, 0, 0.3),
-                0 0 20px rgba(255, 107, 157, 0.2),
-                inset 0 2px 4px rgba(255, 255, 255, 0.3);
-            position: relative;
-            overflow: hidden;
-            animation: logoGlow 3s ease-in-out infinite alternate;
-        }
-
-        .logo-icon::before {
-            content: '';
-            position: absolute;
-            top: -2px;
-            left: -2px;
-            right: -2px;
-            bottom: -2px;
-            background: linear-gradient(45deg, 
-                #ffd700, #ff6b9d, #c44569, #8b2635, 
-                #ffd700, #ff6b9d, #c44569);
-            border-radius: 50%;
-            z-index: -1;
-            animation: borderRotate 4s linear infinite;
-        }
-
-        @keyframes logoGlow {
-            0% {
-                box-shadow: 
-                    0 8px 25px rgba(255, 215, 0, 0.3),
-                    0 0 20px rgba(255, 107, 157, 0.2),
-                    inset 0 2px 4px rgba(255, 255, 255, 0.3);
-            }
-            100% {
-                box-shadow: 
-                    0 12px 35px rgba(255, 215, 0, 0.5),
-                    0 0 30px rgba(255, 107, 157, 0.4),
-                    inset 0 2px 4px rgba(255, 255, 255, 0.4);
-            }
-        }
-
-        @keyframes borderRotate {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-
-
-        .logo-text {
-            font-family: 'Playfair Display', serif;
-            font-size: 26px;
-            font-weight: 800;
-            background: linear-gradient(135deg, 
-                #ffd700 0%, 
-                #ff6b9d 25%, 
-                #c44569 50%, 
-                #8b2635 75%, 
-                #ffd700 100%);
-            background-clip: text;
+        
+        .holographic {
+            background: linear-gradient(45deg, #ec4899, #f59e0b, #10b981, #3b82f6, #8b5cf6);
+            background-size: 400% 400%;
+            animation: holographic 4s ease infinite;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            letter-spacing: -0.025em;
-            text-shadow: 0 2px 4px rgba(255, 215, 0, 0.3);
-            animation: textShimmer 4s ease-in-out infinite;
+            background-clip: text;
+        }
+        
+        @keyframes holographic {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        .lotus-orb {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, #ec4899, #f59e0b, #10b981, #3b82f6, #8b5cf6, #ec4899);
+            animation: rotate 15s linear infinite;
             position: relative;
         }
-
-        .logo-text::after {
-            content: '✨';
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .lotus-orb::before {
+            content: '';
             position: absolute;
-            top: -5px;
-            right: -15px;
-            font-size: 12px;
-            animation: sparkle 2s ease-in-out infinite;
+            inset: 8px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
         }
-
-        @keyframes textShimmer {
-            0%, 100% {
-                background: linear-gradient(135deg, 
-                    #ffd700 0%, 
-                    #ff6b9d 25%, 
-                    #c44569 50%, 
-                    #8b2635 75%, 
-                    #ffd700 100%);
-                background-clip: text;
-                -webkit-background-clip: text;
-            }
-            50% {
-                background: linear-gradient(135deg, 
-                    #ff6b9d 0%, 
-                    #c44569 25%, 
-                    #8b2635 50%, 
-                    #ffd700 75%, 
-                    #ff6b9d 100%);
-                background-clip: text;
-                -webkit-background-clip: text;
-            }
-        }
-
-        @keyframes sparkle {
-            0%, 100% { 
-                opacity: 0.5; 
-                transform: scale(1) rotate(0deg); 
-            }
-            50% { 
-                opacity: 1; 
-                transform: scale(1.2) rotate(180deg); 
-            }
-        }
-
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 24px;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 8px 16px;
-            border-radius: 12px;
-            background: rgba(99, 102, 241, 0.1);
-            border: 1px solid rgba(99, 102, 241, 0.2);
-        }
-
-        .user-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            font-weight: 600;
-            color: white;
-        }
-
-        .user-name {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 10px 20px;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 600;
-            text-decoration: none;
-            border: none;
-            cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            box-shadow: var(--shadow-md);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .btn-secondary {
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            border: 1px solid var(--border);
-        }
-
-        .btn-secondary:hover {
-            background: var(--bg-tertiary);
-            border-color: var(--border-light);
-        }
-
-        .menu-trigger {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            position: relative;
-        }
-
-        .menu-trigger:hover {
-            background: var(--bg-tertiary);
-            border-color: var(--border-light);
-            transform: scale(1.05);
-        }
-
-        .menu-icon {
-            width: 20px;
-            height: 20px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
-        .menu-line {
-            width: 100%;
-            height: 2px;
-            background: var(--text-primary);
-            border-radius: 1px;
-            transition: all 0.3s ease;
-        }
-
-        .menu-trigger.active .menu-line:nth-child(1) {
-            transform: rotate(45deg) translate(6px, 6px);
-        }
-
-        .menu-trigger.active .menu-line:nth-child(2) {
-            opacity: 0;
-        }
-
-        .menu-trigger.active .menu-line:nth-child(3) {
-            transform: rotate(-45deg) translate(6px, -6px);
-        }
-
-        /* Premium Dropdown */
+        
         .dropdown {
+            display: none;
             position: absolute;
-            top: calc(100% + 8px);
+            top: 100%;
             right: 0;
-            min-width: 320px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.9));
+            backdrop-filter: blur(20px);
             border-radius: 16px;
-            padding: 8px;
-            box-shadow: var(--shadow-xl);
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(-8px) scale(0.95);
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 1001;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+            z-index: 1000;
+            min-width: 280px;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
         }
-
-        .dropdown.show {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0) scale(1);
+        
+        .dropdown.show { 
+            display: block;
+            animation: dropdownSlide 0.3s ease-out;
         }
-
-        .dropdown-section {
-            padding: 8px 0;
+        
+        @keyframes dropdownSlide {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-
-        .dropdown-section:not(:last-child) {
-            border-bottom: 1px solid var(--border);
-            margin-bottom: 8px;
-            padding-bottom: 16px;
+        
+        .menu-icon {
+            cursor: pointer;
+            padding: 12px;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
-
+        
+        .menu-icon:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
         .dropdown-item {
             display: flex;
             align-items: center;
-            gap: 12px;
             padding: 12px 16px;
-            border-radius: 10px;
-            color: var(--text-primary);
+            margin: 4px 0;
+            border-radius: 12px;
+            transition: all 0.3s ease;
             text-decoration: none;
-            font-size: 14px;
+            color: #374151;
             font-weight: 500;
-            transition: all 0.2s ease;
-            position: relative;
         }
-
+        
         .dropdown-item:hover {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            background: linear-gradient(135deg, #ec4899, #8b5cf6);
             color: white;
             transform: translateX(4px);
+            box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3);
         }
-
-        .dropdown-icon {
+        
+        .dropdown-item i {
+            margin-right: 12px;
             width: 20px;
-            height: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
+            text-align: center;
         }
-
-        .dropdown-text {
-            flex: 1;
+        
+        .message-bubble {
+            max-width: 80%;
+            word-wrap: break-word;
         }
-
-        .dropdown-badge {
-            padding: 2px 8px;
-            border-radius: 6px;
-            background: var(--accent);
+        
+        .user-message {
+            background: linear-gradient(135deg, #ec4899, #8b5cf6);
             color: white;
-            font-size: 11px;
-            font-weight: 600;
+            margin-left: auto;
         }
-
-        /* Main Layout Excellence */
-        .main-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            min-height: calc(100vh - 72px);
-            display: flex;
-            flex-direction: column;
+        
+        .ai-message {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            border: 1px solid rgba(0,0,0,0.1);
         }
-
-        .chat-container {
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 
-                0 20px 60px rgba(0, 0, 0, 0.1),
-                0 0 60px rgba(255, 154, 158, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 0.15);
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        
+        .upload-zone {
+            border: 2px dashed #cbd5e0;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-zone.dragover {
+            border-color: #ec4899;
+            background: rgba(236, 72, 153, 0.1);
+        }
+        
+        .recording {
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .feature-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 25px 50px rgba(236, 72, 153, 0.2);
+        }
+        
+        .tool-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .tool-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            border-color: rgba(236, 72, 153, 0.5);
+        }
+        
+        .creator-footer {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #ec4899 100%);
             position: relative;
-            backdrop-filter: blur(30px) saturate(150%);
-            -webkit-backdrop-filter: blur(30px) saturate(150%);
+            overflow: hidden;
         }
-
-        .chat-container::before {
+        
+        .creator-footer::before {
             content: '';
             position: absolute;
             top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            border-radius: 16px;
-            padding: 1px;
-            background: linear-gradient(135deg, 
-                rgba(99, 102, 241, 0.3) 0%, 
-                rgba(139, 92, 246, 0.2) 50%, 
-                rgba(6, 182, 212, 0.3) 100%);
-            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            mask-composite: exclude;
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            pointer-events: none;
-            animation: borderGlow 3s ease-in-out infinite alternate;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            animation: shine 3s infinite;
         }
-
-        @keyframes borderGlow {
-            0% { opacity: 0.5; }
-            100% { opacity: 1; }
+        
+        @keyframes shine {
+            0% { left: -100%; }
+            100% { left: 100%; }
         }
-
-        /* Chat Header Premium */
-        .chat-header {
-            background: var(--primary);
-            padding: 16px 20px;
-            text-align: center;
-            border-radius: 16px 16px 0 0;
+        
+        .heart-beat {
+            animation: heartbeat 2s ease-in-out infinite;
         }
-
-        .chat-title {
-            font-size: 20px;
-            font-weight: 600;
-            color: white;
-            margin-bottom: 2px;
-        }
-
-        .chat-subtitle {
-            font-size: 13px;
-            color: rgba(255, 255, 255, 0.8);
-            font-weight: 400;
-        }
-
-        /* Messages Area Excellence */
-        .messages-container {
-            flex: 1;
-            padding: 24px;
-            overflow-y: auto;
-            background: transparent;
-            position: relative;
-            min-height: 400px;
-        }
-
-        .message {
-            margin-bottom: 24px;
-            animation: messageAppear 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        @keyframes messageAppear {
-            0% {
-                opacity: 0;
-                transform: translateY(-20px) scale(0.95);
-            }
-            100% {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-
-        .message-ai {
-            display: flex;
-            gap: 16px;
-            max-width: 85%;
-        }
-
-        .message-user {
-            display: flex;
-            gap: 16px;
-            max-width: 85%;
-            margin-left: auto;
-            flex-direction: row-reverse;
-        }
-
-        .message-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            font-weight: 600;
-            flex-shrink: 0;
-            box-shadow: var(--shadow-md);
-        }
-
-        .avatar-ai {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            color: white;
-        }
-
-        .avatar-user {
-            background: linear-gradient(135deg, var(--accent) 0%, var(--success) 100%);
-            color: white;
-        }
-
-        .message-content {
-            flex: 1;
-            padding: 20px 24px;
-            border-radius: 20px;
-            position: relative;
-        }
-
-        .content-ai {
-            background: rgba(30, 41, 59, 0.85);
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
-            border-bottom-left-radius: 8px;
-            box-shadow: 
-                0 8px 25px rgba(0, 0, 0, 0.15),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
-        }
-
-        .content-user {
-            background: linear-gradient(135deg, 
-                rgba(99, 102, 241, 0.9) 0%, 
-                rgba(139, 92, 246, 0.85) 100%);
-            color: white;
-            border-bottom-right-radius: 8px;
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            box-shadow: 
-                0 8px 25px rgba(99, 102, 241, 0.2),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2);
-        }
-
-        .message-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 8px;
-        }
-
-        .message-name {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-secondary);
-        }
-
-        .message-time {
-            font-size: 12px;
-            font-family: 'JetBrains Mono', monospace;
-            color: var(--text-muted);
-        }
-
-        .message-text {
-            font-size: 15px;
-            line-height: 1.6;
-            color: var(--text-primary);
-        }
-
-        .content-user .message-text {
-            color: white;
-        }
-
-        /* Input Section Excellence */
-        .input-section {
-            padding: 20px 24px;
-            background: rgba(15, 23, 42, 0.88);
-            border-top: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 0 0 20px 20px;
-            backdrop-filter: blur(25px) saturate(150%);
-            -webkit-backdrop-filter: blur(25px) saturate(150%);
-        }
-
-        .input-wrapper {
-            margin-bottom: 16px;
-        }
-
-        .action-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-            gap: 8px;
-        }
-
-        .action-btn {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            padding: 12px 8px;
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: var(--text-primary);
-            font-size: 11px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            text-align: center;
-            backdrop-filter: blur(15px) saturate(180%);
-            -webkit-backdrop-filter: blur(15px) saturate(180%);
-            box-shadow: 
-                0 4px 15px rgba(0, 0, 0, 0.05),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
-        }
-
-        .action-btn:hover {
-            background: linear-gradient(135deg, 
-                rgba(99, 102, 241, 0.8) 0%, 
-                rgba(139, 92, 246, 0.8) 100%);
-            border-color: rgba(255, 255, 255, 0.2);
-            color: white;
-            transform: translateY(-2px) scale(1.02);
-            box-shadow: 
-                0 8px 25px rgba(99, 102, 241, 0.2),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2);
-        }
-
-        .action-icon {
-            font-size: 16px;
-        }
-
-        .input-wrapper-container {
-            display: flex;
-            align-items: flex-end;
-            gap: 12px;
-            padding: 6px;
-            border-radius: 18px;
-            background: rgba(30, 41, 59, 0.75);
-            border: 2px solid rgba(255, 255, 255, 0.18);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            margin-bottom: 16px;
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
-            box-shadow: 
-                0 8px 25px rgba(0, 0, 0, 0.15),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
-        }
-
-        .input-wrapper-container:focus-within {
-            border-color: rgba(99, 102, 241, 0.8);
-            background: rgba(30, 41, 59, 0.85);
-            box-shadow: 
-                0 0 0 4px rgba(99, 102, 241, 0.2),
-                0 12px 35px rgba(99, 102, 241, 0.25),
-                inset 0 1px 0 rgba(255, 255, 255, 0.15);
-        }
-
-        .chat-input {
-            flex: 1;
-            background: transparent;
-            border: none;
-            outline: none;
-            color: var(--text-primary);
-            font-size: 16px;
-            padding: 16px 20px;
-            resize: none;
-            min-height: 24px;
-            max-height: 120px;
-            font-family: inherit;
-        }
-
-        .chat-input::placeholder {
-            color: var(--text-muted);
-        }
-
-        .send-btn {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            border: none;
-            color: white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-            margin: 4px;
-        }
-
-        .send-btn:hover {
-            transform: scale(1.05);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .send-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        /* Typing Indicator */
-        .typing-indicator {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            margin-bottom: 24px;
-            animation: messageAppear 0.4s ease;
-        }
-
-        .typing-content {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 16px 20px;
-            border-radius: 20px;
-            border-bottom-left-radius: 8px;
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            backdrop-filter: blur(20px);
-        }
-
-        .typing-dots {
-            display: flex;
-            gap: 4px;
-        }
-
-        .typing-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--primary);
-            animation: typingPulse 1.4s ease-in-out infinite;
-        }
-
-        .typing-dot:nth-child(1) { animation-delay: 0s; }
-        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-
-        @keyframes typingPulse {
-            0%, 60%, 100% { transform: scale(1); opacity: 0.5; }
-            30% { transform: scale(1.2); opacity: 1; }
-        }
-
-        /* Custom Scrollbar */
-        .messages-container::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .messages-container::-webkit-scrollbar-track {
-            background: var(--bg-secondary);
-            border-radius: 4px;
-        }
-
-        .messages-container::-webkit-scrollbar-thumb {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            border-radius: 4px;
-        }
-
-        .messages-container::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
-        }
-
-        /* Responsive Excellence */
-        @media (max-width: 1024px) {
-            .main-container {
-                padding: 20px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .header-content {
-                padding: 16px 20px;
-            }
-            
-            .main-container {
-                padding: 16px;
-            }
-            
-            .chat-header {
-                padding: 16px 20px;
-            }
-            
-            .chat-title {
-                font-size: 20px;
-            }
-            
-            .messages-container {
-                padding: 20px 16px;
-            }
-            
-            .input-section {
-                padding: 16px;
-            }
-            
-            .action-grid {
-                grid-template-columns: repeat(4, 1fr);
-            }
-            
-            .dropdown {
-                right: 16px;
-                min-width: 280px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .header-content {
-                padding: 12px 16px;
-            }
-            
-            .main-container {
-                padding: 12px;
-            }
-            
-            .logo-text {
-                font-size: 18px;
-            }
-            
-            .user-info {
-                display: none;
-            }
-            
-            .action-grid {
-                grid-template-columns: repeat(4, 1fr);
-                gap: 6px;
-            }
+        
+        @keyframes heartbeat {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
         }
     </style>
 </head>
-<body>
-    <!-- Lakshmi Goddess Background System -->
-    <div class="background-system">
-        <!-- Lakshmi Divine Elements -->
-        <div class="lakshmi-elements">
-            <!-- Lotus Petals -->
-            <div class="lotus-petals">
-                <div class="lotus-petal"></div>
-                <div class="lotus-petal"></div>
-                <div class="lotus-petal"></div>
-                <div class="lotus-petal"></div>
+<body class="bg-gradient-to-br from-purple-900 via-pink-900 to-indigo-900 min-h-screen">
+    <!-- Header -->
+    <header class="glass-effect p-4 relative z-50">
+        <div class="flex items-center justify-between max-w-7xl mx-auto">
+            <!-- Lotus Logo -->
+            <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center relative overflow-hidden border-2 border-pink-300/30 neon-glow">
+                    <!-- Beautiful Lotus SVG -->
+                    <svg width="32" height="32" viewBox="0 0 100 100" class="text-pink-300">
+                        <defs>
+                            <linearGradient id="lotusGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#ec4899;stop-opacity:1" />
+                                <stop offset="50%" style="stop-color:#f59e0b;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#10b981;stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+                        <!-- Lotus petals -->
+                        <path d="M50 20 C40 30, 40 40, 50 50 C60 40, 60 30, 50 20 Z" fill="url(#lotusGradient)" opacity="0.8"/>
+                        <path d="M50 20 C35 25, 30 35, 50 50 C70 35, 65 25, 50 20 Z" fill="url(#lotusGradient)" opacity="0.6"/>
+                        <path d="M50 20 C30 30, 25 45, 50 50 C75 45, 70 30, 50 20 Z" fill="url(#lotusGradient)" opacity="0.4"/>
+                        <path d="M50 20 C25 35, 20 50, 50 50 C80 50, 75 35, 50 20 Z" fill="url(#lotusGradient)" opacity="0.3"/>
+                        <!-- Center -->
+                        <circle cx="50" cy="45" r="8" fill="url(#lotusGradient)"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-white">🪷 Lakshmi AI</h1>
+                    <p class="text-sm text-white/70">Advanced AI Assistant</p>
+                </div>
             </div>
-            
-            <!-- Divine Gold Coins -->
-            <div class="divine-coins">
-                <div class="gold-coin"></div>
-                <div class="gold-coin"></div>
-                <div class="gold-coin"></div>
-                <div class="gold-coin"></div>
-            </div>
-            
-            <!-- Prosperity Waves -->
-            <div class="prosperity-waves"></div>
-        </div>
-        
-        <!-- Sacred Lotus SVG -->
-        <svg class="sacred-lotus" viewBox="0 0 1920 1080" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0.08;">
-            <defs>
-                <radialGradient id="lotusGrad" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" style="stop-color:#ffd700;stop-opacity:0.8" />
-                    <stop offset="50%" style="stop-color:#ff6b9d;stop-opacity:0.6" />
-                    <stop offset="100%" style="stop-color:#c44569;stop-opacity:0.4" />
-                </radialGradient>
-                <radialGradient id="coinGrad" cx="50%" cy="30%" r="70%">
-                    <stop offset="0%" style="stop-color:#ffd700;stop-opacity:1" />
-                    <stop offset="70%" style="stop-color:#f59e0b;stop-opacity:0.8" />
-                    <stop offset="100%" style="stop-color:#d97706;stop-opacity:0.6" />
-                </radialGradient>
-            </defs>
-            
-            <!-- Large Central Lotus -->
-            <g transform="translate(960, 540)">
-                <path d="M0,-100 C30,-80 50,-40 40,0 C50,40 30,80 0,100 C-30,80 -50,40 -40,0 C-50,-40 -30,-80 0,-100Z" 
-                      fill="url(#lotusGrad)" opacity="0.6">
-                    <animateTransform attributeName="transform" type="rotate" 
-                                      values="0;360" dur="60s" repeatCount="indefinite"/>
-                </path>
-                <path d="M0,-80 C25,-65 40,-30 30,0 C40,30 25,65 0,80 C-25,65 -40,30 -30,0 C-40,-30 -25,-65 0,-80Z" 
-                      fill="url(#lotusGrad)" opacity="0.4" transform="rotate(45)">
-                    <animateTransform attributeName="transform" type="rotate" 
-                                      values="45;405" dur="45s" repeatCount="indefinite"/>
-                </path>
-            </g>
-            
-            <!-- Floating Lotus Petals -->
-            <path d="M200,200 C220,180 250,180 270,200 C250,220 220,220 200,200Z" 
-                  fill="url(#lotusGrad)" opacity="0.5">
-                <animateTransform attributeName="transform" type="translate" 
-                                  values="0,0; 50,-30; 0,0" dur="20s" repeatCount="indefinite"/>
-            </path>
-            
-            <path d="M1600,300 C1620,280 1650,280 1670,300 C1650,320 1620,320 1600,300Z" 
-                  fill="url(#lotusGrad)" opacity="0.4">
-                <animateTransform attributeName="transform" type="translate" 
-                                  values="0,0; -40,20; 0,0" dur="25s" repeatCount="indefinite"/>
-            </path>
-            
-            <!-- Sacred Coins -->
-            <circle cx="300" cy="800" r="25" fill="url(#coinGrad)" opacity="0.6">
-                <animate attributeName="cy" values="800;750;800" dur="15s" repeatCount="indefinite"/>
-            </circle>
-            
-            <circle cx="1500" cy="200" r="30" fill="url(#coinGrad)" opacity="0.5">
-                <animate attributeName="cx" values="1500;1550;1500" dur="18s" repeatCount="indefinite"/>
-            </circle>
-        </svg>
-    </div>
 
-    <!-- Premium Header -->
-    <header class="header glass-strong">
-        <div class="header-content">
-            <div class="logo-section">
-                <div class="logo-icon">🪷</div>
-                <span class="logo-text">Lakshmi AI</span>
-            </div>
-            
-            <div class="header-actions">
-                <div class="user-info">
-                    <div class="user-avatar">{{ username[0] if username else 'U' }}</div>
-                    <span class="user-name">{{ username or 'User' }}</span>
+            <!-- Top Right Controls -->
+            <div class="flex items-center space-x-4 relative">
+                <span class="text-white/90 hidden md:block">Welcome! 🙏</span>
+                <button onclick="logout()" class="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-all">
+                    <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                </button>
+                <div class="menu-icon text-white text-xl" onclick="toggleMenu()">
+                    <i class="fas fa-bars"></i>
                 </div>
                 
-                <form method="POST" action="/logout" style="display: inline;">
-                    <button type="submit" class="btn btn-secondary">Logout</button>
-                </form>
-                
-                <div class="menu-trigger" onclick="toggleMenu()" id="menuTrigger">
-                    <div class="menu-icon">
-                        <div class="menu-line"></div>
-                        <div class="menu-line"></div>
-                        <div class="menu-line"></div>
+                <!-- Beautiful Dropdown Menu -->
+                <div class="dropdown" id="menu-dropdown">
+                    <div class="text-center mb-3 pb-3 border-b border-gray-200">
+                        <div class="text-lg font-bold text-gray-800">🪷 Lakshmi AI Tools</div>
+                        <div class="text-sm text-gray-600">Choose your trading tool</div>
                     </div>
                     
-                    <div class="dropdown glass-strong" id="menuDropdown">
-                        <div class="dropdown-section">
-                            <a href="/strategy" class="dropdown-item">
-                                <div class="dropdown-icon">📘</div>
-                                <div class="dropdown-text">Strategy Builder</div>
-                            </a>
-                            <a href="/strategy-engine" class="dropdown-item">
-                                <div class="dropdown-icon">💋</div>
-                                <div class="dropdown-text">Strategy Engine</div>
-                                <div class="dropdown-badge">Pro</div>
-                            </a>
-                            <a href="/candle" class="dropdown-item">
-                                <div class="dropdown-icon">🔮</div>
-                                <div class="dropdown-text">Candle Predictor</div>
-                            </a>
-                            <a href="/matrix" class="dropdown-item">
-                                <div class="dropdown-icon">📊</div>
-                                <div class="dropdown-text">Strategy Matrix</div>
-                            </a>
-                            <a href="/analyzer" class="dropdown-item">
-                                <div class="dropdown-icon">📈</div>
-                                <div class="dropdown-text">Strategy Analyzer</div>
-                            </a>
+                    <a href="https://lakshmi-ai-trades.onrender.com/strategy" class="dropdown-item">
+                        <i class="fas fa-chess text-blue-500"></i>
+                        <div>
+                            <div class="font-semibold">Strategy Builder</div>
+                            <div class="text-xs text-gray-500">Build custom strategies</div>
                         </div>
-                        
-                        <div class="dropdown-section">
-                            <a href="/ask-ai" class="dropdown-item">
-                                <div class="dropdown-icon">🤖</div>
-                                <div class="dropdown-text">Ask AI</div>
-                            </a>
-                            <a href="/option-chain" class="dropdown-item">
-                                <div class="dropdown-icon">💹</div>
-                                <div class="dropdown-text">Option Chain Viewer</div>
-                            </a>
-                            <a href="/backtester" class="dropdown-item">
-                                <div class="dropdown-icon">🔁</div>
-                                <div class="dropdown-text">Back-tester</div>
-                            </a>
-                            <a href="/neuron" class="dropdown-item">
-                                <div class="dropdown-icon">🧠</div>
-                                <div class="dropdown-text">Neuron Analysis</div>
-                                <div class="dropdown-badge">New</div>
-                            </a>
-                            <a href="/strategy-switcher" class="dropdown-item">
-                                <div class="dropdown-icon">🧭</div>
-                                <div class="dropdown-text">Strategy Switcher</div>
-                            </a>
+                    </a>
+                    
+                    <a href="https://lakshmi-ai-trades.onrender.com/strategy-engine" class="dropdown-item">
+                        <i class="fas fa-rocket text-purple-500"></i>
+                        <div>
+                            <div class="font-semibold">Strategy Engine</div>
+                            <div class="text-xs text-gray-500">Advanced trading engine</div>
                         </div>
-                        
-                        <div class="dropdown-section">
-                            <a href="/auth/google" class="dropdown-item">
-                                <div class="dropdown-icon">🔐</div>
-                                <div class="dropdown-text">Login with Google</div>
-                            </a>
+                    </a>
+                    
+                    <a href="https://lakshmi-ai-trades.onrender.com/candle" class="dropdown-item">
+                        <div class="text-pink-500 text-lg">🕯️</div>
+                        <div>
+                            <div class="font-semibold">Candle Predictor</div>
+                            <div class="text-xs text-gray-500">AI price predictions</div>
                         </div>
+                    </a>
+                    
+                    <a href="https://lakshmi-ai-trades.onrender.com/matrix" class="dropdown-item">
+                        <i class="fas fa-th text-green-500"></i>
+                        <div>
+                            <div class="font-semibold">Strategy Matrix</div>
+                            <div class="text-xs text-gray-500">Strategy comparison</div>
+                        </div>
+                    </a>
+                    
+                    <a href="https://lakshmi-ai-trades.onrender.com/analyzer" class="dropdown-item">
+                        <i class="fas fa-chart-line text-orange-500"></i>
+                        <div>
+                            <div class="font-semibold">Strategy Analyzer</div>
+                            <div class="text-xs text-gray-500">Performance analysis</div>
+                        </div>
+                    </a>
+                    
+                    <a href="https://lakshmi-ai-trades.onrender.com/ask-ai" class="dropdown-item">
+                        <i class="fas fa-robot text-cyan-500"></i>
+                        <div>
+                            <div class="font-semibold">Ask AI</div>
+                            <div class="text-xs text-gray-500">AI trading assistant</div>
+                        </div>
+                    </a>
+                    
+                    <a href="https://lakshmi-ai-trades.onrender.com/option-chain" class="dropdown-item">
+                        <i class="fas fa-link text-yellow-500"></i>
+                        <div>
+                            <div class="font-semibold">Option Chain</div>
+                            <div class="text-xs text-gray-500">Options data viewer</div>
+                        </div>
+                    </a>
+                    
+                    <a href="https://lakshmi-ai-trades.onrender.com/backtester" class="dropdown-item">
+                        <i class="fas fa-history text-indigo-500"></i>
+                        <div>
+                            <div class="font-semibold">Back-tester</div>
+                            <div class="text-xs text-gray-500">Strategy backtesting</div>
+                        </div>
+                    </a>
+                    
+                    <a href="https://lakshmi-ai-trades.onrender.com/neuron" class="dropdown-item">
+                        <i class="fas fa-brain text-red-500"></i>
+                        <div>
+                            <div class="font-semibold">Neuron Analysis</div>
+                            <div class="text-xs text-gray-500">Neural network insights</div>
+                        </div>
+                    </a>
+                    
+                    <a href="https://lakshmi-ai-trades.onrender.com/strategy-switcher" class="dropdown-item">
+                        <i class="fas fa-exchange-alt text-teal-500"></i>
+                        <div>
+                            <div class="font-semibold">Strategy Switcher</div>
+                            <div class="text-xs text-gray-500">Dynamic strategy switching</div>
+                        </div>
+                    </a>
+                    
+                    <div class="border-t border-gray-200 mt-3 pt-3">
+                        <a href="https://lakshmi-ai-trades.onrender.com/auth/login" class="block">
+                            <button class="w-full bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-4 py-3 rounded-lg transition-all font-semibold">
+                                <i class="fas fa-sign-in-alt mr-2"></i>Login with Google
+                            </button>
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
     </header>
 
-    <!-- Main Excellence -->
-    <main class="main-container">
-        <div class="chat-container glass">
-            <!-- Premium Chat Header -->
-            <div class="chat-header">
-                <h1 class="chat-title">Lakshmi AI</h1>
-                <p class="chat-subtitle">Advanced Intelligence • Infinite Possibilities</p>
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Hero Section -->
+        <div class="text-center mb-12">
+            <div class="lotus-orb mx-auto mb-8 floating-animation">
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="text-white text-4xl font-bold z-10">🪷</div>
+                </div>
             </div>
-            
-            <!-- Messages Excellence -->
-            <div class="messages-container" id="messagesContainer">
-                <div class="message">
-                    <div class="message-ai">
-                        <div class="message-avatar avatar-ai">🪷</div>
-                        <div class="message-content content-ai">
-                            <div class="message-header">
-                                <span class="message-name">Lakshmi AI</span>
-                                <span class="message-time" id="welcomeTime">now</span>
+            <h1 class="text-5xl md:text-7xl font-bold text-white mb-6">
+                Welcome to <span class="holographic">Lakshmi AI</span>
+            </h1>
+            <p class="text-xl text-white/80 mb-8 max-w-3xl mx-auto">
+                Experience the power of advanced AI with real-time conversations, file analysis, voice interaction, and intelligent responses powered by cutting-edge language models.
+            </p>
+        </div>
+
+        <!-- Main Chat Interface -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8 mb-12">
+            <!-- AI Chat Interface -->
+            <div class="lg:col-span-3 glass-effect rounded-2xl p-6 neon-glow">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-white flex items-center">
+                        <i class="fas fa-robot mr-3 text-pink-400"></i>
+                        Lakshmi AI Assistant
+                    </h2>
+                    <div class="flex space-x-2">
+                        <button onclick="clearChat()" class="text-white/60 hover:text-white transition-all" title="Clear Chat">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <button onclick="exportChat()" class="text-white/60 hover:text-white transition-all" title="Export Chat">
+                            <i class="fas fa-download"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Chat Messages -->
+                <div id="chatMessages" class="h-96 overflow-y-auto mb-4 space-y-4 bg-black/20 rounded-xl p-4">
+                    <div class="chat-message ai-message message-bubble p-4 rounded-2xl">
+                        <div class="flex items-start space-x-3">
+                            <div class="w-8 h-8 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center">
+                                🪷
                             </div>
-                            <div class="message-text">
-                                Welcome to the future of AI interaction. I'm Lakshmi, your advanced intelligence companion. I can assist with complex analysis, creative tasks, strategic planning, and much more. How may I help you achieve excellence today?
+                            <div>
+                                <p class="font-medium mb-1">Lakshmi AI</p>
+                                <p>Namaste! I'm Lakshmi AI, your advanced AI assistant. I can help you with analysis, conversations, file processing, and much more. How can I assist you today?</p>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Premium Input Section -->
-            <div class="input-section">
-                <div class="input-wrapper-container">
-                    <textarea 
-                        id="chatInput" 
-                        class="chat-input" 
-                        placeholder="Ask me anything... I'm here to help you achieve extraordinary results."
-                        rows="1"
-                    ></textarea>
-                    <button class="send-btn" id="sendBtn" onclick="sendMessage()">
-                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                        </svg>
+
+                <!-- File Upload Zone -->
+                <div id="uploadZone" class="upload-zone rounded-xl p-4 text-center text-white/60 cursor-pointer mb-4">
+                    <i class="fas fa-cloud-upload-alt text-2xl mb-2"></i>
+                    <p>Drop files here or click to upload (Images, PDFs, Documents, etc.)</p>
+                    <input type="file" id="fileInput" class="hidden" multiple accept="*/*">
+                </div>
+
+                <!-- Input Controls -->
+                <div class="flex space-x-4 mb-4">
+                    <div class="flex-1 relative">
+                        <input type="text" id="chatInput" placeholder="Ask me anything..." 
+                               class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:border-pink-400 focus:ring-2 focus:ring-pink-400/20">
+                        <button onclick="toggleVoiceInput()" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white transition-all">
+                            <i id="voiceIcon" class="fas fa-microphone"></i>
+                        </button>
+                    </div>
+                    <button onclick="sendMessage()" class="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white px-6 py-3 rounded-xl transition-all">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                    <button onclick="captureScreen()" class="bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 text-white px-6 py-3 rounded-xl transition-all" title="Screen Capture">
+                        <i class="fas fa-camera"></i>
                     </button>
                 </div>
-                
-                <div class="action-grid">
-                    <button class="action-btn" onclick="uploadFile()">
-                        <div class="action-icon">📎</div>
-                        <div>Upload</div>
+
+                <!-- Quick Actions -->
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="quickAction('explain')" class="bg-white/10 hover:bg-white/20 text-white px-3 py-1 rounded-full text-sm transition-all">
+                        💡 Explain Something
                     </button>
-                    <button class="action-btn" onclick="openCamera()">
-                        <div class="action-icon">📸</div>
-                        <div>Camera</div>
+                    <button onclick="quickAction('analyze')" class="bg-white/10 hover:bg-white/20 text-white px-3 py-1 rounded-full text-sm transition-all">
+                        🔍 Analyze Data
                     </button>
-                    <button class="action-btn" onclick="openFolder()">
-                        <div class="action-icon">📁</div>
-                        <div>Folder</div>
+                    <button onclick="quickAction('creative')" class="bg-white/10 hover:bg-white/20 text-white px-3 py-1 rounded-full text-sm transition-all">
+                        🎨 Creative Writing
                     </button>
-                    <button class="action-btn" onclick="createDocument()">
-                        <div class="action-icon">📄</div>
-                        <div>Document</div>
+                    <button onclick="quickAction('code')" class="bg-white/10 hover:bg-white/20 text-white px-3 py-1 rounded-full text-sm transition-all">
+                        💻 Code Help
                     </button>
-                    <button class="action-btn" onclick="generateChart()">
-                        <div class="action-icon">📊</div>
-                        <div>Chart</div>
+                </div>
+            </div>
+
+            <!-- Usage Stats -->
+            <div class="space-y-6">
+                <!-- Real-time Stats -->
+                <div class="glass-effect rounded-2xl p-6 neon-glow">
+                    <h3 class="text-xl font-bold text-white mb-4 flex items-center">
+                        <i class="fas fa-chart-bar mr-2 text-green-400"></i>
+                        Usage Today
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-white/80">Messages</span>
+                            <div class="text-white font-bold" id="messagesCount">0</div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-white/80">Files Uploaded</span>
+                            <div class="text-white font-bold" id="filesCount">0</div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-white/80">Voice Queries</span>
+                            <div class="text-white font-bold" id="voiceCount">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Status -->
+                <div class="glass-effect rounded-2xl p-6 neon-glow">
+                    <h3 class="text-xl font-bold text-white mb-4 flex items-center">
+                        <i class="fas fa-brain mr-2 text-purple-400"></i>
+                        AI Status
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                            <span class="text-white/90 text-sm">OpenRouter API Connected</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                            <span class="text-white/90 text-sm">Voice Recognition Ready</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                            <span class="text-white/90 text-sm">File Processing Active</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Powerful AI Tools Section -->
+        <div class="mb-12">
+            <h2 class="text-3xl font-bold text-white text-center mb-8">
+                <span class="holographic">🛠️ Powerful AI Tools</span>
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Language Translator -->
+                <div class="tool-card rounded-2xl p-6 text-center">
+                    <div class="text-5xl mb-4">🌍</div>
+                    <h3 class="text-xl font-bold text-white mb-2">Language Translator</h3>
+                    <p class="text-white/70 text-sm mb-4">Translate text between 100+ languages instantly with AI precision</p>
+                    <button onclick="openTool('translator')" class="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white px-4 py-2 rounded-lg transition-all w-full">
+                        <i class="fas fa-language mr-2"></i>Start Translating
                     </button>
-                    <button class="action-btn" onclick="shareChat()">
-                        <div class="action-icon">🔗</div>
-                        <div>Share</div>
+                </div>
+
+                <!-- Text Summarizer -->
+                <div class="tool-card rounded-2xl p-6 text-center">
+                    <div class="text-5xl mb-4">📝</div>
+                    <h3 class="text-xl font-bold text-white mb-2">Text Summarizer</h3>
+                    <p class="text-white/70 text-sm mb-4">Summarize long documents, articles, and texts in seconds</p>
+                    <button onclick="openTool('summarizer')" class="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white px-4 py-2 rounded-lg transition-all w-full">
+                        <i class="fas fa-compress-alt mr-2"></i>Summarize Text
                     </button>
-                    <button class="action-btn" onclick="exportData()">
-                        <div class="action-icon">💾</div>
-                        <div>Export</div>
+                </div>
+
+                <!-- Content Generator -->
+                <div class="tool-card rounded-2xl p-6 text-center">
+                    <div class="text-5xl mb-4">✨</div>
+                    <h3 class="text-xl font-bold text-white mb-2">Content Generator</h3>
+                    <p class="text-white/70 text-sm mb-4">Generate creative content, stories, articles, and more</p>
+                    <button onclick="openTool('generator')" class="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-4 py-2 rounded-lg transition-all w-full">
+                        <i class="fas fa-magic mr-2"></i>Generate Content
                     </button>
-                    <button class="action-btn" onclick="toggleVoice()">
-                        <div class="action-icon">🎤</div>
-                        <div>Voice</div>
+                </div>
+
+                <!-- Code Assistant -->
+                <div class="tool-card rounded-2xl p-6 text-center">
+                    <div class="text-5xl mb-4">💻</div>
+                    <h3 class="text-xl font-bold text-white mb-2">Code Assistant</h3>
+                    <p class="text-white/70 text-sm mb-4">Get help with programming, debugging, and code optimization</p>
+                    <button onclick="openTool('code')" class="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white px-4 py-2 rounded-lg transition-all w-full">
+                        <i class="fas fa-code mr-2"></i>Code Help
+                    </button>
+                </div>
+
+                <!-- Image Analyzer -->
+                <div class="tool-card rounded-2xl p-6 text-center">
+                    <div class="text-5xl mb-4">🖼️</div>
+                    <h3 class="text-xl font-bold text-white mb-2">Image Analyzer</h3>
+                    <p class="text-white/70 text-sm mb-4">Analyze images, extract text, and get detailed descriptions</p>
+                    <button onclick="openTool('image')" class="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white px-4 py-2 rounded-lg transition-all w-full">
+                        <i class="fas fa-image mr-2"></i>Analyze Images
+                    </button>
+                </div>
+
+                <!-- Data Processor -->
+                <div class="tool-card rounded-2xl p-6 text-center">
+                    <div class="text-5xl mb-4">📊</div>
+                    <h3 class="text-xl font-bold text-white mb-2">Data Processor</h3>
+                    <p class="text-white/70 text-sm mb-4">Process CSV, Excel files and generate insights from data</p>
+                    <button onclick="openTool('data')" class="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white px-4 py-2 rounded-lg transition-all w-full">
+                        <i class="fas fa-database mr-2"></i>Process Data
                     </button>
                 </div>
             </div>
         </div>
-    </main>
+
+        <!-- Feature Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            <div class="feature-card glass-effect rounded-2xl p-6 text-center neon-glow">
+                <div class="text-4xl mb-4">🧠</div>
+                <h3 class="text-xl font-bold text-white mb-2">Advanced AI</h3>
+                <p class="text-white/70 text-sm mb-4">Powered by state-of-the-art language models for intelligent conversations</p>
+                <button onclick="quickAction('ai-demo')" class="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-4 py-2 rounded-lg transition-all">
+                    Try Now
+                </button>
+            </div>
+
+            <div class="feature-card glass-effect rounded-2xl p-6 text-center neon-glow">
+                <div class="text-4xl mb-4">📁</div>
+                <h3 class="text-xl font-bold text-white mb-2">File Analysis</h3>
+                <p class="text-white/70 text-sm mb-4">Upload and analyze documents, images, and data files with AI</p>
+                <button onclick="document.getElementById('fileInput').click()" class="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white px-4 py-2 rounded-lg transition-all">
+                    Upload File
+                </button>
+            </div>
+
+            <div class="feature-card glass-effect rounded-2xl p-6 text-center neon-glow">
+                <div class="text-4xl mb-4">🎤</div>
+                <h3 class="text-xl font-bold text-white mb-2">Voice Input</h3>
+                <p class="text-white/70 text-sm mb-4">Speak naturally and get intelligent responses with voice recognition</p>
+                <button onclick="toggleVoiceInput()" class="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white px-4 py-2 rounded-lg transition-all">
+                    Start Speaking
+                </button>
+            </div>
+
+            <div class="feature-card glass-effect rounded-2xl p-6 text-center neon-glow">
+                <div class="text-4xl mb-4">📸</div>
+                <h3 class="text-xl font-bold text-white mb-2">Screen Capture</h3>
+                <p class="text-white/70 text-sm mb-4">Capture screenshots and get AI analysis of visual content</p>
+                <button onclick="captureScreen()" class="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white px-4 py-2 rounded-lg transition-all">
+                    Capture Screen
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Professional Creator Footer -->
+    <footer class="creator-footer py-16 mt-20 relative">
+        <div class="max-w-7xl mx-auto px-4 relative z-10">
+            <!-- Main Footer Content -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
+                <!-- Creator Section -->
+                <div class="text-center md:text-left">
+                    <div class="flex items-center justify-center md:justify-start mb-4">
+                        <div class="w-16 h-16 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center text-2xl mr-4">
+                            🪷
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-bold text-white">
+                                <span class="holographic">Monjit</span>
+                            </h3>
+                            <p class="text-white/70 text-sm">Creator & Developer</p>
+                        </div>
+                    </div>
+                    <p class="text-white/80 text-sm leading-relaxed">
+                        Passionate about building innovative AI solutions that empower users and transform the way we interact with technology.
+                    </p>
+                </div>
+
+                <!-- Technologies -->
+                <div class="text-center">
+                    <h4 class="text-xl font-bold text-white mb-4">Built With</h4>
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <div class="flex items-center justify-center space-x-2 bg-white/10 rounded-lg py-2 px-3">
+                            <i class="fab fa-js-square text-yellow-400"></i>
+                            <span class="text-white/90">JavaScript</span>
+                        </div>
+                        <div class="flex items-center justify-center space-x-2 bg-white/10 rounded-lg py-2 px-3">
+                            <i class="fab fa-python text-blue-400"></i>
+                            <span class="text-white/90">Python</span>
+                        </div>
+                        <div class="flex items-center justify-center space-x-2 bg-white/10 rounded-lg py-2 px-3">
+                            <i class="fas fa-robot text-purple-400"></i>
+                            <span class="text-white/90">OpenAI</span>
+                        </div>
+                        <div class="flex items-center justify-center space-x-2 bg-white/10 rounded-lg py-2 px-3">
+                            <i class="fas fa-cloud text-cyan-400"></i>
+                            <span class="text-white/90">Cloud AI</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Professional Info -->
+                <div class="text-center md:text-right">
+                    <h4 class="text-xl font-bold text-white mb-4">Professional</h4>
+                    <div class="space-y-3 text-sm">
+                        <div class="flex items-center justify-center md:justify-end space-x-2">
+                            <i class="fas fa-code text-blue-400"></i>
+                            <span class="text-white/90">Full Stack Developer</span>
+                        </div>
+                        <div class="flex items-center justify-center md:justify-end space-x-2">
+                            <i class="fas fa-brain text-purple-400"></i>
+                            <span class="text-white/90">AI/ML Engineer</span>
+                        </div>
+                        <div class="flex items-center justify-center md:justify-end space-x-2">
+                            <i class="fas fa-chart-line text-green-400"></i>
+                            <span class="text-white/90">Trading Systems</span>
+                        </div>
+                        <div class="flex items-center justify-center md:justify-end space-x-2">
+                            <i class="fas fa-rocket text-orange-400"></i>
+                            <span class="text-white/90">Innovation Leader</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="border-t border-white/20 pt-8">
+                <!-- Bottom Section -->
+                <div class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+                    <div class="text-center md:text-left">
+                        <p class="text-white/90 font-medium mb-1">
+                            Created with <span class="heart-beat text-red-400">❤️</span> and Innovation
+                        </p>
+                        <p class="text-white/60 text-sm">
+                            Empowering traders with AI-driven insights and strategies
+                        </p>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div class="flex items-center justify-center space-x-2 mb-2">
+                            <span class="text-white/90 font-medium">Made in India</span>
+                            <span class="text-2xl">🇮🇳</span>
+                        </div>
+                        <p class="text-white/50 text-sm">
+                            © 2025 Lakshmi AI • All Rights Reserved
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
 
     <script>
-        // Update welcome time
-        const now = new Date();
-        const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        document.getElementById('welcomeTime').textContent = timeString;
+        // Global variables
+        let isRecording = false;
+        let recognition = null;
+        let chatHistory = [];
+        let conversationId = generateConversationId();
 
-        // Simple initialization
+        // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
-            const chatInput = document.getElementById('chatInput');
-            const sendBtn = document.getElementById('sendBtn');
+            initializeApp();
+            setupEventListeners();
+            loadChatHistory();
+            loadUsageStats();
+        });
 
-            chatInput.addEventListener('input', () => {
-                sendBtn.disabled = !chatInput.value.trim();
-            });
+        function generateConversationId() {
+            return 'conv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
 
-            chatInput.addEventListener('keydown', (e) => {
+        function initializeApp() {
+            // Initialize speech recognition
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+                
+                recognition.onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    document.getElementById('chatInput').value = transcript;
+                    updateUsageStats('voice');
+                    sendMessage();
+                };
+                
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error:', event.error);
+                    showNotification('Voice input error: ' + event.error, 'error');
+                    stopRecording();
+                };
+
+                recognition.onend = function() {
+                    stopRecording();
+                };
+            }
+
+            showNotification('🪷 Lakshmi AI is ready to assist you!', 'success');
+        }
+
+        function setupEventListeners() {
+            // Chat input enter key
+            document.getElementById('chatInput').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     sendMessage();
                 }
             });
 
-            // Auto-resize textarea
-            chatInput.addEventListener('input', function() {
-                this.style.height = 'auto';
-                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-            });
+            // File upload
+            const fileInput = document.getElementById('fileInput');
+            const uploadZone = document.getElementById('uploadZone');
 
-            // Close menu when clicking outside
-            document.addEventListener('click', (e) => {
-                const dropdown = document.getElementById('menuDropdown');
-                const trigger = document.getElementById('menuTrigger');
-                
-                if (!dropdown.contains(e.target) && !trigger.contains(e.target)) {
-                    dropdown.classList.remove('show');
-                    trigger.classList.remove('active');
+            uploadZone.addEventListener('click', () => fileInput.click());
+            uploadZone.addEventListener('dragover', handleDragOver);
+            uploadZone.addEventListener('drop', handleFileDrop);
+            fileInput.addEventListener('change', handleFileSelect);
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.menu-icon') && !e.target.closest('.dropdown')) {
+                    document.getElementById('menu-dropdown').classList.remove('show');
                 }
             });
-        });
+        }
 
-        // Global Functions - Real OpenRouter API Implementation
         function toggleMenu() {
-            const dropdown = document.getElementById('menuDropdown');
-            const trigger = document.getElementById('menuTrigger');
+            const dropdown = document.getElementById('menu-dropdown');
             dropdown.classList.toggle('show');
-            trigger.classList.toggle('active');
+        }
+
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                window.location.href = 'https://lakshmi-ai-trades.onrender.com/logout';
+            }
         }
 
         async function sendMessage() {
-    const input = document.getElementById('chatInput');
-    const sendBtn = document.getElementById('sendBtn');
-    const message = input.value.trim();
-    if (!message) return;
-    
-    // Add user message
-    addMessage(message, 'user');
-    input.value = '';
-    input.style.height = 'auto';
-    
-    // Disable send button and show typing
-    sendBtn.disabled = true;
-    showTypingIndicator();
-    
-    try {
-        // Use your actual Render URL here
-        const response = await fetch('https://lakshmi-ai-trades.onrender.com/api/chat', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                message: message,
-                conversation_id: getConversationId()
-            })
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        hideTypingIndicator();
-        
-        if (data.success) {
-            addMessage(data.response, 'ai');
-        } else {
-            addMessage('🚨 I encountered an issue processing your request. Please try again.', 'ai');
-        }
-        
-    } catch (error) {
-        console.error('Error:', error);
-        hideTypingIndicator();
-        addMessage('🚨 Connection error. Please check your internet connection and try again.', 'ai');
-    } finally {
-        sendBtn.disabled = false;
-    }
-}
-        function addMessage(content, type) {
-            const container = document.getElementById('messagesContainer');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message';
-            const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const isAI = type === 'ai';
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
             
-            messageDiv.innerHTML = `
-                <div class="message-${type}">
-                    <div class="message-avatar avatar-${type}">
-                        ${isAI ? '🪷' : '👤'}
-                    </div>
-                    <div class="message-content content-${type}">
-                        <div class="message-header">
-                            <span class="message-name">${isAI ? 'Lakshmi AI' : 'You'}</span>
-                            <span class="message-time">${timestamp}</span>
+            if (!message) return;
+
+            // Add user message to chat
+            addMessageToChat(message, 'user');
+            input.value = '';
+            updateUsageStats('messages');
+
+            // Show typing indicator
+            showTypingIndicator();
+
+            try {
+                // Make real API call to your backend
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        conversation_id: conversationId,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+
+                const data = await response.json();
+                removeTypingIndicator();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                const aiResponse = data.response || data.message || 'I received your message but had trouble generating a response. Please try again.';
+                addMessageToChat(aiResponse, 'ai');
+                
+                // Save to history
+                chatHistory.push({ 
+                    message, 
+                    response: aiResponse, 
+                    timestamp: new Date(),
+                    conversation_id: conversationId
+                });
+                saveChatHistory();
+                
+            } catch (error) {
+                removeTypingIndicator();
+                console.error('API Error:', error);
+                addMessageToChat('I apologize, but I\'m having trouble connecting to my AI services right now. Please check your connection and try again.', 'ai');
+                showNotification('Connection error. Please try again.', 'error');
+            }
+        }
+
+        function addMessageToChat(message, sender) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${sender}-message message-bubble p-4 rounded-2xl`;
+            
+            if (sender === 'user') {
+                messageDiv.innerHTML = `
+                    <div class="flex items-start space-x-3 justify-end">
+                        <div class="text-right">
+                            <p class="font-medium mb-1">You</p>
+                            <p>${escapeHtml(message)}</p>
                         </div>
-                        <div class="message-text">${content}</div>
+                        <div class="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-600 rounded-full flex items-center justify-center">
+                            <i class="fas fa-user text-white text-sm"></i>
+                        </div>
                     </div>
-                </div>
-            `;
-            container.appendChild(messageDiv);
-            container.scrollTop = container.scrollHeight;
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    <div class="flex items-start space-x-3">
+                        <div class="w-8 h-8 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center">
+                            🪷
+                        </div>
+                        <div>
+                            <p class="font-medium mb-1">Lakshmi AI</p>
+                            <p>${escapeHtml(message)}</p>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         function showTypingIndicator() {
-            const container = document.getElementById('messagesContainer');
+            const chatMessages = document.getElementById('chatMessages');
             const typingDiv = document.createElement('div');
-            typingDiv.className = 'typing-indicator';
             typingDiv.id = 'typingIndicator';
-            
+            typingDiv.className = 'chat-message ai-message message-bubble p-4 rounded-2xl';
             typingDiv.innerHTML = `
-                <div class="message-avatar avatar-ai">🪷</div>
-                <div class="typing-content">
-                    <div class="typing-dots">
-                        <div class="typing-dot"></div>
-                        <div class="typing-dot"></div>
-                        <div class="typing-dot"></div>
+                <div class="flex items-start space-x-3">
+                    <div class="w-8 h-8 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center">
+                        🪷
                     </div>
-                    <span style="margin-left: 8px; color: var(--text-muted); font-size: 14px;">Lakshmi is thinking...</span>
+                    <div>
+                        <p class="font-medium mb-1">Lakshmi AI</p>
+                        <div class="flex space-x-1">
+                            <div class="w-2 h-2 bg-gray-400 rounded-full typing-indicator"></div>
+                            <div class="w-2 h-2 bg-gray-400 rounded-full typing-indicator" style="animation-delay: 0.2s;"></div>
+                            <div class="w-2 h-2 bg-gray-400 rounded-full typing-indicator" style="animation-delay: 0.4s;"></div>
+                        </div>
+                    </div>
                 </div>
             `;
-            
-            container.appendChild(typingDiv);
-            container.scrollTop = container.scrollHeight;
+            chatMessages.appendChild(typingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
-        function hideTypingIndicator() {
+        function removeTypingIndicator() {
             const typingIndicator = document.getElementById('typingIndicator');
             if (typingIndicator) {
                 typingIndicator.remove();
             }
         }
 
-        function getConversationId() {
-            let conversationId = sessionStorage.getItem('conversationId');
-            if (!conversationId) {
-                conversationId = 'conv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                sessionStorage.setItem('conversationId', conversationId);
+        function toggleVoiceInput() {
+            if (!recognition) {
+                showNotification('Voice input not supported in this browser', 'error');
+                return;
             }
-            return conversationId;
+
+            if (isRecording) {
+                recognition.stop();
+            } else {
+                recognition.start();
+                startRecording();
+                showNotification('🎤 Listening... Speak now!', 'info');
+            }
         }
 
-        function uploadFile() {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.multiple = true;
-            input.onchange = (e) => {
-                const files = Array.from(e.target.files);
-                if (files.length > 0) {
-                    addMessage(`📎 ${files.length} file(s) uploaded successfully! Divine analysis complete.`, 'ai');
+        function startRecording() {
+            isRecording = true;
+            const voiceIcon = document.getElementById('voiceIcon');
+            voiceIcon.className = 'fas fa-microphone recording';
+            voiceIcon.style.color = '#ef4444';
+        }
+
+        function stopRecording() {
+            isRecording = false;
+            const voiceIcon = document.getElementById('voiceIcon');
+            voiceIcon.className = 'fas fa-microphone';
+            voiceIcon.style.color = '';
+        }
+
+        function updateUsageStats(type) {
+            const today = new Date().toDateString();
+            let stats = JSON.parse(localStorage.getItem('lakshmi-usage-stats') || '{}');
+            
+            if (!stats[today]) {
+                stats[today] = { messages: 0, files: 0, voice: 0 };
+            }
+            
+            stats[today][type]++;
+            localStorage.setItem('lakshmi-usage-stats', JSON.stringify(stats));
+            
+            // Update display
+            const todayStats = stats[today];
+            document.getElementById('messagesCount').textContent = todayStats.messages;
+            document.getElementById('filesCount').textContent = todayStats.files;
+            document.getElementById('voiceCount').textContent = todayStats.voice;
+        }
+
+        function loadUsageStats() {
+            const today = new Date().toDateString();
+            const stats = JSON.parse(localStorage.getItem('lakshmi-usage-stats') || '{}');
+            const todayStats = stats[today] || { messages: 0, files: 0, voice: 0 };
+            
+            document.getElementById('messagesCount').textContent = todayStats.messages;
+            document.getElementById('filesCount').textContent = todayStats.files;
+            document.getElementById('voiceCount').textContent = todayStats.voice;
+        }
+
+        async function captureScreen() {
+            try {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+                    showNotification('Screen capture not supported in this browser', 'error');
+                    return;
                 }
+
+                const stream = await navigator.mediaDevices.getDisplayMedia({ 
+                    video: { mediaSource: 'screen' } 
+                });
+                
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                video.play();
+                
+                video.addEventListener('loadedmetadata', () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, 0, 0);
+                    
+                    canvas.toBlob(async (blob) => {
+                        const file = new File([blob], 'screenshot.png', { type: 'image/png' });
+                        await handleFileUpload(file);
+                        stream.getTracks().forEach(track => track.stop());
+                    });
+                });
+            } catch (error) {
+                console.error('Screen capture error:', error);
+                showNotification('Screen capture failed: ' + error.message, 'error');
+            }
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('dragover');
+        }
+
+        function handleFileDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files);
+            files.forEach(handleFileUpload);
+        }
+
+        function handleFileSelect(e) {
+            const files = Array.from(e.target.files);
+            files.forEach(handleFileUpload);
+        }
+
+        async function handleFileUpload(file) {
+            const maxSize = 50 * 1024 * 1024; // 50MB
+            if (file.size > maxSize) {
+                showNotification('File too large. Maximum size is 50MB.', 'error');
+                return;
+            }
+
+            updateUsageStats('files');
+            showNotification(`📤 Uploading ${file.name}...`, 'info');
+            
+            try {
+                const base64 = await fileToBase64(file);
+                
+                addMessageToChat(`📎 Uploaded: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`, 'user');
+                
+                showTypingIndicator();
+                
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: `I've uploaded a file named "${file.name}". Please analyze this ${file.type.includes('image') ? 'image' : 'document'} and provide insights.`,
+                        file: {
+                            name: file.name,
+                            type: file.type,
+                            size: file.size,
+                            data: base64
+                        },
+                        conversation_id: conversationId,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+
+                const data = await response.json();
+                removeTypingIndicator();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                const aiResponse = data.response || 'I\'ve received your file successfully! How would you like me to analyze it?';
+                addMessageToChat(aiResponse, 'ai');
+                showNotification('✅ File uploaded and analyzed!', 'success');
+                
+            } catch (error) {
+                removeTypingIndicator();
+                console.error('File upload error:', error);
+                addMessageToChat('I received your file but had trouble analyzing it. Please describe what you\'d like me to help you with regarding this file.', 'ai');
+                showNotification('⚠️ File uploaded, but analysis failed', 'warning');
+            }
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        function quickAction(action) {
+            const actions = {
+                'explain': 'Can you explain how quantum computing works in simple terms?',
+                'analyze': 'Help me analyze data trends and patterns',
+                'creative': 'Write a creative short story about AI and humans working together',
+                'code': 'Help me write a Python function to sort a list',
+                'ai-demo': 'Show me what advanced AI capabilities you have'
             };
-            input.click();
+            
+            document.getElementById('chatInput').value = actions[action] || 'Hello! What can you help me with?';
+            sendMessage();
         }
 
-        function openCamera() {
-            addMessage('📸 Camera activated! Divine vision processing enabled for prosperity insights.', 'ai');
+        function openTool(tool) {
+            const prompts = {
+                'translator': 'Please translate the following text to different languages: ',
+                'summarizer': 'Please summarize this long text for me: ',
+                'generator': 'Generate creative content about: ',
+                'code': 'Help me with programming: ',
+                'image': 'Please upload an image and I\'ll analyze it for you!',
+                'data': 'Please upload a CSV or Excel file and I\'ll process the data for you!'
+            };
+            
+            const input = document.getElementById('chatInput');
+            input.value = prompts[tool] || 'Help me with: ';
+            input.focus();
+            
+            if (tool === 'image' || tool === 'data') {
+                document.getElementById('fileInput').click();
+            }
         }
 
-        function openFolder() {
-            addMessage('📁 Folder access granted! Sacred file organization system activated.', 'ai');
+        function clearChat() {
+            if (confirm('Are you sure you want to clear the chat history?')) {
+                document.getElementById('chatMessages').innerHTML = `
+                    <div class="chat-message ai-message message-bubble p-4 rounded-2xl">
+                        <div class="flex items-start space-x-3">
+                            <div class="w-8 h-8 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center">
+                                🪷
+                            </div>
+                            <div>
+                                <p class="font-medium mb-1">Lakshmi AI</p>
+                                <p>Namaste! I'm Lakshmi AI, your advanced AI assistant. I can help you with analysis, conversations, file processing, and much more. How can I assist you today?</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                chatHistory = [];
+                conversationId = generateConversationId();
+                saveChatHistory();
+                showNotification('🗑️ Chat cleared successfully!', 'success');
+            }
         }
 
-        function createDocument() {
-            addMessage('📄 Document creation blessed by Lakshmi! Prosperity templates ready.', 'ai');
+        function exportChat() {
+            if (chatHistory.length === 0) {
+                showNotification('📝 No chat history to export', 'info');
+                return;
+            }
+
+            const chatData = {
+                exported_at: new Date().toISOString(),
+                conversation_id: conversationId,
+                total_messages: chatHistory.length,
+                messages: chatHistory.map(item => ({
+                    timestamp: item.timestamp,
+                    user_message: item.message,
+                    ai_response: item.response
+                }))
+            };
+
+            const blob = new Blob([JSON.stringify(chatData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `lakshmi-ai-chat-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            showNotification('📥 Chat history exported successfully!', 'success');
         }
 
-        function generateChart() {
-            addMessage('📊 Divine charts manifesting! Golden data visualization in progress.', 'ai');
+        function saveChatHistory() {
+            try {
+                localStorage.setItem('lakshmi-chat-history', JSON.stringify(chatHistory));
+            } catch (error) {
+                console.error('Failed to save chat history:', error);
+            }
         }
 
-        function shareChat() {
-            addMessage('🔗 Sacred conversation shared! Spreading divine wisdom and prosperity.', 'ai');
+        function loadChatHistory() {
+            try {
+                const saved = localStorage.getItem('lakshmi-chat-history');
+                if (saved) {
+                    chatHistory = JSON.parse(saved);
+                }
+            } catch (error) {
+                console.error('Failed to load chat history:', error);
+                chatHistory = [];
+            }
         }
 
-        function exportData() {
-            addMessage('💾 Divine data exported! Your prosperity insights are preserved.', 'ai');
-        }
-
-        function toggleVoice() {
-            addMessage('🎤 Divine voice recognition activated! Speak your desires for abundance.', 'ai');
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 transform translate-x-full max-w-sm`;
+            
+            const colors = {
+                success: 'bg-green-500 text-white',
+                error: 'bg-red-500 text-white',
+                info: 'bg-blue-500 text-white',
+                warning: 'bg-yellow-500 text-black'
+            };
+            
+            notification.className += ` ${colors[type] || colors.info}`;
+            notification.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <span>${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" class="ml-3 text-white hover:text-gray-200">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Animate in
+            setTimeout(() => {
+                notification.style.transform = 'translateX(0)';
+            }, 100);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.style.transform = 'translateX(100%)';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.parentNode.removeChild(notification);
+                        }
+                    }, 300);
+                }
+            }, 5000);
         }
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9754c814c46f387e',t:'MTc1NjIyNjUzOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9755586d453fa738',t:'MTc1NjIzMjQ1MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
