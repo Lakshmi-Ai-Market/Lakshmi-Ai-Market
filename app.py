@@ -732,36 +732,11 @@ def reset_password():
 def signup_view():
     return render_template('signup.html')
 
-
-@app.route('/dashboard')
-def dashboard():
-    if 'user_id' not in session:
-        return redirect(url_for('index'))
-
-    return render_template('dashboard.html',
-                           user=session.get('user_id'),
-                           auth_method=session.get('auth_method'),
-                           login_time=session.get('login_time'))
-
-
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('index'))
-
-
         
-    
-@app.route('/dashboard')
-def dashboard():
-    if 'user_id' not in session:
-        return redirect(url_for('index'))
-    
-    return render_template('dashboard.html', 
-                         user=session.get('user_id'),
-                         auth_method=session.get('auth_method'),
-                         login_time=session.get('login_time'))
-
 @app.route('/logout')
 def logout():
     session.clear()
