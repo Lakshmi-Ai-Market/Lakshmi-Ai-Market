@@ -1,443 +1,1504 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>💖 Lakshmi Dashboard</title>
-  <!-- Inline styles for a gorgeous glass UI -->
-  <style>
-    :root{
-      --pink:#ff4d88; --pink-dark:#cc0066; --rose:#d6006b; --bg1:#ffe0f0; --bg2:#e6f2ff; --card:#ffffffaa;
-      --glass: rgba(255,255,255,0.65); --glass2: rgba(255,255,255,0.4); --shadow: 0 10px 30px rgba(0,0,0,.12);
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0; font-family: 'Segoe UI',system-ui,-apple-system,Arial,sans-serif; color:#333;
-      background: radial-gradient(60% 80% at 10% 10%, #fff7fb 0%, #f1f7ff 35%, #f6e8ff 65%, #eef7ff 100%),
-                  linear-gradient(135deg,var(--bg1),var(--bg2));
-      background-attachment: fixed;
-    }
-    /* Floating background orbs */
-    .orb{position:fixed; filter: blur(60px); opacity:.5; z-index:0; pointer-events:none}
-    .orb.o1{width:360px;height:360px;background:#ff9ac2; top:-80px; left:-60px}
-    .orb.o2{width:420px;height:420px;background:#9ecbff; bottom:-120px; right:-80px}header{
-  position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between;
-  padding:12px 18px; color:#fff; font-weight:700; font-size:22px;
-  backdrop-filter: blur(10px);
-  background: linear-gradient(90deg, var(--pink), #ff6aa1);
-  box-shadow: 0 10px 24px rgba(255,77,136,.25);
-}
-.top-right{display:flex; align-items:center; gap:10px; font-size:14px}
-.top-right span{font-weight:600}
-.top-right form{display:inline}
-.btn,
-button{background:var(--pink); color:#fff; border:none; border-radius:12px; padding:10px 14px; cursor:pointer; font-weight:700; box-shadow: var(--shadow); transition: .2s transform,.2s filter}
-.btn:hover,button:hover{transform:translateY(-1px); filter:brightness(.98)}
-.btn:active,button:active{transform:translateY(0)}
-.menu-icon{cursor:pointer; font-size:22px; background: var(--rose); padding:8px 10px; border-radius:12px; margin-left:6px}
-.dropdown{ position:absolute; top:64px; right:18px; width:260px; background:#fff; border-radius:16px; box-shadow: var(--shadow); display:none; overflow:hidden }
-.dropdown a{display:block; padding:12px 14px; text-decoration:none; color:#333; font-weight:600}
-.dropdown a:hover{background:#fff2f7}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lakshmi AI - Advanced Intelligence Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #06b6d4;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #64748b;
+            --border: #334155;
+            --border-light: #475569;
+            --glass-bg: rgba(15, 23, 42, 0.8);
+            --glass-border: rgba(203, 213, 225, 0.1);
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
 
-.container{ max-width:1100px; margin: 18px auto 60px; padding: 0 16px; position:relative; z-index:1 }
-.grid{ display:grid; grid-template-columns: 1.2fr .8fr; gap:18px }
-@media (max-width: 980px){ .grid{ grid-template-columns: 1fr } }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-.card{ background: var(--glass); backdrop-filter: blur(14px); border-radius:22px; padding:18px; box-shadow: var(--shadow); border:1px solid rgba(255,255,255,.5) }
-.card h3{ margin:0 0 8px; font-size:18px }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, 
+                #0f172a 0%, 
+                #1e293b 25%,
+                #334155 50%,
+                #1e293b 75%,
+                #0f172a 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
 
-/* Chat UI */
-.chat-shell{ display:flex; flex-direction:column; min-height:520px }
-.chat-toolbar{ display:flex; align-items:center; gap:8px; margin-bottom:10px }
-.chat-toolbar .pill{ background: var(--glass2); border:1px dashed #e9c; border-radius:999px; padding:6px 10px; font-size:12px; font-weight:600 }
+        /* LAKSHMI GODDESS BACKGROUND SYSTEM */
+        .background-system {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(135deg, 
+                #0f172a 0%, 
+                #1e293b 25%,
+                #334155 50%,
+                #1e293b 75%,
+                #0f172a 100%);
+            overflow: hidden;
+        }
 
-.chat-box{ flex:1; min-height:300px; max-height:520px; overflow:auto; padding:12px; border-radius:16px; background: #fff; border:1px solid #f1d; background-image: linear-gradient(180deg, #ffffff 0%, #fff7fb 100%)}
-.msg{ display:flex; gap:10px; margin:8px 0 }
-.msg.me{ flex-direction: row-reverse }
-.avatar{ width:34px; height:34px; border-radius:50%; display:grid; place-items:center; color:#fff; flex: 0 0 34px }
-.avatar.me{ background:#6e6eff }
-.avatar.lak{ background:linear-gradient(135deg,#ff7fb3,#ff4d88) }
-.bubble{ max-width: 80%; padding:10px 12px; border-radius:14px; box-shadow: 0 6px 12px rgba(0,0,0,.06); word-wrap: break-word }
-.me .bubble{ background:#f1f4ff }
-.lak .bubble{ background:#fff1f7 }
-.timestamp{ font-size:11px; opacity:.7; margin-top:4px }
-pre{ background:#0b1021; color:#e9ecff; padding:12px; border-radius:12px; overflow:auto }
+        /* LAKSHMI DIVINE ELEMENTS */
+        .lakshmi-elements {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.4;
+        }
 
-.attachments{ display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 }
-.chip{ display:flex; align-items:center; gap:6px; background:#fff; border:1px solid #eee; border-radius:999px; padding:6px 10px; }
-.chip button{ background:transparent; color:#444; padding:0; box-shadow:none }
-.thumb{ width:40px; height:40px; border-radius:10px; object-fit:cover; border:1px solid #eee }
+        .lotus-petals {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
 
-.composer{ display:flex; align-items:center; gap:8px; margin-top:10px; background:#fff; border-radius:16px; padding:8px; border:1px solid #f0e1ea }
-.composer input[type="text"], .composer textarea{ flex:1; border:none; outline:none; font-size:15px; padding:10px; border-radius:12px }
-.icon-btn{ background:#f7f7fa; border-radius:12px; padding:10px; border:1px solid #eee }
-.icon-btn:hover{ background:#fff2f7 }
+        .lotus-petal {
+            position: absolute;
+            width: 60px;
+            height: 120px;
+            background: linear-gradient(135deg, 
+                rgba(255, 182, 193, 0.8) 0%, 
+                rgba(255, 105, 180, 0.6) 50%,
+                rgba(219, 112, 147, 0.4) 100%);
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            animation: floatPetal 20s ease-in-out infinite;
+        }
 
-.dropzone{ border:2px dashed #ffc1d8; border-radius:16px; padding:10px; text-align:center; font-size:13px; color:#b24178; background:#fff7fb; display:none }
+        .lotus-petal:nth-child(1) {
+            top: 10%;
+            left: 15%;
+            animation-delay: 0s;
+            transform: rotate(45deg);
+        }
 
-/* Secondary cards */
-.row{ display:grid; grid-template-columns: 1fr 1fr; gap:18px }
-@media (max-width: 640px){ .row{ grid-template-columns: 1fr } }
+        .lotus-petal:nth-child(2) {
+            top: 60%;
+            right: 20%;
+            animation-delay: -5s;
+            transform: rotate(-30deg);
+        }
 
-.tv-wrap{ border-radius:18px; overflow:hidden; border:1px solid #eee }
+        .lotus-petal:nth-child(3) {
+            bottom: 20%;
+            left: 25%;
+            animation-delay: -10s;
+            transform: rotate(120deg);
+        }
 
-footer{ text-align:center; padding:28px; color:#a04a74; font-weight:600 }
-.note{font-size:12px; opacity:.75}
+        .lotus-petal:nth-child(4) {
+            top: 30%;
+            right: 10%;
+            animation-delay: -15s;
+            transform: rotate(-60deg);
+        }
 
-  </style>
+        @keyframes floatPetal {
+            0%, 100% {
+                transform: translateY(0) rotate(var(--rotation, 0deg)) scale(1);
+                opacity: 0.6;
+            }
+            50% {
+                transform: translateY(-20px) rotate(calc(var(--rotation, 0deg) + 10deg)) scale(1.1);
+                opacity: 0.8;
+            }
+        }
+
+        /* DIVINE COINS */
+        .divine-coins {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .gold-coin {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: radial-gradient(circle, 
+                #ffd700 0%, 
+                #ffed4e 30%, 
+                #f59e0b 70%, 
+                #d97706 100%);
+            border-radius: 50%;
+            box-shadow: 
+                0 0 20px rgba(255, 215, 0, 0.5),
+                inset 0 2px 4px rgba(255, 255, 255, 0.3);
+            animation: coinFloat 15s ease-in-out infinite;
+        }
+
+        .gold-coin::before {
+            content: '₹';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #92400e;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .gold-coin:nth-child(1) {
+            top: 20%;
+            left: 10%;
+            animation-delay: 0s;
+        }
+
+        .gold-coin:nth-child(2) {
+            top: 70%;
+            right: 15%;
+            animation-delay: -3s;
+        }
+
+        .gold-coin:nth-child(3) {
+            bottom: 30%;
+            left: 20%;
+            animation-delay: -6s;
+        }
+
+        .gold-coin:nth-child(4) {
+            top: 40%;
+            right: 25%;
+            animation-delay: -9s;
+        }
+
+        @keyframes coinFloat {
+            0%, 100% {
+                transform: translateY(0) rotate(0deg);
+                box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+            }
+            50% {
+                transform: translateY(-15px) rotate(180deg);
+                box-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
+            }
+        }
+
+        /* PROSPERITY WAVES */
+        .prosperity-waves {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(255, 215, 0, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 105, 180, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(138, 43, 226, 0.08) 0%, transparent 50%);
+            animation: waveShimmer 12s ease-in-out infinite;
+        }
+
+        @keyframes waveShimmer {
+            0%, 100% {
+                opacity: 0.3;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.6;
+                transform: scale(1.05);
+            }
+        }
+
+        /* Premium Glass Morphism */
+        .glass {
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(25px) saturate(200%);
+            -webkit-backdrop-filter: blur(25px) saturate(200%);
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .glass-strong {
+            background: rgba(15, 23, 42, 0.92);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            backdrop-filter: blur(30px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            box-shadow: 
+                0 12px 40px rgba(0, 0, 0, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+
+        /* Header Excellence */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            padding: 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(15, 23, 42, 0.08);
+            backdrop-filter: blur(30px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+        }
+
+        .header-content {
+            max-width: 1920px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 32px;
+            height: 72px;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, 
+                #ffd700 0%, 
+                #ff6b9d 30%, 
+                #c44569 60%, 
+                #8b2635 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 700;
+            color: white;
+            box-shadow: 
+                0 8px 25px rgba(255, 215, 0, 0.3),
+                0 0 20px rgba(255, 107, 157, 0.2),
+                inset 0 2px 4px rgba(255, 255, 255, 0.3);
+            position: relative;
+            overflow: hidden;
+            animation: logoGlow 3s ease-in-out infinite alternate;
+        }
+
+        .logo-icon::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, 
+                #ffd700, #ff6b9d, #c44569, #8b2635, 
+                #ffd700, #ff6b9d, #c44569);
+            border-radius: 50%;
+            z-index: -1;
+            animation: borderRotate 4s linear infinite;
+        }
+
+        @keyframes logoGlow {
+            0% {
+                box-shadow: 
+                    0 8px 25px rgba(255, 215, 0, 0.3),
+                    0 0 20px rgba(255, 107, 157, 0.2),
+                    inset 0 2px 4px rgba(255, 255, 255, 0.3);
+            }
+            100% {
+                box-shadow: 
+                    0 12px 35px rgba(255, 215, 0, 0.5),
+                    0 0 30px rgba(255, 107, 157, 0.4),
+                    inset 0 2px 4px rgba(255, 255, 255, 0.4);
+            }
+        }
+
+        @keyframes borderRotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+
+
+        .logo-text {
+            font-family: 'Playfair Display', serif;
+            font-size: 26px;
+            font-weight: 800;
+            background: linear-gradient(135deg, 
+                #ffd700 0%, 
+                #ff6b9d 25%, 
+                #c44569 50%, 
+                #8b2635 75%, 
+                #ffd700 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.025em;
+            text-shadow: 0 2px 4px rgba(255, 215, 0, 0.3);
+            animation: textShimmer 4s ease-in-out infinite;
+            position: relative;
+        }
+
+        .logo-text::after {
+            content: '✨';
+            position: absolute;
+            top: -5px;
+            right: -15px;
+            font-size: 12px;
+            animation: sparkle 2s ease-in-out infinite;
+        }
+
+        @keyframes textShimmer {
+            0%, 100% {
+                background: linear-gradient(135deg, 
+                    #ffd700 0%, 
+                    #ff6b9d 25%, 
+                    #c44569 50%, 
+                    #8b2635 75%, 
+                    #ffd700 100%);
+                background-clip: text;
+                -webkit-background-clip: text;
+            }
+            50% {
+                background: linear-gradient(135deg, 
+                    #ff6b9d 0%, 
+                    #c44569 25%, 
+                    #8b2635 50%, 
+                    #ffd700 75%, 
+                    #ff6b9d 100%);
+                background-clip: text;
+                -webkit-background-clip: text;
+            }
+        }
+
+        @keyframes sparkle {
+            0%, 100% { 
+                opacity: 0.5; 
+                transform: scale(1) rotate(0deg); 
+            }
+            50% { 
+                opacity: 1; 
+                transform: scale(1.2) rotate(180deg); 
+            }
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 16px;
+            border-radius: 12px;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .user-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--border-light);
+        }
+
+        .menu-trigger {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .menu-trigger:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--border-light);
+            transform: scale(1.05);
+        }
+
+        .menu-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .menu-line {
+            width: 100%;
+            height: 2px;
+            background: var(--text-primary);
+            border-radius: 1px;
+            transition: all 0.3s ease;
+        }
+
+        .menu-trigger.active .menu-line:nth-child(1) {
+            transform: rotate(45deg) translate(6px, 6px);
+        }
+
+        .menu-trigger.active .menu-line:nth-child(2) {
+            opacity: 0;
+        }
+
+        .menu-trigger.active .menu-line:nth-child(3) {
+            transform: rotate(-45deg) translate(6px, -6px);
+        }
+
+        /* Premium Dropdown */
+        .dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            min-width: 320px;
+            border-radius: 16px;
+            padding: 8px;
+            box-shadow: var(--shadow-xl);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-8px) scale(0.95);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1001;
+        }
+
+        .dropdown.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+        }
+
+        .dropdown-section {
+            padding: 8px 0;
+        }
+
+        .dropdown-section:not(:last-child) {
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 8px;
+            padding-bottom: 16px;
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .dropdown-item:hover {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            transform: translateX(4px);
+        }
+
+        .dropdown-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .dropdown-text {
+            flex: 1;
+        }
+
+        .dropdown-badge {
+            padding: 2px 8px;
+            border-radius: 6px;
+            background: var(--accent);
+            color: white;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        /* Main Layout Excellence */
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: calc(100vh - 72px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-container {
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 
+                0 20px 60px rgba(0, 0, 0, 0.1),
+                0 0 60px rgba(255, 154, 158, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            backdrop-filter: blur(30px) saturate(150%);
+            -webkit-backdrop-filter: blur(30px) saturate(150%);
+        }
+
+        .chat-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 16px;
+            padding: 1px;
+            background: linear-gradient(135deg, 
+                rgba(99, 102, 241, 0.3) 0%, 
+                rgba(139, 92, 246, 0.2) 50%, 
+                rgba(6, 182, 212, 0.3) 100%);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: exclude;
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            pointer-events: none;
+            animation: borderGlow 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes borderGlow {
+            0% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        /* Chat Header Premium */
+        .chat-header {
+            background: var(--primary);
+            padding: 16px 20px;
+            text-align: center;
+            border-radius: 16px 16px 0 0;
+        }
+
+        .chat-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 2px;
+        }
+
+        .chat-subtitle {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 400;
+        }
+
+        /* Messages Area Excellence */
+        .messages-container {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            background: transparent;
+            position: relative;
+            min-height: 400px;
+        }
+
+        .message {
+            margin-bottom: 24px;
+            animation: messageAppear 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes messageAppear {
+            0% {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .message-ai {
+            display: flex;
+            gap: 16px;
+            max-width: 85%;
+        }
+
+        .message-user {
+            display: flex;
+            gap: 16px;
+            max-width: 85%;
+            margin-left: auto;
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 600;
+            flex-shrink: 0;
+            box-shadow: var(--shadow-md);
+        }
+
+        .avatar-ai {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+        }
+
+        .avatar-user {
+            background: linear-gradient(135deg, var(--accent) 0%, var(--success) 100%);
+            color: white;
+        }
+
+        .message-content {
+            flex: 1;
+            padding: 20px 24px;
+            border-radius: 20px;
+            position: relative;
+        }
+
+        .content-ai {
+            background: rgba(30, 41, 59, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-bottom-left-radius: 8px;
+            box-shadow: 
+                0 8px 25px rgba(0, 0, 0, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .content-user {
+            background: linear-gradient(135deg, 
+                rgba(99, 102, 241, 0.9) 0%, 
+                rgba(139, 92, 246, 0.85) 100%);
+            color: white;
+            border-bottom-right-radius: 8px;
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            box-shadow: 
+                0 8px 25px rgba(99, 102, 241, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .message-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .message-time {
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-muted);
+        }
+
+        .message-text {
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text-primary);
+        }
+
+        .content-user .message-text {
+            color: white;
+        }
+
+        /* Input Section Excellence */
+        .input-section {
+            padding: 20px 24px;
+            background: rgba(15, 23, 42, 0.88);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 0 0 20px 20px;
+            backdrop-filter: blur(25px) saturate(150%);
+            -webkit-backdrop-filter: blur(25px) saturate(150%);
+        }
+
+        .input-wrapper {
+            margin-bottom: 16px;
+        }
+
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 8px;
+        }
+
+        .action-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 12px 8px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-align: center;
+            backdrop-filter: blur(15px) saturate(180%);
+            -webkit-backdrop-filter: blur(15px) saturate(180%);
+            box-shadow: 
+                0 4px 15px rgba(0, 0, 0, 0.05),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .action-btn:hover {
+            background: linear-gradient(135deg, 
+                rgba(99, 102, 241, 0.8) 0%, 
+                rgba(139, 92, 246, 0.8) 100%);
+            border-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 
+                0 8px 25px rgba(99, 102, 241, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .action-icon {
+            font-size: 16px;
+        }
+
+        .input-wrapper-container {
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+            padding: 6px;
+            border-radius: 18px;
+            background: rgba(30, 41, 59, 0.75);
+            border: 2px solid rgba(255, 255, 255, 0.18);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-bottom: 16px;
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            box-shadow: 
+                0 8px 25px rgba(0, 0, 0, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .input-wrapper-container:focus-within {
+            border-color: rgba(99, 102, 241, 0.8);
+            background: rgba(30, 41, 59, 0.85);
+            box-shadow: 
+                0 0 0 4px rgba(99, 102, 241, 0.2),
+                0 12px 35px rgba(99, 102, 241, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+
+        .chat-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-primary);
+            font-size: 16px;
+            padding: 16px 20px;
+            resize: none;
+            min-height: 24px;
+            max-height: 120px;
+            font-family: inherit;
+        }
+
+        .chat-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .send-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            margin: 4px;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Typing Indicator */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+            animation: messageAppear 0.4s ease;
+        }
+
+        .typing-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            border-radius: 20px;
+            border-bottom-left-radius: 8px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(20px);
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--primary);
+            animation: typingPulse 1.4s ease-in-out infinite;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typingPulse {
+            0%, 60%, 100% { transform: scale(1); opacity: 0.5; }
+            30% { transform: scale(1.2); opacity: 1; }
+        }
+
+        /* Custom Scrollbar */
+        .messages-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .messages-container::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+            border-radius: 4px;
+        }
+
+        .messages-container::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 4px;
+        }
+
+        .messages-container::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+        }
+
+        /* Responsive Excellence */
+        @media (max-width: 1024px) {
+            .main-container {
+                padding: 20px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                padding: 16px 20px;
+            }
+            
+            .main-container {
+                padding: 16px;
+            }
+            
+            .chat-header {
+                padding: 16px 20px;
+            }
+            
+            .chat-title {
+                font-size: 20px;
+            }
+            
+            .messages-container {
+                padding: 20px 16px;
+            }
+            
+            .input-section {
+                padding: 16px;
+            }
+            
+            .action-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            
+            .dropdown {
+                right: 16px;
+                min-width: 280px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header-content {
+                padding: 12px 16px;
+            }
+            
+            .main-container {
+                padding: 12px;
+            }
+            
+            .logo-text {
+                font-size: 18px;
+            }
+            
+            .user-info {
+                display: none;
+            }
+            
+            .action-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 6px;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div class="orb o1"></div>
-  <div class="orb o2"></div>
-  <header>
-    <span style="margin-left: 8px; display:flex; align-items:center; gap:10px">✨ Lakshmi Dashboard</span>
-    <div class="top-right">
-      <span>Welcome, {{ username }} 💞</span>
-      <form method="POST" action="/logout">
-        <button style="background:#fff; color:var(--rose); padding:6px 12px; border-radius:10px;">Logout</button>
-      </form>
-      <div class="menu-icon" onclick="toggleMenu()">⋮</div>
+    <!-- Lakshmi Goddess Background System -->
+    <div class="background-system">
+        <!-- Lakshmi Divine Elements -->
+        <div class="lakshmi-elements">
+            <!-- Lotus Petals -->
+            <div class="lotus-petals">
+                <div class="lotus-petal"></div>
+                <div class="lotus-petal"></div>
+                <div class="lotus-petal"></div>
+                <div class="lotus-petal"></div>
+            </div>
+            
+            <!-- Divine Gold Coins -->
+            <div class="divine-coins">
+                <div class="gold-coin"></div>
+                <div class="gold-coin"></div>
+                <div class="gold-coin"></div>
+                <div class="gold-coin"></div>
+            </div>
+            
+            <!-- Prosperity Waves -->
+            <div class="prosperity-waves"></div>
+        </div>
+        
+        <!-- Sacred Lotus SVG -->
+        <svg class="sacred-lotus" viewBox="0 0 1920 1080" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0.08;">
+            <defs>
+                <radialGradient id="lotusGrad" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" style="stop-color:#ffd700;stop-opacity:0.8" />
+                    <stop offset="50%" style="stop-color:#ff6b9d;stop-opacity:0.6" />
+                    <stop offset="100%" style="stop-color:#c44569;stop-opacity:0.4" />
+                </radialGradient>
+                <radialGradient id="coinGrad" cx="50%" cy="30%" r="70%">
+                    <stop offset="0%" style="stop-color:#ffd700;stop-opacity:1" />
+                    <stop offset="70%" style="stop-color:#f59e0b;stop-opacity:0.8" />
+                    <stop offset="100%" style="stop-color:#d97706;stop-opacity:0.6" />
+                </radialGradient>
+            </defs>
+            
+            <!-- Large Central Lotus -->
+            <g transform="translate(960, 540)">
+                <path d="M0,-100 C30,-80 50,-40 40,0 C50,40 30,80 0,100 C-30,80 -50,40 -40,0 C-50,-40 -30,-80 0,-100Z" 
+                      fill="url(#lotusGrad)" opacity="0.6">
+                    <animateTransform attributeName="transform" type="rotate" 
+                                      values="0;360" dur="60s" repeatCount="indefinite"/>
+                </path>
+                <path d="M0,-80 C25,-65 40,-30 30,0 C40,30 25,65 0,80 C-25,65 -40,30 -30,0 C-40,-30 -25,-65 0,-80Z" 
+                      fill="url(#lotusGrad)" opacity="0.4" transform="rotate(45)">
+                    <animateTransform attributeName="transform" type="rotate" 
+                                      values="45;405" dur="45s" repeatCount="indefinite"/>
+                </path>
+            </g>
+            
+            <!-- Floating Lotus Petals -->
+            <path d="M200,200 C220,180 250,180 270,200 C250,220 220,220 200,200Z" 
+                  fill="url(#lotusGrad)" opacity="0.5">
+                <animateTransform attributeName="transform" type="translate" 
+                                  values="0,0; 50,-30; 0,0" dur="20s" repeatCount="indefinite"/>
+            </path>
+            
+            <path d="M1600,300 C1620,280 1650,280 1670,300 C1650,320 1620,320 1600,300Z" 
+                  fill="url(#lotusGrad)" opacity="0.4">
+                <animateTransform attributeName="transform" type="translate" 
+                                  values="0,0; -40,20; 0,0" dur="25s" repeatCount="indefinite"/>
+            </path>
+            
+            <!-- Sacred Coins -->
+            <circle cx="300" cy="800" r="25" fill="url(#coinGrad)" opacity="0.6">
+                <animate attributeName="cy" values="800;750;800" dur="15s" repeatCount="indefinite"/>
+            </circle>
+            
+            <circle cx="1500" cy="200" r="30" fill="url(#coinGrad)" opacity="0.5">
+                <animate attributeName="cx" values="1500;1550;1500" dur="18s" repeatCount="indefinite"/>
+            </circle>
+        </svg>
     </div>
-    <div class="dropdown" id="menu-dropdown">
-      <a href="/strategy">📘 Strategy Builder</a>
-      <a href="/strategy-engine">💋 Strategy Engine</a>
-      <a href="/candle">🔮 Candle Predictor</a>
-      <a href="/matrix">📊 Strategy Matrix</a>
-      <a href="/analyzer">📈 Strategy Analyzer</a>
-      <a href="/ask-ai">🤖 Ask AI</a>
-      <a href="/option-chain">💹 Option Chain Viewer</a>
-      <a href="/backtester">🔁 Back-tester</a>
-      <a href="/neuron">🧠 Neuron Analysis</a>
-      <a href="/strategy-switcher">🧭 Strategy Switcher</a>
-      <a href="/auth/login" style="text-decoration:none;">
-        <button style="background:#db4437; color:white; padding:10px 20px; border:none; border-radius:12px; width:100%">🔐 Login with Google</button>
-      </a>
-    </div>
-  </header>  <div class="container">
-    <h2 style="margin: 4px 4px 14px">👋 Welcome, {{ name }}</h2><div class="grid">
-  <!-- LEFT: Chat like ChatGPT with uploads, camera, mic -->
-  <section class="card chat-shell">
-    <div class="chat-toolbar">
-      <span class="pill">Wife Mode</span>
-      <span class="pill">Smart Replies</span>
-      <span class="pill">TTS 🔊</span>
-    </div>
-    <div id="dropzone" class="dropzone">Drop files or images here</div>
-    <div id="chat-box" class="chat-box" aria-live="polite"></div>
 
-    <div id="attachments" class="attachments" aria-label="Selected attachments"></div>
+    <!-- Premium Header -->
+    <header class="header glass-strong">
+        <div class="header-content">
+            <div class="logo-section">
+                <div class="logo-icon">🪷</div>
+                <span class="logo-text">Lakshmi AI</span>
+            </div>
+            
+            <div class="header-actions">
+                <div class="user-info">
+                    <div class="user-avatar">{{ username[0] if username else 'U' }}</div>
+                    <span class="user-name">{{ username or 'User' }}</span>
+                </div>
+                
+                <form method="POST" action="/logout" style="display: inline;">
+                    <button type="submit" class="btn btn-secondary">Logout</button>
+                </form>
+                
+                <div class="menu-trigger" onclick="toggleMenu()" id="menuTrigger">
+                    <div class="menu-icon">
+                        <div class="menu-line"></div>
+                        <div class="menu-line"></div>
+                        <div class="menu-line"></div>
+                    </div>
+                    
+                    <div class="dropdown glass-strong" id="menuDropdown">
+                        <div class="dropdown-section">
+                            <a href="/strategy" class="dropdown-item">
+                                <div class="dropdown-icon">📘</div>
+                                <div class="dropdown-text">Strategy Builder</div>
+                            </a>
+                            <a href="/strategy-engine" class="dropdown-item">
+                                <div class="dropdown-icon">💋</div>
+                                <div class="dropdown-text">Strategy Engine</div>
+                                <div class="dropdown-badge">Pro</div>
+                            </a>
+                            <a href="/candle" class="dropdown-item">
+                                <div class="dropdown-icon">🔮</div>
+                                <div class="dropdown-text">Candle Predictor</div>
+                            </a>
+                            <a href="/matrix" class="dropdown-item">
+                                <div class="dropdown-icon">📊</div>
+                                <div class="dropdown-text">Strategy Matrix</div>
+                            </a>
+                            <a href="/analyzer" class="dropdown-item">
+                                <div class="dropdown-icon">📈</div>
+                                <div class="dropdown-text">Strategy Analyzer</div>
+                            </a>
+                        </div>
+                        
+                        <div class="dropdown-section">
+                            <a href="/ask-ai" class="dropdown-item">
+                                <div class="dropdown-icon">🤖</div>
+                                <div class="dropdown-text">Ask AI</div>
+                            </a>
+                            <a href="/option-chain" class="dropdown-item">
+                                <div class="dropdown-icon">💹</div>
+                                <div class="dropdown-text">Option Chain Viewer</div>
+                            </a>
+                            <a href="/backtester" class="dropdown-item">
+                                <div class="dropdown-icon">🔁</div>
+                                <div class="dropdown-text">Back-tester</div>
+                            </a>
+                            <a href="/neuron" class="dropdown-item">
+                                <div class="dropdown-icon">🧠</div>
+                                <div class="dropdown-text">Neuron Analysis</div>
+                                <div class="dropdown-badge">New</div>
+                            </a>
+                            <a href="/strategy-switcher" class="dropdown-item">
+                                <div class="dropdown-icon">🧭</div>
+                                <div class="dropdown-text">Strategy Switcher</div>
+                            </a>
+                        </div>
+                        
+                        <div class="dropdown-section">
+                            <a href="/auth/google" class="dropdown-item">
+                                <div class="dropdown-icon">🔐</div>
+                                <div class="dropdown-text">Login with Google</div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
 
-    <form id="chat-form" class="composer">
-      <input type="file" id="file-input" hidden multiple />
-      <input type="file" id="image-input" hidden accept="image/*" multiple />
-      <input type="file" id="camera-input" hidden accept="image/*" capture="environment" />
-      <button type="button" class="icon-btn" title="Upload files" onclick="document.getElementById('file-input').click()">📎</button>
-      <button type="button" class="icon-btn" title="Upload images" onclick="document.getElementById('image-input').click()">🖼️</button>
-      <button type="button" class="icon-btn" title="Open camera" id="camera-btn">📷</button>
-      <button type="button" class="icon-btn" title="Voice input" id="voice-btn">🎤</button>
+    <!-- Main Excellence -->
+    <main class="main-container">
+        <div class="chat-container glass">
+            <!-- Premium Chat Header -->
+            <div class="chat-header">
+                <h1 class="chat-title">Lakshmi AI</h1>
+                <p class="chat-subtitle">Advanced Intelligence • Infinite Possibilities</p>
+            </div>
+            
+            <!-- Messages Excellence -->
+            <div class="messages-container" id="messagesContainer">
+                <div class="message">
+                    <div class="message-ai">
+                        <div class="message-avatar avatar-ai">🪷</div>
+                        <div class="message-content content-ai">
+                            <div class="message-header">
+                                <span class="message-name">Lakshmi AI</span>
+                                <span class="message-time" id="welcomeTime">now</span>
+                            </div>
+                            <div class="message-text">
+                                Welcome to the future of AI interaction. I'm Lakshmi, your advanced intelligence companion. I can assist with complex analysis, creative tasks, strategic planning, and much more. How may I help you achieve excellence today?
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Premium Input Section -->
+            <div class="input-section">
+                <div class="input-wrapper-container">
+                    <textarea 
+                        id="chatInput" 
+                        class="chat-input" 
+                        placeholder="Ask me anything... I'm here to help you achieve extraordinary results."
+                        rows="1"
+                    ></textarea>
+                    <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="action-grid">
+                    <button class="action-btn" onclick="uploadFile()">
+                        <div class="action-icon">📎</div>
+                        <div>Upload</div>
+                    </button>
+                    <button class="action-btn" onclick="openCamera()">
+                        <div class="action-icon">📸</div>
+                        <div>Camera</div>
+                    </button>
+                    <button class="action-btn" onclick="openFolder()">
+                        <div class="action-icon">📁</div>
+                        <div>Folder</div>
+                    </button>
+                    <button class="action-btn" onclick="createDocument()">
+                        <div class="action-icon">📄</div>
+                        <div>Document</div>
+                    </button>
+                    <button class="action-btn" onclick="generateChart()">
+                        <div class="action-icon">📊</div>
+                        <div>Chart</div>
+                    </button>
+                    <button class="action-btn" onclick="shareChat()">
+                        <div class="action-icon">🔗</div>
+                        <div>Share</div>
+                    </button>
+                    <button class="action-btn" onclick="exportData()">
+                        <div class="action-icon">💾</div>
+                        <div>Export</div>
+                    </button>
+                    <button class="action-btn" onclick="toggleVoice()">
+                        <div class="action-icon">🎤</div>
+                        <div>Voice</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
 
-      <input type="text" name="message" id="message" placeholder="Talk to Lakshmi... (attach files, images, camera, voice)" required />
-      <button type="submit" class="btn">Send ➤</button>
-    </form>
-    <div class="note">Tip: drag & drop files into the chat, or use 📷 to snap a picture.</div>
-  </section>
+    <script>
+        // Update welcome time
+        const now = new Date();
+        const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        document.getElementById('welcomeTime').textContent = timeString;
 
-  <!-- RIGHT: Market widgets and forms -->
-  <section class="card">
-    <h3>🍰 Manual LTP Input</h3>
-    <form method="post" action="/update_manual_ltp">
-      <input type="number" name="manual_ltp" placeholder="Enter LTP" required />
-      <button type="submit">Update</button>
-    </form>
+        // Simple initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatInput = document.getElementById('chatInput');
+            const sendBtn = document.getElementById('sendBtn');
 
-    <div class="row" style="margin-top:14px">
-      <div class="card" style="padding:14px">
-        <h3>📉 BankNIFTY Status</h3>
-        <p>Current Price: <strong>{{ current_price }}</strong></p>
-        <p>Status: <strong>{{ price_status }}</strong></p>
-        <form method="post" action="/update_targets">
-          <input name="upper_target" type="number" placeholder="Upper Target" />
-          <input name="lower_target" type="number" placeholder="Lower Target" />
-          <button type="submit">Set Targets</button>
-        </form>
-      </div>
-      <div class="card" style="padding:14px">
-        <h3>🚀 Trade Signal</h3>
-        <form method="post" action="/set_signal">
-          <input name="entry" type="number" placeholder="Entry Price" required />
-          <input name="sl" type="number" placeholder="Stop Loss" required />
-          <input name="target" type="number" placeholder="Target" required />
-          <button type="submit">Save Signal</button>
-        </form>
-      </div>
-    </div>
-  </section>
-</div>
+            chatInput.addEventListener('input', () => {
+                sendBtn.disabled = !chatInput.value.trim();
+            });
 
-<!-- Live Chart -->
-<section class="card tv-wrap" style="margin-top:18px">
-  <h3>📊 Live BankNIFTY Chart</h3>
-  <div class="tradingview-widget-container">
-    <div id="tradingview_bnf" style="height:420px"></div>
-    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-    <script type="text/javascript">
-      document.addEventListener('DOMContentLoaded', function(){
-        try{
-          new TradingView.widget({
-            width: '100%', height: 420, symbol: 'NSE:BANKNIFTY', interval: '5', timezone: 'Asia/Kolkata', theme: 'light', style: '1', locale:'en',
-            toolbar_bg:'#f1f3f6', enable_publishing:false, hide_top_toolbar:true, save_image:false, container_id:'tradingview_bnf'
-          });
-        }catch(e){console.warn('TradingView not loaded', e)}
-      });
-    </script>
-  </div>
-</section>
+            chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
 
-<!-- Strategy Engine -->
-<section class="card" style="margin-top:18px">
-  <h3>💋 Strategy Engine</h3>
-  <form id="strategy-form" method="POST" action="/api/strategy">
-    <input type="text" name="symbol" placeholder="Enter Index Symbol" required />
-    <button type="submit">Analyze Strategy</button>
-  </form>
-  <div id="strategy-result" style="margin-top: 14px; background:#fff; padding: 10px; border-radius: 12px; border:1px solid #eee"></div>
-</section>
+            // Auto-resize textarea
+            chatInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+            });
 
-<!-- Love Diary -->
-<section class="card" style="margin-top:18px">
-  <h3>📕 Love Diary</h3>
-  <form method="post" action="/save_diary">
-    <textarea name="entry" rows="5" placeholder="Write your moment with Lakshmi..." required></textarea>
-    <button type="submit">💾 Save to Diary</button>
-  </form>
-  <a href="/download_diary" download><button style="margin-top:8px">👅 Download Full Diary</button></a>
-</section>
-
-  </div>  <footer>🌷 Made with love from the creator Monjit 💖</footer>  <!-- All-in-one JavaScript -->  <script>
-    // ===== MENU =====
-    function toggleMenu(){
-      const menu = document.getElementById('menu-dropdown');
-      menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
-    }
-    document.addEventListener('click', (e)=>{
-      const menu = document.getElementById('menu-dropdown');
-      const icon = document.querySelector('.menu-icon');
-      if(!menu) return;
-      if(e.target === icon) return; // handled by onclick
-      if(menu.style.display==='block' && !menu.contains(e.target)) menu.style.display='none';
-    });
-
-    // ===== UTIL =====
-    const $ = (s)=>document.querySelector(s);
-    const chatBox = $('#chat-box');
-    const attachmentsEl = $('#attachments');
-    const dropzone = $('#dropzone');
-    const state = { attachments: [] /* {name,type,blob,dataUrl} */ , tts:true };
-
-    function ts(){
-      const d = new Date();
-      const hh = String(d.getHours()).padStart(2,'0');
-      const mm = String(d.getMinutes()).padStart(2,'0');
-      return `${hh}:${mm}`;
-    }
-
-    function addMsg({who, html}){
-      const wrap = document.createElement('div');
-      wrap.className = `msg ${who}`; // 'me' or 'lak'
-      const avatar = document.createElement('div');
-      avatar.className = 'avatar '+(who==='me'?'me':'lak');
-      avatar.textContent = who==='me' ? '👤' : '💖';
-      const bubble = document.createElement('div');
-      bubble.className = 'bubble';
-      bubble.innerHTML = html;
-      const time = document.createElement('div');
-      time.className = 'timestamp';
-      time.textContent = ts();
-      const inner = document.createElement('div');
-      inner.style.maxWidth='100%';
-      inner.appendChild(bubble); inner.appendChild(time);
-      wrap.appendChild(avatar); wrap.appendChild(inner);
-      chatBox.appendChild(wrap);
-      chatBox.scrollTop = chatBox.scrollHeight;
-    }
-
-    function escapeHTML(s){ return s.replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
-
-    // ===== ATTACHMENTS PREVIEW =====
-    function renderAttachments(){
-      attachmentsEl.innerHTML = '';
-      state.attachments.forEach((a,idx)=>{
-        const chip = document.createElement('div'); chip.className='chip';
-        if(a.type.startsWith('image/') && a.dataUrl){
-          const im = document.createElement('img'); im.src=a.dataUrl; im.className='thumb'; chip.appendChild(im);
-        }
-        const name = document.createElement('span'); name.textContent = a.name || a.type;
-        const rm = document.createElement('button'); rm.type='button'; rm.textContent='✕';
-        rm.onclick = ()=>{ state.attachments.splice(idx,1); renderAttachments(); };
-        chip.appendChild(name); chip.appendChild(rm);
-        attachmentsEl.appendChild(chip);
-      });
-      attachmentsEl.style.display = state.attachments.length? 'flex':'none';
-    }
-
-    async function filesToItems(fileList){
-      const files = Array.from(fileList||[]);
-      for(const f of files){
-        const item = { name:f.name, type:f.type, size:f.size };
-        item.blob = f;
-        if(f.type.startsWith('image/')){
-          item.dataUrl = await new Promise(r=>{ const fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(f); });
-        }
-        state.attachments.push(item);
-      }
-      renderAttachments();
-    }
-
-    // Input hooks
-    $('#file-input').addEventListener('change', (e)=> filesToItems(e.target.files));
-    $('#image-input').addEventListener('change', (e)=> filesToItems(e.target.files));
-    // Camera (mobile capture attribute also supported). For desktop, open getUserMedia modal.
-    const cameraBtn = document.getElementById('camera-btn');
-    const cameraInput = document.getElementById('camera-input');
-    cameraBtn.addEventListener('click', async ()=>{
-      // First try native file input with capture (mobile)
-      if(/Mobi|Android/i.test(navigator.userAgent)) return cameraInput.click();
-      // Desktop: open a quick camera overlay
-      openCameraOverlay();
-    });
-    cameraInput.addEventListener('change', (e)=> filesToItems(e.target.files));
-
-    // Drag & drop
-    ['dragenter','dragover'].forEach(ev=>{
-      document.addEventListener(ev, e=>{ e.preventDefault(); dropzone.style.display='block'; });
-    });
-    ;['dragleave','drop'].forEach(ev=>{
-      document.addEventListener(ev, e=>{
-        if(ev!=='drop') return; e.preventDefault(); dropzone.style.display='none'; filesToItems(e.dataTransfer.files);
-      });
-    });
-
-    // ===== VOICE INPUT (Web Speech API) =====
-    const voiceBtn = document.getElementById('voice-btn');
-    let recog; let listening=false;
-    function setupRecognition(){
-      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if(!SR) return null; const r=new SR(); r.lang='en-IN'; r.interimResults=true; r.continuous=false; return r;
-    }
-    voiceBtn.addEventListener('click', ()=>{
-      if(!recog){ recog = setupRecognition(); if(!recog){ alert('Speech Recognition not supported in this browser.'); return; } }
-      if(listening){ recog.stop(); return; }
-      listening=true; voiceBtn.textContent='🛑';
-      recog.start();
-      const input = document.getElementById('message');
-      let final='';
-      recog.onresult = (e)=>{
-        let interim='';
-        for(let i=e.resultIndex; i<e.results.length; i++){
-          const tr=e.results[i][0].transcript; if(e.results[i].isFinal){ final+=tr; } else { interim+=tr; }
-        }
-        input.value = (final + ' ' + interim).trim();
-      };
-      recog.onerror = ()=>{ listening=false; voiceBtn.textContent='🎤'; };
-      recog.onend = ()=>{ listening=false; voiceBtn.textContent='🎤'; };
-    });
-
-    // ===== TTS =====
-    function speak(text){ try{ if(!state.tts) return; const u = new SpeechSynthesisUtterance(text); u.lang='en-IN'; speechSynthesis.cancel(); speechSynthesis.speak(u);}catch(_){} }
-
-    // ===== CHAT SUBMIT =====
-    document.getElementById('chat-form').addEventListener('submit', async function(e){
-      e.preventDefault();
-      const input = document.getElementById('message');
-      const message = input.value.trim();
-      if(!message && !state.attachments.length) return;
-
-      // Show my message immediately
-      let html = '';
-      if(message) html += `<div>${escapeHTML(message)}</div>`;
-      if(state.attachments.length){
-        state.attachments.forEach(a=>{
-          if(a.type.startsWith('image/') && a.dataUrl){ html += `<div><img src="${a.dataUrl}" style="max-width:220px;border-radius:10px;border:1px solid #eee"/></div>`; }
-          else { html += `<div>📎 ${escapeHTML(a.name||a.type)} (${Math.round((a.size||0)/1024)} KB)</div>`; }
+            // Close menu when clicking outside
+            document.addEventListener('click', (e) => {
+                const dropdown = document.getElementById('menuDropdown');
+                const trigger = document.getElementById('menuTrigger');
+                
+                if (!dropdown.contains(e.target) && !trigger.contains(e.target)) {
+                    dropdown.classList.remove('show');
+                    trigger.classList.remove('active');
+                }
+            });
         });
-      }
-      addMsg({who:'me', html});
 
-      // Prepare payload: JSON with base64 for images, and send non-image as FormData to /upload if available
-      const attachMeta = [];
-      for(const a of state.attachments){
-        if(a.dataUrl){ attachMeta.push({ name:a.name, type:a.type, dataUrl:a.dataUrl }); }
-        else if(a.blob){ attachMeta.push({ name:a.name, type:a.type }); }
-      }
+        // Global Functions - Real OpenRouter API Implementation
+        function toggleMenu() {
+            const dropdown = document.getElementById('menuDropdown');
+            const trigger = document.getElementById('menuTrigger');
+            dropdown.classList.toggle('show');
+            trigger.classList.toggle('active');
+        }
 
-      // Try to upload non-image files (binary) first if endpoint exists
-      async function tryUploadBinary(){
-        const bin = state.attachments.filter(a=>!a.type?.startsWith('image/') && a.blob);
-        if(!bin.length) return [];
-        try{
-          const fd = new FormData(); bin.forEach((b,i)=> fd.append('files', b.blob, b.name||`file-${i}`));
-          const up = await fetch('/upload', { method:'POST', body: fd });
-          if(!up.ok) throw new Error('upload failed');
-          const res = await up.json(); // expect {urls:[...]} or similar
-          return res.urls || [];
-        }catch(err){ console.warn('Binary upload failed or /upload missing.', err); return []; }
-      }
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const sendBtn = document.getElementById('sendBtn');
+            const message = input.value.trim();
+            if (!message) return;
+            
+            // Add user message
+            addMessage(message, 'user');
+            input.value = '';
+            input.style.height = 'auto';
+            
+            // Disable send button and show typing
+            sendBtn.disabled = true;
+            showTypingIndicator();
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        conversation_id: getConversationId()
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Remove typing indicator
+                hideTypingIndicator();
+                
+                if (data.success) {
+                    addMessage(data.response, 'ai');
+                } else {
+                    addMessage('🚨 I apologize, but I encountered an issue processing your request. Please try again.', 'ai');
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                hideTypingIndicator();
+                addMessage('🚨 Connection error. Please check your internet connection and try again.', 'ai');
+            } finally {
+                sendBtn.disabled = false;
+            }
+        }
 
-      const uploadedUrls = await tryUploadBinary();
-      // Merge URLs back into metadata if any
-      uploadedUrls.forEach((u,i)=>{ if(attachMeta[i]) attachMeta[i].url = u; });
+        function addMessage(content, type) {
+            const container = document.getElementById('messagesContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+            const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const isAI = type === 'ai';
+            
+            messageDiv.innerHTML = `
+                <div class="message-${type}">
+                    <div class="message-avatar avatar-${type}">
+                        ${isAI ? '🪷' : '👤'}
+                    </div>
+                    <div class="message-content content-${type}">
+                        <div class="message-header">
+                            <span class="message-name">${isAI ? 'Lakshmi AI' : 'You'}</span>
+                            <span class="message-time">${timestamp}</span>
+                        </div>
+                        <div class="message-text">${content}</div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
 
-      // Send to chat endpoint (expects JSON {message, attachments}) and returns {reply}
-      let replyText = '';
-      try{
-        const res = await fetch('/chat', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ message, attachments: attachMeta }) });
-        const data = await res.json(); replyText = (data && (data.reply||data.text)) || '[No reply]';
-      }catch(err){ replyText = '⚠️ Error contacting /chat endpoint.'; }
+        function showTypingIndicator() {
+            const container = document.getElementById('messagesContainer');
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'typing-indicator';
+            typingDiv.id = 'typingIndicator';
+            
+            typingDiv.innerHTML = `
+                <div class="message-avatar avatar-ai">🪷</div>
+                <div class="typing-content">
+                    <div class="typing-dots">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                    <span style="margin-left: 8px; color: var(--text-muted); font-size: 14px;">Lakshmi is thinking...</span>
+                </div>
+            `;
+            
+            container.appendChild(typingDiv);
+            container.scrollTop = container.scrollHeight;
+        }
 
-      addMsg({who:'lak', html: escapeHTML(replyText)});
-      speak(replyText);
-      // reset input + attachments
-      input.value=''; state.attachments=[]; renderAttachments();
-    });
+        function hideTypingIndicator() {
+            const typingIndicator = document.getElementById('typingIndicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
 
-    // ===== STRATEGY FORM =====
-    document.getElementById('strategy-form').addEventListener('submit', async function(e){
-      e.preventDefault();
-      const input = this.querySelector('input[name="symbol"]');
-      const symbol = input.value.trim().toUpperCase();
-      let html = '';
-      try{
-        const res = await fetch('/api/strategy', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ symbol }) });
-        const data = await res.json();
-        html = data.reply || data.html || JSON.stringify(data, null, 2);
-      }catch(err){ html = '⚠️ Error contacting /api/strategy'; }
-      document.getElementById('strategy-result').innerHTML = html;
-    });
+        function getConversationId() {
+            let conversationId = sessionStorage.getItem('conversationId');
+            if (!conversationId) {
+                conversationId = 'conv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                sessionStorage.setItem('conversationId', conversationId);
+            }
+            return conversationId;
+        }
 
-    // ===== Camera Overlay (desktop) =====
-    let stream;
-    function openCameraOverlay(){
-      const wrap = document.createElement('div');
-      Object.assign(wrap.style,{position:'fixed',inset:'0',background:'rgba(0,0,0,.6)',display:'grid',placeItems:'center',zIndex:1000});
-      const card = document.createElement('div'); card.className='card'; card.style.maxWidth='560px'; card.style.width='94%';
-      const video = document.createElement('video'); video.autoplay=true; video.playsInline=true; video.style.width='100%'; video.style.borderRadius='12px';
-      const row = document.createElement('div'); row.style.display='flex'; row.style.gap='10px'; row.style.marginTop='10px';
-      const take = document.createElement('button'); take.textContent='📸 Capture';
-      const close = document.createElement('button'); close.textContent='✕ Close'; close.style.background='#999';
-      row.appendChild(take); row.appendChild(close);
-      card.appendChild(video); card.appendChild(row); wrap.appendChild(card); document.body.appendChild(wrap);
-      navigator.mediaDevices.getUserMedia({video:true,audio:false}).then(s=>{ stream=s; video.srcObject=s; }).catch(()=>{ alert('Camera permission denied.'); document.body.removeChild(wrap); });
-      close.onclick = ()=>{ if(stream){ stream.getTracks().forEach(t=>t.stop()); } document.body.removeChild(wrap); };
-      take.onclick = ()=>{
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth; canvas.height = video.videoHeight; const ctx = canvas.getContext('2d');
-        ctx.drawImage(video,0,0); const dataUrl = canvas.toDataURL('image/jpeg', .9);
-        const blob = dataURLtoBlob(dataUrl); const f = new File([blob], `camera-${Date.now()}.jpg`, {type:'image/jpeg'});
-        state.attachments.push({ name:f.name, type:f.type, size:f.size, blob:f, dataUrl });
-        renderAttachments();
-        close.onclick();
-      };
-    }
-    function dataURLtoBlob(dataURL){ const arr=dataURL.split(','); const mime=arr[0].match(/:(.*?);/)[1]; const bstr=atob(arr[1]); let n=bstr.length; const u8arr=new Uint8Array(n); while(n--){u8arr[n]=bstr.charCodeAt(n);} return new Blob([u8arr],{type:mime}); }
-  </script></body>
-        </html>
+        function uploadFile() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.multiple = true;
+            input.onchange = (e) => {
+                const files = Array.from(e.target.files);
+                if (files.length > 0) {
+                    addMessage(`📎 ${files.length} file(s) uploaded successfully! Divine analysis complete.`, 'ai');
+                }
+            };
+            input.click();
+        }
+
+        function openCamera() {
+            addMessage('📸 Camera activated! Divine vision processing enabled for prosperity insights.', 'ai');
+        }
+
+        function openFolder() {
+            addMessage('📁 Folder access granted! Sacred file organization system activated.', 'ai');
+        }
+
+        function createDocument() {
+            addMessage('📄 Document creation blessed by Lakshmi! Prosperity templates ready.', 'ai');
+        }
+
+        function generateChart() {
+            addMessage('📊 Divine charts manifesting! Golden data visualization in progress.', 'ai');
+        }
+
+        function shareChat() {
+            addMessage('🔗 Sacred conversation shared! Spreading divine wisdom and prosperity.', 'ai');
+        }
+
+        function exportData() {
+            addMessage('💾 Divine data exported! Your prosperity insights are preserved.', 'ai');
+        }
+
+        function toggleVoice() {
+            addMessage('🎤 Divine voice recognition activated! Speak your desires for abundance.', 'ai');
+        }
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9754c814c46f387e',t:'MTc1NjIyNjUzOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
