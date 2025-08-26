@@ -540,12 +540,17 @@ def get_real_insider_data(period):
         return {'error': str(e)}
 
 # --- Routes ---
+
 # ✅ Login Page
 @app.route("/")
 def home():
     if "user_id" in session or "username" in session or "email" in session:
         return redirect(url_for("dashboard"))
     return redirect(url_for("login_page"))
+
+@app.route("/login", methods=["GET"])
+def login_page():
+    return render_template("login.html")
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
@@ -564,7 +569,7 @@ def signup():
         if password != confirm_password:
             return render_template("signup.html", error="Passwords do not match.")
 
-        # save into csv
+        # Save into CSV
         file_exists = os.path.isfile("users.csv")
         with open("users.csv", "a", newline='') as f:
             writer = csv.writer(f)
@@ -576,7 +581,7 @@ def signup():
         session["username"] = username
         session["user_email"] = email
         session["login_time"] = datetime.now().isoformat()
-        return redirect("/dashboard")
+        return redirect(url_for("dashboard"))
 
     return render_template("signup.html")
 
@@ -599,7 +604,7 @@ def login():
                 session["user_email"] = VALID_CREDENTIALS[username]['email']
                 session["login_time"] = datetime.now().isoformat()
                 session["auth_method"] = "password"
-                return jsonify({"success": True, "message": "Login successful", "redirect": "/dashboard"})
+                return jsonify({"success": True, "message": "Login successful", "redirect": url_for("dashboard")})
             else:
                 return jsonify({"success": False, "message": "Invalid password"}), 401
         else:
@@ -621,7 +626,7 @@ def biometric_auth():
             session["username"] = username
             session["auth_method"] = f"biometric_{method}"
             session["login_time"] = datetime.now().isoformat()
-            return jsonify({"success": True, "message": f"{method.capitalize()} authentication successful", "redirect": "/dashboard"})
+            return jsonify({"success": True, "message": f"{method.capitalize()} authentication successful", "redirect": url_for("dashboard")})
         else:
             return jsonify({"success": False, "message": "Biometric authentication not enabled for this user"}), 401
     except Exception as e:
@@ -646,7 +651,7 @@ def google_callback():
         session["user_email"] = user_info.get("email")
         session["auth_method"] = "google_oauth"
         session["login_time"] = datetime.now().isoformat()
-        return redirect("/dashboard")
+        return redirect(url_for("dashboard"))
     except Exception as e:
         print(f"Google callback error: {e}")
         return redirect(url_for("login_page"))
@@ -667,7 +672,7 @@ def facebook_callback():
         session["user_email"] = user_info.get("email")
         session["auth_method"] = "facebook_oauth"
         session["login_time"] = datetime.now().isoformat()
-        return redirect("/dashboard")
+        return redirect(url_for("dashboard"))
     except Exception as e:
         print(f"Facebook callback error: {e}")
         return redirect(url_for("login_page"))
@@ -687,7 +692,7 @@ def instagram_callback():
         session["username"] = user_info.get("username")
         session["auth_method"] = "instagram_oauth"
         session["login_time"] = datetime.now().isoformat()
-        return redirect("/dashboard")
+        return redirect(url_for("dashboard"))
     except Exception as e:
         print(f"Instagram callback error: {e}")
         return redirect(url_for("login_page"))
@@ -713,13 +718,6 @@ def reset_password():
 def logout():
     session.clear()
     return redirect(url_for("login_page"))
-
-@app.route("/dashboard")
-def dashboard():
-    if "user_id" not in session:
-        return redirect("/login")
-    name = session.get("username") or session.get("user_email")
-    return render_template("index.html", name=name, mood="happy")
 
 @app.route("/strategy")
 def strategy_page():
