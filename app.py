@@ -60,9 +60,15 @@ INDIAN_SYMBOLS = {
     'fmcg': ['HINDUNILVR.NS', 'ITC.NS', 'NESTLEIND.NS', 'BRITANNIA.NS', 'DABUR.NS']
 }
 
-app.secret_key = "lakshmi_secret_key"
-app.config['UPLOAD_FOLDER'] = 'static/voice_notes'
+app = Flask(__name__)
+app.secret_key = "your_secret_key"
 
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
+REDIRECT_URI = "https://lakshmi-ai-trades.onrender.com/auth/callback"
+
+client = WebApplicationClient(GOOGLE_CLIENT_ID)
 
 
 facebook = oauth.register(
@@ -606,59 +612,53 @@ def biometric_auth():
 
 
 # ---- OAuth (Google) ----
-@app.route("/auth/login")
-def google_login():
-    cfg = get_google_config()
-    auth_endpoint = cfg["authorization_endpoint"]
+@app.route("/login")
+def login():
+    google_provider_cfg = requests.get(GOOGLE_DISCOVERY_URL).json()
+    authorization_endpoint = google_provider_cfg["authorization_endpoint"]
 
-    params = {
-        "response_type": "code",
-        "client_id": os.getenv("GOOGLE_CLIENT_ID"),
-        "redirect_uri": REDIRECT_URI,
-        "scope": "openid email profile",
-        "access_type": "offline",
-        "prompt": "consent"
-    }
-    return redirect(f"{auth_endpoint}?{urlencode(params)}")
+    request_uri = client.prepare_request_uri(
+        authorization_endpoint,
+        redirect_uri=REDIRECT_URI,  # Must match exactly what you registered
+        scope=["openid", "email", "profile"],
+    )
+    return redirect(request_uri)
 
+# --- CALLBACK ROUTE ---
 @app.route("/auth/callback")
-def google_callback():
+def callback():
+    # Get code from Google
     code = request.args.get("code")
-    if not code:
-        return "❌ No code from Google", 400
 
-    cfg = get_google_config()
-    token_endpoint = cfg["token_endpoint"]
+    # Exchange for tokens
+    google_provider_cfg = requests.get(GOOGLE_DISCOVERY_URL).json()
+    token_endpoint = google_provider_cfg["token_endpoint"]
 
-    token_res = requests.post(
+    token_url, headers, body = client.prepare_token_request(
         token_endpoint,
-        data={
-            "code": code,
-            "client_id": os.getenv("GOOGLE_CLIENT_ID"),
-            "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
-            "redirect_uri": REDIRECT_URI,
-            "grant_type": "authorization_code"
-        },
-        headers={"Content-Type": "application/x-www-form-urlencoded"}
+        authorization_response=request.url,
+        redirect_uri=REDIRECT_URI,
+        code=code
+    )
+    token_response = requests.post(
+        token_url,
+        headers=headers,
+        data=body,
+        auth=(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET),
     )
 
-    token_json = token_res.json()
-    access_token = token_json.get("access_token")
-    if not access_token:
-        return "❌ Failed to get token from Google", 400
+    client.parse_request_body_response(json.dumps(token_response.json()))
 
-    userinfo_res = requests.get(
-        cfg["userinfo_endpoint"],
-        headers={"Authorization": f"Bearer {access_token}"}
-    )
-    userinfo = userinfo_res.json()
-    email = userinfo.get("email")
+    # Get user info
+    userinfo_endpoint = google_provider_cfg["userinfo_endpoint"]
+    uri, headers, body = client.add_token(userinfo_endpoint)
+    userinfo_response = requests.get(uri, headers=headers, data=body)
 
-    if not email:
-        return "❌ Failed to get user email", 400
+    userinfo = userinfo_response.json()
+    session["email"] = userinfo["email"]
 
-    session["email"] = email
-    return redirect("/dashboard")
+    # Redirect to dashboard
+    return redirect(url_for("index"))
 
 # ---- OAuth (Facebook) ----
 @app.route("/auth/facebook")
