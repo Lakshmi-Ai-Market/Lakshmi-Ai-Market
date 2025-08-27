@@ -63,18 +63,7 @@ INDIAN_SYMBOLS = {
 app.secret_key = "lakshmi_secret_key"
 app.config['UPLOAD_FOLDER'] = 'static/voice_notes'
 
-# --- Google OAuth Settings ---
-oauth = OAuth(app)
 
-google = oauth.register(
-    name="google",
-    client_id=os.getenv("GOOGLE_CLIENT_ID"),
-    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
-    access_token_url="https://oauth2.googleapis.com/token",
-    authorize_url="https://accounts.google.com/o/oauth2/v2/auth",
-    api_base_url="https://www.googleapis.com/oauth2/v2/",
-    client_kwargs={"scope": "openid email profile"}
-)
 
 facebook = oauth.register(
     name="facebook",
@@ -617,30 +606,59 @@ def biometric_auth():
 
 
 # ---- OAuth (Google) ----
-@app.route("/auth/google")
+@app.route("/auth/login")
 def google_login():
-    redirect_uri = url_for("google_callback", _external=True)
-    return oauth.google.authorize_redirect(redirect_uri)
+    cfg = get_google_config()
+    auth_endpoint = cfg["authorization_endpoint"]
 
-@app.route("/auth/google/callback")
+    params = {
+        "response_type": "code",
+        "client_id": os.getenv("GOOGLE_CLIENT_ID"),
+        "redirect_uri": REDIRECT_URI,
+        "scope": "openid email profile",
+        "access_type": "offline",
+        "prompt": "consent"
+    }
+    return redirect(f"{auth_endpoint}?{urlencode(params)}")
+
+@app.route("/auth/callback")
 def google_callback():
-    try:
-        token = oauth.google.authorize_access_token()
-        user_json = oauth.google.get("oauth2/v2/userinfo", token=token).json()
+    code = request.args.get("code")
+    if not code:
+        return "❌ No code from Google", 400
 
-        email = user_json.get("email")
-        name = user_json.get("name") or email
-        session['user_id'] = email
-        session['user_name'] = name
-        session['user_email'] = email
-        session['auth_method'] = 'google'
-        session['login_time'] = datetime.utcnow().isoformat()
-        session['google_token'] = token
+    cfg = get_google_config()
+    token_endpoint = cfg["token_endpoint"]
 
-        return redirect(url_for("index"))  # FIX: redirect to index route
-    except Exception as e:
-        print("Google callback error:", e)
-        return redirect(url_for("login_page"))
+    token_res = requests.post(
+        token_endpoint,
+        data={
+            "code": code,
+            "client_id": os.getenv("GOOGLE_CLIENT_ID"),
+            "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
+            "redirect_uri": REDIRECT_URI,
+            "grant_type": "authorization_code"
+        },
+        headers={"Content-Type": "application/x-www-form-urlencoded"}
+    )
+
+    token_json = token_res.json()
+    access_token = token_json.get("access_token")
+    if not access_token:
+        return "❌ Failed to get token from Google", 400
+
+    userinfo_res = requests.get(
+        cfg["userinfo_endpoint"],
+        headers={"Authorization": f"Bearer {access_token}"}
+    )
+    userinfo = userinfo_res.json()
+    email = userinfo.get("email")
+
+    if not email:
+        return "❌ Failed to get user email", 400
+
+    session["email"] = email
+    return redirect("/dashboard")
 
 # ---- OAuth (Facebook) ----
 @app.route("/auth/facebook")
