@@ -61,15 +61,22 @@ INDIAN_SYMBOLS = {
 }
 
 app = Flask(__name__)
-app.secret_key = "your_secret_key"
+app.secret_key = "lakshmi_secret_key"
+app.config['UPLOAD_FOLDER'] = 'static/voice_notes'
 
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
-REDIRECT_URI = "https://lakshmi-ai-trades.onrender.com/auth/callback"
+# Initialize OAuth
+oauth = OAuth(app)
 
-client = WebApplicationClient(GOOGLE_CLIENT_ID)
-
+# Register Google OAuth client
+google = oauth.register(
+    name="google",
+    client_id=os.getenv("GOOGLE_CLIENT_ID"),
+    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+    access_token_url="https://oauth2.googleapis.com/token",           # updated endpoint
+    authorize_url="https://accounts.google.com/o/oauth2/auth",
+    api_base_url="https://www.googleapis.com/oauth2/v2/",             # updated base
+    client_kwargs={"scope": "openid email profile"}
+)
 
 facebook = oauth.register(
     name="facebook",
@@ -612,53 +619,47 @@ def biometric_auth():
 
 
 # ---- OAuth (Google) ----
-@app.route("/login")
-def login():
-    google_provider_cfg = requests.get(GOOGLE_DISCOVERY_URL).json()
-    authorization_endpoint = google_provider_cfg["authorization_endpoint"]
-
-    request_uri = client.prepare_request_uri(
-        authorization_endpoint,
-        redirect_uri=REDIRECT_URI,  # Must match exactly what you registered
-        scope=["openid", "email", "profile"],
+@app.route("/auth/google")
+def google_login():
+    """
+    Start Google OAuth login flow.
+    """
+    # Use env variable if provided, fallback to dynamic URL
+    redirect_uri = os.getenv(
+        "GOOGLE_REDIRECT_URI",
+        url_for("google_callback", _external=True)
     )
-    return redirect(request_uri)
+    return oauth.google.authorize_redirect(redirect_uri)
 
-# --- CALLBACK ROUTE ---
 @app.route("/auth/callback")
-def callback():
-    # Get code from Google
-    code = request.args.get("code")
+def google_callback():
+    """
+    Handle Google's OAuth callback.
+    """
+    try:
+        token = oauth.google.authorize_access_token()
+        # Try userinfo endpoint
+        try:
+            user_json = oauth.google.userinfo(token=token).json()
+        except Exception:
+            # Fallback for older endpoints
+            user_json = oauth.google.get("userinfo", token=token).json()
 
-    # Exchange for tokens
-    google_provider_cfg = requests.get(GOOGLE_DISCOVERY_URL).json()
-    token_endpoint = google_provider_cfg["token_endpoint"]
+        email = user_json.get("email")
+        name = user_json.get("name") or email
 
-    token_url, headers, body = client.prepare_token_request(
-        token_endpoint,
-        authorization_response=request.url,
-        redirect_uri=REDIRECT_URI,
-        code=code
-    )
-    token_response = requests.post(
-        token_url,
-        headers=headers,
-        data=body,
-        auth=(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET),
-    )
+        # Store user info in session (adapt to your app's logic)
+        session['user_id'] = email or "google_user"
+        session['user_name'] = name
+        session['user_email'] = email
+        session['auth_method'] = 'google'
+        session['login_time'] = datetime.utcnow().isoformat()
+        session['google_token'] = token
 
-    client.parse_request_body_response(json.dumps(token_response.json()))
-
-    # Get user info
-    userinfo_endpoint = google_provider_cfg["userinfo_endpoint"]
-    uri, headers, body = client.add_token(userinfo_endpoint)
-    userinfo_response = requests.get(uri, headers=headers, data=body)
-
-    userinfo = userinfo_response.json()
-    session["email"] = userinfo["email"]
-
-    # Redirect to dashboard
-    return redirect(url_for("index"))
+        return redirect(url_for("index")  # adjust target route if needed
+    except Exception as e:
+        print("Google callback error:", e)
+        return redirect(url_for("login_page"))
 
 # ---- OAuth (Facebook) ----
 @app.route("/auth/facebook")
