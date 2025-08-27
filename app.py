@@ -64,15 +64,17 @@ app.secret_key = "lakshmi_secret_key"
 app.config['UPLOAD_FOLDER'] = 'static/voice_notes'
 
 # --- OAuth Config ---
+# Initialize OAuth
 oauth = OAuth(app)
 
+# Register Google OAuth client
 google = oauth.register(
     name="google",
     client_id=os.getenv("GOOGLE_CLIENT_ID"),
     client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
-    access_token_url="https://accounts.google.com/o/oauth2/token",
+    access_token_url="https://oauth2.googleapis.com/token",           # updated endpoint
     authorize_url="https://accounts.google.com/o/oauth2/auth",
-    api_base_url="https://www.googleapis.com/oauth2/v1/",
+    api_base_url="https://www.googleapis.com/oauth2/v2/",             # updated base
     client_kwargs={"scope": "openid email profile"}
 )
 
@@ -551,7 +553,6 @@ def login_page():
     # Renders templates/login.html
     return render_template("login.html")
 
-
 @app.route("/auth/login", methods=["POST"])
 def login():
     """
@@ -620,37 +621,45 @@ def biometric_auth():
 # ---- OAuth (Google) ----
 @app.route("/auth/google")
 def google_login():
-    redirect_uri = url_for("google_callback", _external=True)
+    """
+    Start Google OAuth login flow.
+    """
+    # Use env variable if provided, fallback to dynamic URL
+    redirect_uri = os.getenv(
+        "GOOGLE_REDIRECT_URI",
+        url_for("google_callback", _external=True)
+    )
     return oauth.google.authorize_redirect(redirect_uri)
 
-
-@app.route("/auth/google/callback")
+@app.route("/auth/callback")
 def google_callback():
+    """
+    Handle Google's OAuth callback.
+    """
     try:
         token = oauth.google.authorize_access_token()
-        # Authlib provides userinfo endpoint; .userinfo() is a convenience; fallback to get endpoint
-        user_info = None
+        # Try userinfo endpoint
         try:
-            user_info = oauth.google.userinfo(token=token)
-            user_json = user_info.json()
+            user_json = oauth.google.userinfo(token=token).json()
         except Exception:
-            user_json = oauth.google.get("oauth2/v2/userinfo", token=token).json()
+            # Fallback for older endpoints
+            user_json = oauth.google.get("userinfo", token=token).json()
 
-        # Create session (map to your user logic)
         email = user_json.get("email")
         name = user_json.get("name") or email
+
+        # Store user info in session (adapt to your app's logic)
         session['user_id'] = email or "google_user"
         session['user_name'] = name
         session['user_email'] = email
         session['auth_method'] = 'google'
         session['login_time'] = datetime.utcnow().isoformat()
-        # store token if you need later
         session['google_token'] = token
-        return redirect('/dashboard')
+
+        return redirect('/dashboard')  # adjust target route if needed
     except Exception as e:
         print("Google callback error:", e)
         return redirect(url_for("login_page"))
-
 
 # ---- OAuth (Facebook) ----
 @app.route("/auth/facebook")
