@@ -63,18 +63,16 @@ INDIAN_SYMBOLS = {
 app.secret_key = "lakshmi_secret_key"
 app.config['UPLOAD_FOLDER'] = 'static/voice_notes'
 
-# --- OAuth Config ---
-# Initialize OAuth
+# --- Google OAuth Settings ---
 oauth = OAuth(app)
 
-# Register Google OAuth client
 google = oauth.register(
     name="google",
     client_id=os.getenv("GOOGLE_CLIENT_ID"),
     client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
-    access_token_url="https://oauth2.googleapis.com/token",           # updated endpoint
-    authorize_url="https://accounts.google.com/o/oauth2/auth",
-    api_base_url="https://www.googleapis.com/oauth2/v2/",             # updated base
+    access_token_url="https://oauth2.googleapis.com/token",
+    authorize_url="https://accounts.google.com/o/oauth2/v2/auth",
+    api_base_url="https://www.googleapis.com/oauth2/v2/",
     client_kwargs={"scope": "openid email profile"}
 )
 
@@ -639,7 +637,7 @@ def google_callback():
         session['login_time'] = datetime.utcnow().isoformat()
         session['google_token'] = token
 
-        return redirect(url_for("dashboard"))  # ensure "dashboard" route exists
+        return redirect(url_for("index"))  # FIX: redirect to index route
     except Exception as e:
         print("Google callback error:", e)
         return redirect(url_for("login_page"))
