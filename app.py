@@ -621,42 +621,25 @@ def biometric_auth():
 # ---- OAuth (Google) ----
 @app.route("/auth/google")
 def google_login():
-    """
-    Start Google OAuth login flow.
-    """
-    # Use env variable if provided, fallback to dynamic URL
-    redirect_uri = os.getenv(
-        "GOOGLE_REDIRECT_URI",
-        url_for("google_callback", _external=True)
-    )
+    redirect_uri = url_for("google_callback", _external=True)
     return oauth.google.authorize_redirect(redirect_uri)
 
-@app.route("/auth/callback")
+@app.route("/auth/google/callback")
 def google_callback():
-    """
-    Handle Google's OAuth callback.
-    """
     try:
         token = oauth.google.authorize_access_token()
-        # Try userinfo endpoint
-        try:
-            user_json = oauth.google.userinfo(token=token).json()
-        except Exception:
-            # Fallback for older endpoints
-            user_json = oauth.google.get("userinfo", token=token).json()
+        user_json = oauth.google.get("oauth2/v2/userinfo", token=token).json()
 
         email = user_json.get("email")
         name = user_json.get("name") or email
-
-        # Store user info in session (adapt to your app's logic)
-        session['user_id'] = email or "google_user"
+        session['user_id'] = email
         session['user_name'] = name
         session['user_email'] = email
         session['auth_method'] = 'google'
         session['login_time'] = datetime.utcnow().isoformat()
         session['google_token'] = token
 
-        return redirect('/dashboard')  # adjust target route if needed
+        return redirect(url_for("dashboard"))  # ensure "dashboard" route exists
     except Exception as e:
         print("Google callback error:", e)
         return redirect(url_for("login_page"))
