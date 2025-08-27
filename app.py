@@ -656,7 +656,7 @@ def google_callback():
         session['login_time'] = datetime.utcnow().isoformat()
         session['google_token'] = token
 
-        return redirect(url_for("index")  # adjust target route if needed
+        return redirect(url_for("index"))  # adjust target route if needed
     except Exception as e:
         print("Google callback error:", e)
         return redirect(url_for("login_page"))
