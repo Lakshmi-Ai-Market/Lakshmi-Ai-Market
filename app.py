@@ -1515,25 +1515,34 @@ def sentiment_analysis():
 def correlation_matrix():
     """Multi-asset correlation analysis for Indian markets"""
     try:
-        data = request.json
+        data = request.get_json(force=True)
+
         # ✅ Use API key from frontend if given, otherwise fallback to .env
         api_key = data.get('api_key') or os.getenv("OPENROUTER_API_KEY", "")
         if not api_key:
             return jsonify({'error': 'No API key available'}), 400
-        # Get correlation data for Indian assets
-        symbols = INDIAN_SYMBOLS['nifty50'][:20]  # Top 20 for correlation
+
+        # ✅ Select top 20 Nifty50 stocks for correlation
+        symbols = INDIAN_SYMBOLS.get('nifty50', [])[:20]
+        if not symbols:
+            return jsonify({'error': 'No symbols found for correlation'}), 400
+
+        # ✅ Fetch real market data (ensure this helper returns a DataFrame)
         market_data = get_real_market_data(symbols)
-        
-        # Calculate correlations
+
+        if market_data is None or market_data.empty:
+            return jsonify({'error': 'Failed to fetch market data'}), 500
+
+        # ✅ Calculate correlation matrix
         correlation_matrix = calculate_correlation_matrix(symbols)
-        
-        # AI analysis
+
+        # ✅ AI analysis
         ai_prompt = f"""
         Analyze this correlation matrix for Indian stocks:
-        
+
         Correlation Data:
         {json.dumps(correlation_matrix, indent=2)}
-        
+
         Provide insights on:
         1. Strongest positive correlations
         2. Negative correlations (diversification opportunities)
@@ -1541,16 +1550,17 @@ def correlation_matrix():
         4. Portfolio diversification recommendations
         5. Risk concentration areas
         """
-        
+
         ai_analysis = call_openrouter_api(ai_prompt, api_key)
-        
+
         return jsonify({
+            'status': 'success',
+            'assets_analyzed': len(symbols),
             'correlation_matrix': correlation_matrix,
             'ai_analysis': ai_analysis,
-            'assets_analyzed': len(symbols),
             'timestamp': datetime.now().isoformat()
         })
-        
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
