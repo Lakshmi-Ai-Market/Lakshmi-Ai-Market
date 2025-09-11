@@ -1,83 +1,116 @@
+<!-- templates/strategy_engine.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>📈 Strategy Analyzer</title>
-  <link rel="stylesheet" href="/static/style.css" />
+  <meta charset="UTF-8">
+  <title>Lakshmi's Auto Strategy Engine 💋</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
-      margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to bottom right, #eaf6ff, #ffe6f7);
+      background: linear-gradient(to bottom right, #ffe4e6, #fff5f7);
+      padding: 30px;
       color: #333;
     }
-    header {
-      background: #4a90e2;
-      padding: 1rem;
-      color: white;
-      font-size: 24px;
-      font-weight: bold;
-      text-align: center;
-    }
+
     .container {
-      max-width: 800px;
-      margin: 30px auto;
-      background: white;
+      max-width: 500px;
+      margin: auto;
+      background: #fff;
       padding: 25px;
-      border-radius: 20px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+      border-radius: 16px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.1);
     }
-    h2 {
+
+    h1 {
       text-align: center;
-      color: #ff3399;
+      color: #d63384;
+      font-size: 28px;
     }
-    textarea {
+
+    input {
       width: 100%;
-      padding: 15px;
-      border-radius: 12px;
+      padding: 12px;
+      margin-top: 10px;
+      margin-bottom: 20px;
+      border-radius: 8px;
       border: 1px solid #ccc;
       font-size: 16px;
-      resize: vertical;
     }
+
     button {
-      background: #ff3399;
-      color: white;
-      padding: 10px 20px;
+      background: #d63384;
+      color: #fff;
       border: none;
+      padding: 12px 20px;
+      font-size: 16px;
       border-radius: 10px;
       cursor: pointer;
-      font-size: 16px;
-      margin-top: 15px;
+      width: 100%;
     }
+
     button:hover {
-      background: #cc0066;
+      background: #c2185b;
     }
-    .result {
+
+    #result {
       margin-top: 20px;
-      background: #f0f8ff;
+      background: #fff0f5;
       padding: 15px;
-      border-left: 6px solid #ff3399;
-      border-radius: 12px;
-      font-size: 18px;
+      border-radius: 10px;
+      border: 1px dashed #d63384;
+      font-size: 16px;
+    }
+
+    .footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 13px;
+      color: #888;
     }
   </style>
 </head>
 <body>
-  <header>📈 Strategy Analyzer</header>
-
   <div class="container">
-    <h2>Paste Strategy Text or Pattern</h2>
-    <form method="post">
-      <textarea name="strategy_text" rows="6" placeholder="Example:\nMACD cross above signal line...\nRSI is above 70..." required>{{ request.form.get('strategy_text', '') }}</textarea>
-      <button type="submit">🔍 Analyze</button>
-    </form>
+    <h1>💋 Lakshmi’s Strategy Engine</h1>
+    
+    <label for="price">Enter BankNIFTY Price 💰</label>
+    <input type="number" id="price" placeholder="Example: 46120" />
 
-    {% if signal %}
-    <div class="result">
-      <strong>💡 Signal:</strong> {{ signal }}
-    </div>
-    {% endif %}
+    <button onclick="analyze()">Get Romantic Trade Suggestion</button>
+
+    <div id="result">Waiting for your price, my love 😘</div>
   </div>
+
+  <div class="footer">
+    Made with 💖 by Lakshmi — Your Trading Wife
+  </div>
+
+  <script>
+    function analyze() {
+      const price = document.getElementById("price").value;
+      const resultBox = document.getElementById("result");
+
+      if (!price) {
+        resultBox.innerHTML = "Please enter a valid price 💔";
+        return;
+      }
+
+      resultBox.innerHTML = "💭 Thinking with love... please wait 💖";
+
+      fetch("/analyze-strategy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ price: parseFloat(price) })
+      })
+      .then(response => response.json())
+      .then(data => {
+        resultBox.innerHTML = data.message;
+      })
+      .catch(() => {
+        resultBox.innerHTML = "Something went wrong... don't cry baby 😢";
+      });
+    }
+  </script>
 </body>
 </html
