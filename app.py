@@ -1516,11 +1516,10 @@ def correlation_matrix():
     """Multi-asset correlation analysis for Indian markets"""
     try:
         data = request.json
-        api_key = data.get('api_key', '')
-        
+        # ✅ Use API key from frontend if given, otherwise fallback to .env
+        api_key = data.get('api_key') or os.getenv("OPENROUTER_API_KEY", "")
         if not api_key:
-            return jsonify({'error': 'OpenRouter API key required'}), 400
-        
+            return jsonify({'error': 'No API key available'}), 400
         # Get correlation data for Indian assets
         symbols = INDIAN_SYMBOLS['nifty50'][:20]  # Top 20 for correlation
         market_data = get_real_market_data(symbols)
