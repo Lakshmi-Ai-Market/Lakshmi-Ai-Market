@@ -1326,82 +1326,107 @@ def get_market_data(symbol):
         print(f"❌ Error fetching data for {symbol}: {str(e)}")
         return jsonify({"error": f"Failed to fetch data: {str(e)}"}), 500
 
-# ✅ AI Prediction API for Indian Market Trader
 @app.route("/api/ai-predict", methods=["POST"])
 def ai_predict():
     try:
         data = request.get_json(force=True) or {}
-        raw_symbol = data.get("symbol")   # e.g. "NIFTY"
-        market_data = data.get("marketData")
+        raw_symbol = data.get("symbol")   # e.g. "BANKNIFTY", "NIFTY", "SENSEX"
+        market_data = data.get("marketData")  # Array of stock price data
 
         print("DEBUG /api/ai-predict received:", data)
 
-        # 🚨 If neither marketData nor symbol is provided → fail early
-        if not market_data and not raw_symbol:
-            return jsonify({"error": "No symbol or market data provided"}), 400
-
-        # ✅ If only symbol provided → fetch candles via yfinance
+        # If no market data provided, fetch from yfinance
         if not market_data and raw_symbol:
             yf_symbols = {
                 "BANKNIFTY": "^NSEBANK",
-                "NIFTY": "^NSEI",
-                "SENSEX": "^BSESN"
+                "NIFTY": "^NSEI", 
+                "SENSEX": "^BSESN",
+                "RELIANCE": "RELIANCE.NS",
+                "TCS": "TCS.NS",
+                "INFY": "INFY.NS",
+                "HDFCBANK": "HDFCBANK.NS",
+                "ICICIBANK": "ICICIBANK.NS"
             }
             yf_symbol = yf_symbols.get(raw_symbol.upper(), raw_symbol)
 
             df = get_stock_df(yf_symbol, period="3mo", interval="1d")
             if df is None or df.empty:
                 return jsonify({"error": f"No market data found for {yf_symbol}"}), 400
-
-            # Convert DataFrame → list of dicts for consistency
             market_data = df.tail(60).reset_index().to_dict(orient="records")
 
-        # 🚨 If still empty after all attempts → fail
+        # Validate market data exists
         if not market_data or len(market_data) == 0:
             return jsonify({"error": f"No market data available for {raw_symbol}"}), 400
 
-        # === Prepare indicators ===
-        closes = [float(c.get("Close", 0)) for c in market_data if "Close" in c][-50:]
-        volumes = [float(c.get("Volume", 0)) for c in market_data if "Volume" in c][-10:]
+        # Extract closing prices and volumes from market data
+        closes = []
+        volumes = []
+        
+        for record in market_data:
+            if isinstance(record, dict):
+                # Handle both 'Close' and 'close' keys
+                close_price = record.get("Close") or record.get("close")
+                volume = record.get("Volume") or record.get("volume")
+                
+                if close_price is not None:
+                    closes.append(float(close_price))
+                if volume is not None:
+                    volumes.append(float(volume))
 
         if not closes:
-            return jsonify({"error": "No closing prices in market data"}), 400
+            return jsonify({"error": "No valid closing prices found in market data"}), 400
 
-        sma_20 = sum(closes[-20:]) / 20 if len(closes) >= 20 else closes[-1]
-        sma_50 = sum(closes[-50:]) / 50 if len(closes) >= 50 else closes[-1]
+        # Take last 50 closes for analysis
+        closes = closes[-50:]
+        volumes = volumes[-10:] if volumes else [0]
+
+        # Calculate technical indicators
         current_price = closes[-1]
-
-        avg_volume = sum(volumes) / len(volumes) if volumes else 0
-        current_volume = volumes[-1] if volumes else 0
+        sma_20 = sum(closes[-20:]) / 20 if len(closes) >= 20 else current_price
+        sma_50 = sum(closes[-50:]) / 50 if len(closes) >= 50 else current_price
+        
+        # Calculate price change
+        price_change = ((current_price - closes[-2]) / closes[-2] * 100) if len(closes) > 1 else 0
+        
+        # Volume analysis
+        avg_volume = sum(volumes) / len(volumes) if volumes and volumes[0] != 0 else 1
+        current_volume = volumes[-1] if volumes else avg_volume
         volume_ratio = current_volume / avg_volume if avg_volume > 0 else 1
 
-        # === AI Prompt ===
+        # Determine trend
+        trend = "Bullish" if current_price > sma_20 > sma_50 else "Bearish" if current_price < sma_20 < sma_50 else "Neutral"
+
+        # Create AI prompt for stock analysis
         prompt = f"""
 You are an expert Indian stock market analyst with deep knowledge of NSE/BSE trading patterns.
 
 TECHNICAL ANALYSIS DATA:
 Symbol: {raw_symbol}
 Current Price: ₹{current_price:.2f}
+Price Change: {price_change:+.2f}%
 SMA(20): ₹{sma_20:.2f}
 SMA(50): ₹{sma_50:.2f}
+Current Trend: {trend}
 Volume Ratio: {volume_ratio:.2f}x average
-Recent Price Action: {closes[-5:]}
+Recent 5-day prices: {[round(p, 2) for p in closes[-5:]]}
 
 MARKET CONTEXT:
 - This is an Indian stock/index trading on NSE/BSE
 - Consider Indian market hours (9:15 AM - 3:30 PM IST)
 - Factor in typical Indian market behavior and volatility patterns
+- Current market sentiment and global factors
 
-Provide a concise analysis with:
+Based on this technical analysis, provide:
 1. Prediction: Bullish/Bearish/Neutral
-2. Confidence: 1-100%
-3. Key reasoning (2-3 points)
-4. Risk factors
-5. Target timeframe
+2. Confidence Level: 1-100%
+3. Key reasoning (2-3 technical points)
+4. Risk factors to watch
+5. Suggested timeframe for this prediction
 
-Keep response under 200 words and focus on actionable insights.
+Keep response concise (under 200 words) and focus on actionable insights for Indian traders.
 """
 
+        # Make AI API call
         headers = {
             "Authorization": f"Bearer {OPENROUTER_KEY}",
             "Content-Type": "application/json",
@@ -1412,23 +1437,39 @@ Keep response under 200 words and focus on actionable insights.
             "messages": [
                 {
                     "role": "system",
-                    "content": "You are a professional Indian stock market analyst specializing in technical analysis and NSE/BSE trading patterns."
+                    "content": "You are a professional Indian stock market analyst specializing in NSE/BSE technical analysis and market predictions."
                 },
                 {"role": "user", "content": prompt}
             ],
             "temperature": 0.3,
-            "max_tokens": 500
+            "max_tokens": 400
         }
 
         response = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=30)
 
         if response.status_code == 200:
             ai_response = response.json()["choices"][0]["message"]["content"].strip()
+            
+            # Extract confidence from AI response if possible
+            confidence = 75  # default
+            if "confidence" in ai_response.lower():
+                import re
+                conf_match = re.search(r'confidence[:\s]*(\d+)', ai_response.lower())
+                if conf_match:
+                    confidence = int(conf_match.group(1))
+
             return jsonify({
-                "prediction": "Analysis Complete",
-                "confidence": 75,
+                "prediction": trend,
+                "confidence": confidence,
                 "reasoning": ai_response,
-                "timeframe": "Short term"
+                "timeframe": "Short to medium term",
+                "currentPrice": f"₹{current_price:.2f}",
+                "priceChange": f"{price_change:+.2f}%",
+                "technicals": {
+                    "sma20": f"₹{sma_20:.2f}",
+                    "sma50": f"₹{sma_50:.2f}",
+                    "volumeRatio": f"{volume_ratio:.2f}x"
+                }
             })
         else:
             print(f"❌ AI API Error: {response.status_code} - {response.text}")
