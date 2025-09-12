@@ -575,20 +575,15 @@ def call_openrouter(prompt, model="deepseek/deepseek-chat", temperature=0.7, max
 # Helpers: yfinance data utilities
 # -----------------------
 def get_stock_df(symbol, period="6mo", interval="1d"):
-    """
-    Returns OHLCV DataFrame for a given symbol, or None if not available.
-    symbol: str like 'RELIANCE.NS' or '^NSEI' or 'AAPL'
-    """
     try:
-        # yfinance accepts both single symbol and list; here single
+        app.logger.info(f"Fetching {symbol} period={period} interval={interval}")
         df = yf.download(symbol, period=period, interval=interval, progress=False, auto_adjust=True)
         if df is None or df.empty:
+            app.logger.warning(f"No data returned for {symbol}")
             return None
-        # Ensure DatetimeIndex and proper column names
-        df.index = pd.to_datetime(df.index)
         return df
     except Exception as e:
-        app.logger.exception("yfinance error for %s: %s", symbol, e)
+        app.logger.exception(f"yfinance error for {symbol}: {e}")
         return None
 
 def get_multi_close_df(symbols, period="6mo", interval="1d"):
