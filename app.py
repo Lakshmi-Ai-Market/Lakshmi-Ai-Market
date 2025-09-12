@@ -1330,57 +1330,21 @@ def get_market_data(symbol):
 def ai_predict():
     try:
         data = request.get_json(force=True) or {}
-        market_data = data.get("marketData", [])
-        raw_symbol = data.get("symbol", "")
-
-        # If marketData missing but symbol is provided → auto fetch from yfinance
-        if not market_data and raw_symbol:
-            from helpers import get_stock_df, map_to_yf_symbol  # if helpers in another file
-            symbol = map_to_yf_symbol(raw_symbol)
-            df = get_stock_df(symbol, period="3mo", interval="1d")
+        market_data = data.get("marketData")
+        raw_symbol = data.get("symbol")
+         print("DEBUG /api/ai-predict input:", data)
+        # ⚡ FIX: if marketData is missing but symbol is provided → fetch automatically
+        if (not market_data or len(market_data) == 0) and raw_symbol:
+            from helpers import get_stock_df, map_to_yf_symbol
+            yf_symbol = map_to_yf_symbol(raw_symbol)
+            df = get_stock_df(yf_symbol, period="3mo", interval="1d")
             if df is None or df.empty:
-                return jsonify({"error": f"No market data found for {symbol}"}), 400
+                return jsonify({"error": f"No market data found for {yf_symbol}"}), 400
             market_data = df.tail(60).reset_index().to_dict(orient="records")
 
-        # If still no data → reject
-        if not market_data:
+        # ⚡ If still empty → reject
+        if not market_data or len(market_data) == 0:
             return jsonify({"error": "No market data provided"}), 400
-
-        # ✅ Extract closes/volumes safely
-        closes = [c.get("Close") or c.get("close") for c in market_data if c.get("Close") or c.get("close")]
-        volumes = [c.get("Volume") or c.get("volume") for c in market_data if c.get("Volume") or c.get("volume")]
-
-        if not closes:
-            return jsonify({"error": "Invalid market data format"}), 400
-
-        sma_20 = sum(closes[-20:]) / 20 if len(closes) >= 20 else closes[-1]
-        sma_50 = sum(closes[-50:]) / 50 if len(closes) >= 50 else closes[-1]
-        current_price = closes[-1]
-
-        avg_volume = sum(volumes[-10:]) / 10 if len(volumes) >= 10 else (volumes[-1] if volumes else 0)
-        current_volume = volumes[-1] if volumes else 0
-        volume_ratio = current_volume / avg_volume if avg_volume > 0 else 1
-
-        prompt = f"""
-Symbol: {raw_symbol}
-Current Price: ₹{current_price:.2f}
-SMA(20): ₹{sma_20:.2f}
-SMA(50): ₹{sma_50:.2f}
-Volume Ratio: {volume_ratio:.2f}x average
-Recent Price Action: {closes[-5:]}
-"""
-
-        ai_response = call_openrouter(prompt, model="deepseek/deepseek-chat", temperature=0.3, max_tokens=500)
-
-        return jsonify({
-            "status": "success",
-            "symbol": raw_symbol,
-            "ai_analysis": ai_response
-        })
-
-    except Exception as e:
-        print(f"[❌ AI Prediction Error] {e}")
-        return jsonify({"error": f"Prediction failed: {str(e)}"}), 500
 
 # ✅ AI Market Narrative API
 @app.route("/api/ai-narrative", methods=["POST"])
