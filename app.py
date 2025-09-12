@@ -1326,35 +1326,33 @@ def get_market_data(symbol):
         print(f"❌ Error fetching data for {symbol}: {str(e)}")
         return jsonify({"error": f"Failed to fetch data: {str(e)}"}), 500
 
-# ✅ AI Prediction API for Indian Market Trader
 @app.route("/api/ai-predict", methods=["POST"])
-def api_ai_predict():
+def ai_predict():
     try:
         data = request.get_json(force=True) or {}
-        symbol = data.get("symbol", "")
         market_data = data.get("marketData", [])
+        raw_symbol = data.get("symbol", "")
 
-        # ✅ Auto fetch data if marketData not provided
-        if not market_data and symbol:
+        # If marketData missing but symbol is provided → auto fetch from yfinance
+        if not market_data and raw_symbol:
+            from helpers import get_stock_df, map_to_yf_symbol  # if helpers in another file
+            symbol = map_to_yf_symbol(raw_symbol)
             df = get_stock_df(symbol, period="3mo", interval="1d")
             if df is None or df.empty:
                 return jsonify({"error": f"No market data found for {symbol}"}), 400
             market_data = df.tail(60).reset_index().to_dict(orient="records")
 
+        # If still no data → reject
         if not market_data:
             return jsonify({"error": "No market data provided"}), 400
 
-        if not OPENROUTER_KEY:
-            return jsonify({"error": "AI service not configured"}), 500
-
-        # ✅ Extract closes and volumes (support both dict styles)
-        closes = [c.get("Close") or c.get("close") for c in market_data if "Close" in c or "close" in c]
-        volumes = [c.get("Volume") or c.get("volume") for c in market_data if "Volume" in c or "volume" in c]
+        # ✅ Extract closes/volumes safely
+        closes = [c.get("Close") or c.get("close") for c in market_data if c.get("Close") or c.get("close")]
+        volumes = [c.get("Volume") or c.get("volume") for c in market_data if c.get("Volume") or c.get("volume")]
 
         if not closes:
             return jsonify({"error": "Invalid market data format"}), 400
 
-        # ✅ Technical indicators
         sma_20 = sum(closes[-20:]) / 20 if len(closes) >= 20 else closes[-1]
         sma_50 = sum(closes[-50:]) / 50 if len(closes) >= 50 else closes[-1]
         current_price = closes[-1]
@@ -1363,44 +1361,25 @@ def api_ai_predict():
         current_volume = volumes[-1] if volumes else 0
         volume_ratio = current_volume / avg_volume if avg_volume > 0 else 1
 
-        # ✅ Build AI prompt
         prompt = f"""
-You are an expert Indian stock market analyst with deep knowledge of NSE/BSE trading patterns.
-
-TECHNICAL ANALYSIS DATA:
-Symbol: {symbol}
+Symbol: {raw_symbol}
 Current Price: ₹{current_price:.2f}
 SMA(20): ₹{sma_20:.2f}
 SMA(50): ₹{sma_50:.2f}
 Volume Ratio: {volume_ratio:.2f}x average
 Recent Price Action: {closes[-5:]}
-
-MARKET CONTEXT:
-- This is an Indian stock/index trading on NSE/BSE
-- Consider Indian market hours (9:15 AM - 3:30 PM IST)
-- Factor in typical Indian market behavior and volatility patterns
-
-Provide a concise analysis with:
-1. Prediction: Bullish/Bearish/Neutral
-2. Confidence: 1-100%
-3. Key reasoning (2-3 points)
-4. Risk factors
-5. Target timeframe
-
-Keep response under 200 words and focus on actionable insights.
 """
 
-        # ✅ Use your existing OpenRouter helper
         ai_response = call_openrouter(prompt, model="deepseek/deepseek-chat", temperature=0.3, max_tokens=500)
 
         return jsonify({
             "status": "success",
-            "symbol": symbol,
+            "symbol": raw_symbol,
             "ai_analysis": ai_response
         })
 
     except Exception as e:
-        app.logger.exception(f"AI Prediction Error: {str(e)}")
+        print(f"[❌ AI Prediction Error] {e}")
         return jsonify({"error": f"Prediction failed: {str(e)}"}), 500
 
 # ✅ AI Market Narrative API
