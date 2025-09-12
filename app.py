@@ -2445,10 +2445,20 @@ def sentiment_analysis():
 # ------------------------------
 # Page render
 # ------------------------------
-@app.route("/strategy-matrix")
-def strategy_matrix_page():
-    return render_template("strategy_matrix.html")
-
+@app.route("/matrix", methods=["GET", "POST"])
+def strategy_matrix():
+    signals = []
+    if request.method == "POST":
+        raw_data = request.form["data"]
+        lines = raw_data.strip().splitlines()
+        for line in lines:
+            if "buy" in line.lower():
+                signals.append(f"📈 Buy signal from: {line}")
+            elif "sell" in line.lower():
+                signals.append(f"📉 Sell signal from: {line}")
+            else:
+                signals.append(f"⚠️ Neutral/No signal: {line}")
+    return render_template("strategy_matrix.html", signals=signals)
 
 @app.route("/ask-ai", methods=["GET", "POST"])
 def ask_ai():
