@@ -137,69 +137,148 @@ romantic_replies = [
     "Want to hear something naughty, darling? 😏"
 ]
 
-
-# --- User Handling ---
-def load_users():
+# -----------------------
+# User handling
+# -----------------------
+def load_users(csv_path: str = "users.csv") -> List[Dict[str, str]]:
+    """Load users from CSV; returns list of dicts with 'username' and 'password' keys."""
     try:
-        with open('users.csv', newline='') as f:
-            return list(csv.DictReader(f))
-    except FileNotFoundError:
+        if not os.path.isfile(csv_path):
+            return []
+        with open(csv_path, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            return [r for r in reader]
+    except Exception as e:
+        print(f"[ERROR] load_users: {e}")
         return []
 
-def save_user(username, password):
-    file_exists = os.path.isfile("users.csv")
-    with open('users.csv', 'a', newline='') as f:
-        writer = csv.writer(f)
-        if not file_exists:
-            writer.writerow(["username", "password"])
-        writer.writerow([username, password])
+def save_user(username: str, password: str, csv_path: str = "users.csv") -> bool:
+    """Append a user to users.csv. Returns True on success."""
+    try:
+        file_exists = os.path.isfile(csv_path)
+        with open(csv_path, "a", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            if not file_exists:
+                writer.writerow(["username", "password"])
+            writer.writerow([username, password])
+        return True
+    except Exception as e:
+        print(f"[ERROR] save_user: {e}")
+        return False
 
-
-# === Detect F&O symbol from user input ===
-def extract_symbol_from_text(user_input):
-    input_lower = user_input.lower()
-    if "banknifty" in input_lower:
+# -----------------------
+# Symbol detection & mapping
+# -----------------------
+def extract_symbol_from_text(user_input: str) -> str:
+    """Detect basic F&O symbols from free text. Returns normalized token or None."""
+    if not user_input:
+        return None
+    txt = user_input.lower()
+    if "banknifty" in txt or "bank nifty" in txt:
         return "BANKNIFTY"
-    elif "nifty" in input_lower:
+    if "nifty" in txt and "bank" not in txt:
         return "NIFTY"
-    elif "sensex" in input_lower:
+    if "sensex" in txt:
         return "SENSEX"
+    # fallback: look for ticker-like tokens (ALLCAPS or with .NS)
+    tokens = re.findall(r"\b[A-Z0-9\.\-]{2,}\b", user_input)
+    if tokens:
+        # prefer tokens containing .NS or ^ or common ticker patterns
+        for t in tokens:
+            if t.endswith(".NS") or t.startswith("^"):
+                return t.upper()
+        return tokens[0].upper()
     return None
 
-# === Get live LTP using yfinance ===
-def get_yfinance_ltp(symbol):
+def map_to_yf_symbol(sym: str) -> str:
+    """Map user-friendly names to Yahoo Finance tickers (NSE/BSE)."""
+    if not sym:
+        return None
+    s = sym.strip().upper()
+    mapping = {
+        "NIFTY": "^NSEI",
+        "BANKNIFTY": "^NSEBANK",
+        "SENSEX": "^BSESN",
+        "USDINR": "INR=X"
+    }
+    if s in mapping:
+        return mapping[s]
+    # If already a quoted YF symbol, return as-is
+    if s.endswith(".NS") or s.startswith("^") or s.endswith("=X"):
+        return s
+    # Otherwise assume Indian stock and append .NS
+    return s + ".NS"
+
+# -----------------------
+# Quick LTP using yfinance (fast_info)
+# -----------------------
+def get_yfinance_ltp(symbol: str) -> float:
+    """
+    Return the latest price for the given symbol.
+    Accepts mapped YF symbols (e.g., '^NSEI', 'RELIANCE.NS', 'INR=X').
+    Returns 0.0 on failure.
+    """
     try:
-        yf_symbols = {
-            "BANKNIFTY": "^NSEBANK",
-            "NIFTY": "^NSEI",
-            "SENSEX": "^BSESN"
-        }
-
-        yf_symbol = yf_symbols.get(symbol.upper())
-        if not yf_symbol:
-            return 0
-
-        data = yf.Ticker(yf_symbol)
-        price = data.fast_info["last_price"]
-        return float(price)
-
+        if not symbol:
+            return 0.0
+        yf_symbol = map_to_yf_symbol(symbol)
+        t = yf.Ticker(yf_symbol)
+        # fast_info is quicker and more stable for last_price
+        fast = getattr(t, "fast_info", None)
+        if fast and "last_price" in fast:
+            price = fast.get("last_price")
+            return float(price) if price is not None else 0.0
+        # fallback: tiny history call
+        hist = t.history(period="1d", interval="1m")
+        if hist is not None and not hist.empty:
+            return float(hist["Close"].iloc[-1])
+        return 0.0
     except Exception as e:
-        print(f"[ERROR] Failed to fetch LTP from yfinance: {e}")
-        return 0
+        print(f"[ERROR] get_yfinance_ltp({symbol}): {e}")
+        return 0.0
 
-# === Extract fields from Lakshmi AI response ===
-def extract_field(text, field):
-    match = re.search(f"{field}[:：]?\s*([\w.%-]+)", text, re.IGNORECASE)
-    return match.group(1) if match else "N/A"
+# -----------------------
+# Extract field from AI reply (robust regex)
+# -----------------------
+def extract_field(text: str, field: str) -> str:
+    """
+    Extract a field value from a free-text AI reply.
+    Captures numbers with optional percent sign or simple strings.
+    If not found, returns "N/A".
+    """
+    if not text or not field:
+        return "N/A"
+    # common pattern: Field: value  OR Field：value (unicode)
+    # allow capturing words, numbers, +/- signs, % and commas
+    pattern = rf"{re.escape(field)}\s*[:：]\s*([\+\-]?\d[\d,\.%kMbK ]+|\w[\w \-\/]+)"
+    m = re.search(pattern, text, flags=re.IGNORECASE)
+    if m:
+        return m.group(1).strip()
+    # fallback: try line starting with field
+    lines = text.splitlines()
+    for ln in lines:
+        if ln.lower().lstrip().startswith(field.lower()):
+            parts = ln.split(":", 1)
+            if len(parts) > 1:
+                return parts[1].strip()
+    return "N/A"
 
-# === Lakshmi AI Analysis ===
-def analyze_with_neuron(price, symbol):
+# -----------------------
+# Call Lakshmi neuron / AI endpoint
+# -----------------------
+def analyze_with_neuron(price: float, symbol: str, neuron_endpoint: str = "https://lakshmi-ai-trades.onrender.com/chat", timeout: int = 30) -> Dict[str, Any]:
+    """
+    Send prompt to your local Lakshmi chat endpoint and parse response.
+    Returns structured dict with signal, confidence, entry, sl, target and raw reply.
+    """
     try:
+        if price is None:
+            price = 0.0
         prompt = f"""
 You are Lakshmi AI, an expert technical analyst.
 
 Symbol: {symbol}
-Live Price: ₹{price}
+Live Price: ₹{price:.2f}
 
 Based on this, give:
 Signal (Bullish / Bearish / Reversal / Volatile)
@@ -209,442 +288,222 @@ Stoploss
 Target
 Explain reasoning in 1 line
 """
-
-        response = requests.post(
-            "https://lakshmi-ai-trades.onrender.com/chat",
-            json={"message": prompt}
-        )
-
-        reply = response.json().get("reply", "No response")
-
+        resp = requests.post(neuron_endpoint, json={"message": prompt}, timeout=timeout)
+        resp.raise_for_status()
+        data = resp.json()
+        # accept different reply key names: reply, message, text
+        reply = data.get("reply") or data.get("message") or data.get("text") or json.dumps(data)
         return {
             "symbol": symbol,
-            "price": price,
-            "signal": extract_field(reply, "signal"),
-            "confidence": extract_field(reply, "confidence"),
-            "entry": extract_field(reply, "entry"),
-            "sl": extract_field(reply, "stoploss"),
-            "target": extract_field(reply, "target"),
+            "price": float(price),
+            "signal": extract_field(reply, "Signal"),
+            "confidence": extract_field(reply, "Confidence"),
+            "entry": extract_field(reply, "Entry"),
+            "sl": extract_field(reply, "Stoploss") or extract_field(reply, "Stop Loss") or extract_field(reply, "SL"),
+            "target": extract_field(reply, "Target"),
             "lakshmi_reply": reply,
             "time": time.strftime("%Y-%m-%d %H:%M:%S")
         }
-
     except Exception as e:
+        err = str(e)
+        print(f"[ERROR] analyze_with_neuron: {err}")
         return {
-            "signal": "❌ Error",
-            "confidence": 0,
-            "entry": 0,
-            "sl": 0,
-            "target": 0,
-            "lakshmi_reply": str(e),
+            "symbol": symbol,
+            "price": float(price),
+            "signal": "ERROR",
+            "confidence": "0",
+            "entry": "0",
+            "sl": "0",
+            "target": "0",
+            "lakshmi_reply": f"Error: {err}",
             "time": time.strftime("%Y-%m-%d %H:%M:%S")
         }
 
+# -----------------------
+# Market data fetching
+# -----------------------
 def get_real_market_data(symbols: List[str]) -> Dict[str, Any]:
-    """Fetch real market data from Yahoo Finance for Indian stocks"""
-    market_data = {}
-    
-    for symbol in symbols:
+    """
+    Fetch market snapshot for a list of Yahoo-style tickers (e.g. 'RELIANCE.NS', '^NSEI').
+    Returns dict keyed by ticker with price, change, change_percent, volume, market_cap, pe_ratio, beta, rsi, sector, industry.
+    """
+    out = {}
+    for sym in symbols:
         try:
-            ticker = yf.Ticker(symbol)
-            info = ticker.info
-            hist = ticker.history(period="5d")
-            
-            if not hist.empty:
-                current_price = hist['Close'].iloc[-1]
-                prev_close = hist['Close'].iloc[-2] if len(hist) > 1 else current_price
-                change = current_price - prev_close
-                change_percent = (change / prev_close) * 100
-                
-                market_data[symbol] = {
-                    'symbol': symbol,
-                    'price': float(current_price),
-                    'change': float(change),
-                    'change_percent': float(change_percent),
-                    'volume': int(hist['Volume'].iloc[-1]) if 'Volume' in hist.columns else 0,
-                    'market_cap': info.get('marketCap', 0),
-                    'pe_ratio': info.get('trailingPE', 0),
-                    'beta': info.get('beta', 1.0),
-                    'rsi': calculate_rsi(hist['Close'].values),
-                    'near_52w_high': current_price >= (info.get('fiftyTwoWeekHigh', current_price) * 0.95),
-                    'sector': info.get('sector', 'Unknown'),
-                    'industry': info.get('industry', 'Unknown')
-                }
+            yf_sym = map_to_yf_symbol(sym)
+            tk = yf.Ticker(yf_sym)
+            # Use quick history for last 5 days
+            hist = tk.history(period="5d")
+            if hist is None or hist.empty:
+                # sometimes ticker.history returns empty if intraday not available,
+                # try 1d with 1m interval fallback
+                hist = tk.history(period="1d", interval="5m")
+            if hist is None or hist.empty:
+                print(f"[WARN] No history for {yf_sym}")
+                continue
+            curr = float(hist["Close"].iloc[-1])
+            prev = float(hist["Close"].iloc[-2]) if len(hist["Close"]) > 1 else curr
+            ch = curr - prev
+            ch_pct = (ch / prev * 100) if prev != 0 else 0.0
+            fast = getattr(tk, "fast_info", {}) or {}
+            info = {}
+            # try ticker.info but be defensive (can be slow)
+            try:
+                info = tk.info if hasattr(tk, "info") else {}
+            except Exception:
+                info = {}
+            out[yf_sym] = {
+                "symbol": yf_sym,
+                "price": float(curr),
+                "change": float(ch),
+                "change_percent": float(ch_pct),
+                "volume": int(hist["Volume"].iloc[-1]) if "Volume" in hist.columns else 0,
+                "market_cap": int(fast.get("market_cap", info.get("marketCap", 0)) or 0),
+                "pe_ratio": float(info.get("trailingPE", 0) or 0),
+                "beta": float(info.get("beta", fast.get("beta", 1.0)) or 1.0),
+                "rsi": calculate_rsi(hist["Close"].values),
+                "near_52w_high": False if info.get("fiftyTwoWeekHigh") is None else (curr >= info.get("fiftyTwoWeekHigh", curr) * 0.95),
+                "sector": info.get("sector", "Unknown"),
+                "industry": info.get("industry", "Unknown")
+            }
         except Exception as e:
-            print(f"Error fetching data for {symbol}: {e}")
+            print(f"[ERROR] get_real_market_data {sym}: {e}")
             continue
-    
-    return market_data
+    return out
 
-def calculate_rsi(prices, period=14):
-    """Calculate RSI indicator"""
-    if len(prices) < period + 1:
+# -----------------------
+# RSI calculation (numpy)
+# -----------------------
+def calculate_rsi(prices: np.ndarray, period: int = 14) -> float:
+    """Classic RSI using numpy. Returns float between 0 and 100."""
+    try:
+        if prices is None or len(prices) < period + 1:
+            return 50.0
+        prices = np.asarray(prices, dtype=float)
+        deltas = np.diff(prices)
+        seed = deltas[:period]
+        up = seed[seed > 0].sum() / period
+        down = -seed[seed < 0].sum() / period
+        up_avg = up
+        down_avg = down
+        for i in range(period, len(deltas)):
+            delta = deltas[i]
+            up_avg = (up_avg * (period - 1) + max(delta, 0)) / period
+            down_avg = (down_avg * (period - 1) + max(-delta, 0)) / period
+        if down_avg == 0:
+            return 100.0 if up_avg > 0 else 50.0
+        rs = up_avg / down_avg
+        rsi = 100 - (100 / (1 + rs))
+        return float(rsi)
+    except Exception as e:
+        print(f"[ERROR] calculate_rsi: {e}")
         return 50.0
-    
-    deltas = np.diff(prices)
-    gains = np.where(deltas > 0, deltas, 0)
-    losses = np.where(deltas < 0, -deltas, 0)
-    
-    avg_gain = np.mean(gains[-period:])
-    avg_loss = np.mean(losses[-period:])
-    
-    if avg_loss == 0:
-        return 100.0
-    
-    rs = avg_gain / avg_loss
-    rsi = 100 - (100 / (1 + rs))
-    return float(rsi)
 
-def call_openrouter_api(prompt: str, api_key: str) -> str:
-    """Call OpenRouter API with DeepSeek V3"""
-    try:
-        response = requests.post(
-            'https://openrouter.ai/api/v1/chat/completions',
-            headers={
-                'Authorization': f'Bearer {api_key}',
-                'Content-Type': 'application/json',
-                'HTTP-Referer': 'https://nexus-ai-trading.com',
-                'X-Title': 'NEXUS AI Trading Platform'
-            },
-            json={
-                'model': 'deepseek/deepseek-chat',
-                'messages': [
-                    {
-                        'role': 'system',
-                        'content': 'You are a professional Indian market analyst specializing in NSE and BSE stocks. Provide specific insights for Indian markets.'
-                    },
-                    {
-                        'role': 'user',
-                        'content': prompt
-                    }
-                ],
-                'max_tokens': 3000,
-                'temperature': 0.1
-            }
-        )
-        
-        if response.status_code == 200:
-            data = response.json()
-            return data['choices'][0]['message']['content']
-        else:
-            return f"API Error: {response.status_code} - {response.text}"
-            
-    except Exception as e:
-        return f"Error calling OpenRouter API: {str(e)}"
-def get_real_sentiment_data(target, source):
-    """Fetch real sentiment data from various sources"""
-    try:
-        sentiment_data = {
-            'overall_score': 0,
-            'breakdown': {},
-            'data_points': 0
-        }
-        
-        if source in ['news', 'all']:
-            # Fetch from Indian financial news sources
-            news_sentiment = fetch_news_sentiment(target)
-            sentiment_data['breakdown']['news'] = news_sentiment
-            sentiment_data['overall_score'] += news_sentiment.get('score', 50) * 0.4
-            sentiment_data['data_points'] += news_sentiment.get('count', 0)
-        
-        if source in ['social', 'all']:
-            # Fetch from social media
-            social_sentiment = fetch_social_sentiment(target)
-            sentiment_data['breakdown']['social'] = social_sentiment
-            sentiment_data['overall_score'] += social_sentiment.get('score', 50) * 0.3
-            sentiment_data['data_points'] += social_sentiment.get('count', 0)
-        
-        if source in ['earnings', 'all']:
-            # Fetch from earnings calls
-            earnings_sentiment = fetch_earnings_sentiment(target)
-            sentiment_data['breakdown']['earnings'] = earnings_sentiment
-            sentiment_data['overall_score'] += earnings_sentiment.get('score', 50) * 0.3
-            sentiment_data['data_points'] += earnings_sentiment.get('count', 0)
-        
-        return sentiment_data
-        
-    except Exception as e:
-        return {'overall_score': 50, 'breakdown': {}, 'data_points': 0, 'error': str(e)}
-
-def fetch_news_sentiment(target):
-    """Fetch sentiment from Indian financial news"""
-    try:
-        # Use NewsAPI or RSS feeds from Indian financial sources
-        news_sources = [
-            'https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms',
-            'https://www.moneycontrol.com/rss/results.xml',
-            'https://www.business-standard.com/rss/markets-106.rss'
-        ]
-        
-        sentiment_scores = []
-        articles_count = 0
-        
-        for source in news_sources:
-            try:
-                feed = feedparser.parse(source)
-                for entry in feed.entries[:10]:  # Analyze last 10 articles
-                    if target.replace('.NS', '').lower() in entry.title.lower() or target.replace('.NS', '').lower() in entry.summary.lower():
-                        blob = TextBlob(entry.title + ' ' + entry.summary)
-                        sentiment_scores.append(blob.sentiment.polarity)
-                        articles_count += 1
-            except:
-                continue
-        
-        if sentiment_scores:
-            avg_sentiment = np.mean(sentiment_scores)
-            # Convert from -1,1 to 0,100 scale
-            sentiment_score = (avg_sentiment + 1) * 50
-        else:
-            sentiment_score = 50  # Neutral
-        
-        return {
-            'score': sentiment_score,
-            'count': articles_count,
-            'raw_scores': sentiment_scores
-        }
-        
-    except Exception as e:
-        return {'score': 50, 'count': 0, 'error': str(e)}
-
-def fetch_social_sentiment(target):
-    """Fetch sentiment from social media (Twitter, Reddit)"""
-    try:
-        # This would require Twitter API and Reddit API setup
-        # For now, return simulated data based on market conditions
-        
-        # Simulate social sentiment based on stock performance
-        symbol_data = get_real_market_data([target])
-        if target in symbol_data:
-            change_percent = symbol_data[target]['change_percent']
-            
-            # Base sentiment on recent performance
-            if change_percent > 2:
-                sentiment_score = 70 + (change_percent * 2)
-            elif change_percent < -2:
-                sentiment_score = 30 + (change_percent * 2)
-            else:
-                sentiment_score = 50 + (change_percent * 5)
-            
-            sentiment_score = max(0, min(100, sentiment_score))
-        else:
-            sentiment_score = 50
-        
-        return {
-            'score': sentiment_score,
-            'count': 50,  # Simulated count
-            'platforms': ['twitter', 'reddit']
-        }
-        
-    except Exception as e:
-        return {'score': 50, 'count': 0, 'error': str(e)}
-
-def fetch_earnings_sentiment(target):
-    """Fetch sentiment from earnings calls and reports"""
-    try:
-        # This would analyze earnings call transcripts
-        # For now, return simulated data
-        
-        return {
-            'score': 55,  # Slightly positive
-            'count': 5,
-            'source': 'earnings_calls'
-        }
-        
-    except Exception as e:
-        return {'score': 50, 'count': 0, 'error': str(e)}
-
-def calculate_correlation_matrix(symbols):
-    """Calculate correlation matrix for given symbols"""
-    try:
-        # Fetch historical data for correlation calculation
-        price_data = {}
-        
-        for symbol in symbols:
-            try:
-                ticker = yf.Ticker(symbol)
-                hist = ticker.history(period="1y")
-                if not hist.empty:
-                    price_data[symbol.replace('.NS', '')] = hist['Close'].pct_change().dropna()
-            except:
-                continue
-        
-        if len(price_data) < 2:
-            return {}
-        
-        # Create DataFrame and calculate correlation
-        df = pd.DataFrame(price_data)
-        correlation_matrix = df.corr()
-        
-        # Convert to dictionary format
-        corr_dict = {}
-        for i, stock1 in enumerate(correlation_matrix.columns):
-            corr_dict[stock1] = {}
-            for j, stock2 in enumerate(correlation_matrix.columns):
-                if i != j:  # Exclude self-correlation
-                    corr_dict[stock1][stock2] = round(correlation_matrix.iloc[i, j], 3)
-        
-        return corr_dict
-        
-    except Exception as e:
-        return {'error': str(e)}
-
-def get_real_options_data(symbol):
-    """Fetch real options data from NSE"""
-    try:
-        # This would fetch from NSE options API
-        # For now, return simulated realistic data
-        
-        options_data = {
-            'put_call_ratio': 1.2,  # Bearish
-            'max_pain': 22500 if symbol == 'NIFTY' else 48000,
-            'open_interest': {
-                'calls': 15000000,
-                'puts': 18000000
-            },
-            'implied_volatility': 18.5,
-            'unusual_activity': [
-                {'strike': 22000, 'type': 'PUT', 'volume': 50000, 'oi_change': 25000},
-                {'strike': 23000, 'type': 'CALL', 'volume': 40000, 'oi_change': -15000}
-            ]
-        }
-        
-        return options_data
-        
-    except Exception as e:
-        return {'error': str(e)}
-
-def get_real_insider_data(period):
-    """Fetch real insider trading data"""
-    try:
-        # This would fetch from BSE/NSE insider trading disclosures
-        # For now, return simulated data
-        
-        insider_data = [
-            {
-                'company': 'RELIANCE',
-                'insider': 'Mukesh Ambani',
-                'transaction': 'SELL',
-                'shares': 100000,
-                'value': 284750000,
-                'date': '2024-01-15'
-            },
-            {
-                'company': 'TCS',
-                'insider': 'N Chandrasekaran',
-                'transaction': 'BUY',
-                'shares': 50000,
-                'value': 209937500,
-                'date': '2024-01-10'
-            }
-        ]
-        
-        return insider_data
-        
-    except Exception as e:
-        return {'error': str(e)}
-
-
-# Helpers: OpenRouter call (optional)
 # -----------------------
-def call_openrouter(prompt, model="deepseek/deepseek-chat", temperature=0.7, max_tokens=1000):
+# OpenRouter call (single unified helper)
+# -----------------------
+def call_openrouter(prompt: str, model: str = "deepseek/deepseek-chat", temperature: float = 0.3, max_tokens: int = 500, api_key: str = None) -> str:
     """
-    Optional: call OpenRouter. If OPENROUTER_KEY not set, raises RuntimeError.
-    This function is not required for core route functionality.
+    Call OpenRouter chat completions. Returns string response or error message.
     """
-    if not OPENROUTER_KEY:
+    key = api_key or OPENROUTER_KEY
+    if not key:
         raise RuntimeError("OPENROUTER_API_KEY not configured in environment.")
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_KEY}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "model": model,
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": temperature,
-        "max_tokens": max_tokens
-    }
-    r = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=60)
-    r.raise_for_status()
-    j = r.json()
     try:
-        return j["choices"][0]["message"]["content"]
-    except Exception:
-        return json.dumps(j)
+        headers = {
+            "Authorization": f"Bearer {key}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": temperature,
+            "max_tokens": max_tokens
+        }
+        r = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=60)
+        r.raise_for_status()
+        data = r.json()
+        return data["choices"][0]["message"]["content"]
+    except Exception as e:
+        print(f"[ERROR] call_openrouter: {e}")
+        return f"OpenRouter Error: {str(e)}"
 
 # -----------------------
-# Helpers: yfinance data utilities
+# yfinance helpers
 # -----------------------
-def get_stock_df(symbol, period="6mo", interval="1d"):
+def get_stock_df(symbol: str, period: str = "6mo", interval: str = "1d") -> pd.DataFrame:
+    """
+    Download OHLCV DataFrame via yfinance. Returns None if not available.
+    """
     try:
-        app.logger.info(f"Fetching {symbol} period={period} interval={interval}")
-        df = yf.download(symbol, period=period, interval=interval, progress=False, auto_adjust=True)
-        if df is None or df.empty:
-            app.logger.warning(f"No data returned for {symbol}")
+        if not symbol:
             return None
+        yf_sym = map_to_yf_symbol(symbol)
+        df = yf.download(yf_sym, period=period, interval=interval, progress=False, auto_adjust=True)
+        if df is None or df.empty:
+            # sometimes group_by/ticker returns nested - try using Ticker.history
+            t = yf.Ticker(yf_sym)
+            df = t.history(period=period, interval=interval)
+        if df is None or df.empty:
+            return None
+        # normalize column names to Title-case: 'Open','High','Low','Close','Volume'
+        df = df.rename(columns={c: c.title() for c in df.columns})
         return df
     except Exception as e:
-        app.logger.exception(f"yfinance error for {symbol}: {e}")
+        print(f"[ERROR] get_stock_df({symbol}): {e}")
         return None
 
-def get_multi_close_df(symbols, period="6mo", interval="1d"):
+def get_multi_close_df(symbols: List[str], period: str = "6mo", interval: str = "1d") -> pd.DataFrame:
     """
-    Returns a DataFrame with Close prices for multiple tickers (aligned).
-    symbols: list of ticker strings.
+    Returns DataFrame where each column is 'SYMBOL' close aligned by index.
+    Accepts list of YF-style symbols or simple names (will be mapped to .NS).
     """
     try:
-        if isinstance(symbols, str):
-            symbols = [symbols]
-        data = yf.download(symbols, period=period, interval=interval, group_by='ticker', progress=False, auto_adjust=True)
-        # If single ticker, data will be simple DataFrame
+        if not symbols:
+            return None
+        yf_symbols = [map_to_yf_symbol(s) for s in symbols]
+        data = yf.download(yf_symbols, period=period, interval=interval, group_by="ticker", progress=False, auto_adjust=True)
         if data is None or data.empty:
             return None
-        # If multiindex (group_by='ticker'), normalize
+        # If MultiIndex columns (ticker, field)
         if isinstance(data.columns, pd.MultiIndex):
-            close_df = pd.DataFrame()
-            for sym in symbols:
-                try:
-                    close_series = data[(sym, 'Close')]
-                except Exception:
-                    # fallback if yfinance returned flat structure
-                    try:
-                        close_series = data['Close']
-                    except Exception:
-                        close_series = None
-                if close_series is not None:
-                    close_df[sym] = close_series
+            close_df = pd.DataFrame(index=data.index)
+            for sym in yf_symbols:
+                if (sym, "Close") in data.columns:
+                    close_df[sym] = data[(sym, "Close")]
+                else:
+                    # try to find close in flattened form
+                    for col in data.columns:
+                        if col[1].lower() == "close":
+                            close_df[sym] = data[col]
+                            break
+            close_df = close_df.dropna(axis=0, how="all")
             if close_df.empty:
-                # try flat 'Close' column
-                if 'Close' in data:
-                    close_df = data['Close']
-            if isinstance(close_df, pd.Series):
-                close_df = close_df.to_frame()
-            close_df = close_df.dropna(axis=0, how='all')
+                return None
             return close_df
         else:
-            # single multi-day DataFrame with columns 'Open','High',... or if multiple tickers requested, it might be wide already
-            if 'Close' in data.columns:
-                close_series = data['Close']
-                if isinstance(close_series, pd.Series):
-                    return close_series.to_frame()
-                else:
-                    # DataFrame (maybe multi columns by ticker)
-                    return close_series
-            else:
-                return pd.DataFrame(data)
+            # Single-ticker case: return Close column as DataFrame
+            if "Close" in data.columns:
+                closes = data["Close"]
+                if isinstance(closes, pd.Series):
+                    return closes.to_frame(name=yf_symbols[0])
+                return closes
+            # else return whatever we have
+            return pd.DataFrame(data)
     except Exception as e:
-        app.logger.exception("get_multi_close_df error: %s", e)
+        print(f"[ERROR] get_multi_close_df: {e}")
         return None
 
 # -----------------------
-# Helpers: technical indicators (pandas / numpy)
+# Technical indicators (pandas-safe)
 # -----------------------
-def ema(series, span):
+def ema(series: pd.Series, span: int) -> pd.Series:
     return series.ewm(span=span, adjust=False).mean()
 
-def sma(series, window):
-    return series.rolling(window).mean()
+def sma(series: pd.Series, window: int) -> pd.Series:
+    return series.rolling(window=window).mean()
 
-def rsi(series, length=14):
+def rsi(series: pd.Series, length: int = 14) -> pd.Series:
     delta = series.diff()
     up = delta.clip(lower=0)
     down = -1 * delta.clip(upper=0)
@@ -653,7 +512,7 @@ def rsi(series, length=14):
     rs = ma_up / (ma_down + 1e-9)
     return 100 - (100 / (1 + rs))
 
-def macd(series, fast=12, slow=26, signal=9):
+def macd(series: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9):
     fast_ema = series.ewm(span=fast, adjust=False).mean()
     slow_ema = series.ewm(span=slow, adjust=False).mean()
     macd_line = fast_ema - slow_ema
@@ -661,156 +520,191 @@ def macd(series, fast=12, slow=26, signal=9):
     hist = macd_line - signal_line
     return macd_line, signal_line, hist
 
-def atr(df, length=14):
-    # df must contain High, Low, Close
-    high = df['High']
-    low = df['Low']
-    close = df['Close']
-    tr1 = high - low
-    tr2 = (high - close.shift(1)).abs()
-    tr3 = (low - close.shift(1)).abs()
-    tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
-    return tr.rolling(length).mean()
+def atr(df: pd.DataFrame, length: int = 14) -> pd.Series:
+    """
+    df must contain 'High','Low','Close' columns (case-insensitive)
+    """
+    try:
+        dfc = df.copy()
+        # normalize column names
+        cols = {c.lower(): c for c in dfc.columns}
+        high = dfc[cols.get("high", "High")]
+        low = dfc[cols.get("low", "Low")]
+        close = dfc[cols.get("close", "Close")]
+        tr1 = (high - low).abs()
+        tr2 = (high - close.shift(1)).abs()
+        tr3 = (low - close.shift(1)).abs()
+        tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+        return tr.rolling(length).mean()
+    except Exception as e:
+        print(f"[ERROR] atr: {e}")
+        return pd.Series(dtype=float)
 
-def bollinger_bands(series, window=20, num_std=2):
-    ma = series.rolling(window).mean()
-    std = series.rolling(window).std()
+def bollinger_bands(series: pd.Series, window: int = 20, num_std: int = 2):
+    ma = series.rolling(window=window).mean()
+    std = series.rolling(window=window).std()
     upper = ma + std * num_std
     lower = ma - std * num_std
     return ma, upper, lower
 
-def zscore(series):
+def zscore(series: pd.Series) -> pd.Series:
     return (series - series.mean()) / (series.std() + 1e-9)
 
 # -----------------------
-# Backtest engine: EMA crossover with ATR-based stops
+# Backtest engine (cleaned)
 # -----------------------
 def backtest_ema_crossover(close_series, high_series=None, low_series=None, short=12, long=26, capital=100000, risk_pct=0.02):
     """
-    Simple long-only EMA crossover backtest.
-    Entry when short EMA crosses above long EMA.
-    Exit when short EMA crosses below long EMA.
-    Position sizing uses risk_pct of equity and ATR to size stop loss (2 * ATR).
-    Returns trade list and statistics.
+    Long-only EMA crossover backtest with ATR-based stops.
+    close_series: pd.Series or list/ndarray
+    high_series/low_series optional series aligned with close_series
     """
     try:
-        df = pd.DataFrame({'close': close_series}).dropna()
-        if high_series is not None and low_series is not None:
-            df['High'] = high_series.reindex(df.index)
-            df['Low'] = low_series.reindex(df.index)
+        # normalize input series to DataFrame indexable
+        if isinstance(close_series, (list, np.ndarray)):
+            df = pd.DataFrame({"Close": close_series})
+        elif isinstance(close_series, pd.Series):
+            df = close_series.to_frame(name="Close")
+        elif isinstance(close_series, pd.DataFrame) and "Close" in close_series.columns:
+            df = close_series[["Close"]].copy()
         else:
-            df['High'] = df['close']
-            df['Low'] = df['close']
-        df['ema_short'] = df['close'].ewm(span=short, adjust=False).mean()
-        df['ema_long'] = df['close'].ewm(span=long, adjust=False).mean()
-        df['signal'] = 0
-        df.loc[df['ema_short'] > df['ema_long'], 'signal'] = 1
-        df['signal_shift'] = df['signal'].shift(1).fillna(0)
-        df['cross'] = df['signal'] - df['signal_shift']
-        df['atr'] = atr(df[['High', 'Low', 'close']].rename(columns={'close':'Close'}), length=14).reindex(df.index).fillna(method='bfill')
+            df = pd.DataFrame({"Close": close_series})
+
+        if high_series is not None:
+            df["High"] = pd.Series(high_series).values[:len(df)]
+        else:
+            df["High"] = df["Close"]
+        if low_series is not None:
+            df["Low"] = pd.Series(low_series).values[:len(df)]
+        else:
+            df["Low"] = df["Close"]
+
+        df = df.dropna()
+        if df.empty:
+            return {"trades": [], "stats": {"capital_start": capital, "capital_end": capital, "total_trades": 0}}
+
+        df["ema_short"] = df["Close"].ewm(span=short, adjust=False).mean()
+        df["ema_long"] = df["Close"].ewm(span=long, adjust=False).mean()
+        df["signal"] = 0
+        df.loc[df["ema_short"] > df["ema_long"], "signal"] = 1
+        df["signal_shift"] = df["signal"].shift(1).fillna(0)
+        df["cross"] = df["signal"] - df["signal_shift"]
+
+        df["atr"] = atr(df.rename(columns={"Close": "Close", "High": "High", "Low": "Low"}), length=14).fillna(method="bfill")
 
         trades = []
         position = 0
-        entry_price = None
         equity = float(capital)
         trade_records = []
 
         for idx, row in df.iterrows():
-            if row['cross'] == 1 and position == 0:
-                entry_price = float(row['close'])
+            if row["cross"] == 1 and position == 0:
+                entry_price = float(row["Close"])
                 position = 1
-                stop_distance = max(0.01 * entry_price, 2 * float(row.get('atr', 0.0)))  # avoid zero ATR
-                # number of shares sized by risk_pct of equity divided by stop_distance*price approx
-                eq_risk_amount = equity * float(risk_pct)
-                if stop_distance <= 0:
-                    size = 0
-                else:
-                    size = math.floor(eq_risk_amount / stop_distance)
+                stop_distance = max(0.01 * entry_price, 2.0 * float(row.get("atr", 0.0)))
+                risk_amount = equity * float(risk_pct)
+                size = math.floor(risk_amount / (stop_distance)) if stop_distance > 0 else 1
                 if size <= 0:
                     size = 1
-                trades.append({
-                    'entry_time': str(idx),
-                    'entry_price': entry_price,
-                    'size': int(size),
-                    'stop_distance': float(stop_distance),
-                    'equity_before': float(equity)
-                })
-            elif row['cross'] == -1 and position == 1:
-                exit_price = float(row['close'])
+                trade = {
+                    "entry_time": str(idx),
+                    "entry_price": entry_price,
+                    "size": int(size),
+                    "stop_distance": float(stop_distance),
+                    "equity_before": float(equity)
+                }
+                trades.append(trade)
+            elif row["cross"] == -1 and position == 1:
+                exit_price = float(row["Close"])
                 position = 0
                 last = trades[-1]
-                pl = (exit_price - last['entry_price']) * last['size']
+                pl = (exit_price - last["entry_price"]) * last["size"]
                 equity += pl
                 last.update({
-                    'exit_time': str(idx),
-                    'exit_price': float(exit_price),
-                    'pl': float(pl),
-                    'equity_after': float(equity)
+                    "exit_time": str(idx),
+                    "exit_price": float(exit_price),
+                    "pl": float(pl),
+                    "equity_after": float(equity)
                 })
                 trade_records.append(last)
 
-        # close any open position at last price
+        # Close open position at last price
         if position == 1 and trades:
             last = trades[-1]
-            if 'exit_time' not in last:
-                last_price = float(df['close'].iloc[-1])
-                pl = (last_price - last['entry_price']) * last['size']
+            if "exit_time" not in last:
+                last_price = float(df["Close"].iloc[-1])
+                pl = (last_price - last["entry_price"]) * last["size"]
                 equity += pl
                 last.update({
-                    'exit_time': str(df.index[-1]),
-                    'exit_price': float(last_price),
-                    'pl': float(pl),
-                    'equity_after': float(equity)
+                    "exit_time": str(df.index[-1]),
+                    "exit_price": float(last_price),
+                    "pl": float(pl),
+                    "equity_after": float(equity)
                 })
                 trade_records.append(last)
 
         total_trades = len(trade_records)
-        wins = sum(1 for t in trade_records if t['pl'] > 0)
+        wins = sum(1 for t in trade_records if t.get("pl", 0) > 0)
         losses = total_trades - wins
-        total_pl = sum(t['pl'] for t in trade_records)
-        returns_pct = (equity - capital) / capital * 100 if capital != 0 else 0.0
+        total_pl = sum(t.get("pl", 0) for t in trade_records)
+        returns_pct = (equity - capital) / capital * 100 if capital else 0.0
 
         stats = {
-            'capital_start': float(capital),
-            'capital_end': float(equity),
-            'total_trades': int(total_trades),
-            'wins': int(wins),
-            'losses': int(losses),
-            'net_pnl': float(total_pl),
-            'returns_pct': float(returns_pct)
+            "capital_start": float(capital),
+            "capital_end": float(equity),
+            "total_trades": int(total_trades),
+            "wins": int(wins),
+            "losses": int(losses),
+            "net_pnl": float(total_pl),
+            "returns_pct": float(returns_pct)
         }
-        return {'trades': trade_records, 'stats': stats}
+        return {"trades": trade_records, "stats": stats}
     except Exception as e:
-        app.logger.exception("backtest error: %s", e)
-        return {'error': str(e)}
+        print(f"[ERROR] backtest_ema_crossover: {e}")
+        return {"error": str(e)}
 
 # -----------------------
 # Options helpers
 # -----------------------
-def get_option_chain(symbol):
+def get_option_chain(symbol: str) -> Dict[str, Any]:
     """
-    Returns the nearest expiry option chain (calls & puts) using yfinance.Ticker.option_chain
+    Return option chain for nearest expiry using yfinance.Ticker.option_chain.
+    symbol should be a Yahoo-style symbol (e.g., 'RELIANCE.NS').
     """
     try:
-        t = yf.Ticker(symbol)
+        if not symbol:
+            return {"expiries": [], "chains": {}}
+        yf_sym = map_to_yf_symbol(symbol)
+        t = yf.Ticker(yf_sym)
         expiries = t.options
         if not expiries:
-            return {'expiries': [], 'chains': {}}
+            return {"expiries": [], "chains": {}}
         exp = expiries[0]
         chain = t.option_chain(exp)
-        calls = chain.calls.to_dict(orient='records')
-        puts = chain.puts.to_dict(orient='records')
-        return {'expiries': expiries, 'expiry_used': exp, 'calls': calls, 'puts': puts}
+        return {"expiries": expiries, "expiry_used": exp, "calls": chain.calls.to_dict(orient="records"), "puts": chain.puts.to_dict(orient="records")}
     except Exception as e:
-        app.logger.exception("get_option_chain error: %s", e)
-        return {'expiries': [], 'chains_error': str(e)}
+        print(f"[ERROR] get_option_chain: {e}")
+        return {"expiries": [], "chains_error": str(e)}
 
 # -----------------------
-# Utility: safe JSON conversion
+# Utilities
 # -----------------------
-def safe_json(obj):
+def safe_json(obj: Any) -> Any:
+    """Convert numpy/pandas objects into JSON-serializable primitives."""
     try:
-        return json.loads(json.dumps(obj, default=lambda o: (o.isoformat() if hasattr(o, 'isoformat') else (float(o) if isinstance(o, (np.floating, np.integer)) else str(o)))))
+        def _default(o):
+            if hasattr(o, "isoformat"):
+                return o.isoformat()
+            if isinstance(o, (np.integer,)):
+                return int(o)
+            if isinstance(o, (np.floating,)):
+                return float(o)
+            if isinstance(o, (np.ndarray,)):
+                return o.tolist()
+            if isinstance(o, pd.Timestamp):
+                return o.isoformat()
+            return str(o)
+        return json.loads(json.dumps(obj, default=_default))
     except Exception:
         try:
             return str(obj)
@@ -818,52 +712,235 @@ def safe_json(obj):
             return {}
 
 # -----------------------
-# Small NLP-ish helper for basic natural language trading parsing
+# Minimal natural language parser
 # -----------------------
-def simple_nl_parse(text):
+def simple_nl_parse(text: str) -> Dict[str, Any]:
     """
-    Very small heuristic parser: detects 'buy', 'sell', 'monitor', tickers like ALLCAPS with dots,
-    percentages and timeframes like '1d','1w','1m'
+    Heuristic parser to detect buy/sell/monitor and tickers from free text.
+    Returns dict with keys: action, symbols, condition, threshold, timeframe, priority.
     """
-    out = {
-        'action': None,
-        'symbols': [],
-        'condition': None,
-        'threshold': None,
-        'timeframe': None,
-        'priority': 'normal'
-    }
+    out = {"action": None, "symbols": [], "condition": None, "threshold": None, "timeframe": None, "priority": "normal"}
+    if not text:
+        return out
     txt = text.lower()
-    if 'buy' in txt:
-        out['action'] = 'buy'
-    elif 'sell' in txt:
-        out['action'] = 'sell'
-    elif 'alert' in txt:
-        out['action'] = 'alert'
-    elif 'monitor' in txt:
-        out['action'] = 'monitor'
-    # symbols: naive extract uppercase tokens or token with .NS or ^
-    tokens = text.replace(',', ' ').split()
+    if "buy" in txt:
+        out["action"] = "buy"
+    elif "sell" in txt:
+        out["action"] = "sell"
+    elif "alert" in txt:
+        out["action"] = "alert"
+    elif "monitor" in txt:
+        out["action"] = "monitor"
+
+    # Extract symbol-like tokens (.NS, ^, ALLCAPS)
+    tokens = re.split(r"[,\s]+", text)
     syms = []
     for t in tokens:
-        if t.upper() == t and len(t) >= 2 and any(ch.isalpha() for ch in t):
-            syms.append(t)
-        if '.NS' in t.upper() or '^' in t:
+        if not t:
+            continue
+        if t.upper() == t and len(t) >= 2 and any(c.isalpha() for c in t):
             syms.append(t.upper())
-    out['symbols'] = list(dict.fromkeys([s.upper() for s in syms]))
-    # thresholds
-    import re
-    m = re.search(r'(\d+\.?\d*)\s*%?', text)
+        if ".NS" in t.upper() or "^" in t:
+            syms.append(t.upper())
+    out["symbols"] = list(dict.fromkeys([map_to_yf_symbol(s) for s in syms]))
+
+    # threshold (percentage or number)
+    m = re.search(r"([-+]?\d+\.?\d*)\s*(%|percent)?", text)
     if m:
-        out['threshold'] = m.group(1)
-    # timeframe
-    for tf in ['1d','3d','5d','1w','1m','3m','6m','1y']:
+        out["threshold"] = m.group(0).strip()
+
+    # timeframe tokens
+    for tf in ["1d", "3d", "5d", "1w", "1m", "3m", "6m", "1y"]:
         if tf in txt:
-            out['timeframe'] = tf
+            out["timeframe"] = tf
             break
-    if 'urgent' in txt or 'high' in txt:
-        out['priority'] = 'high'
+
+    if "urgent" in txt or "high" in txt:
+        out["priority"] = "high"
+
     return out
+
+# -----------------------
+# Sentiment & news
+# -----------------------
+def fetch_news_sentiment(target: str, news_sources: List[str] = None) -> Dict[str, Any]:
+    """
+    Fetch recent RSS articles from Indian financial sources and return a simple sentiment score (0-100).
+    If TextBlob is available, use it; otherwise use simple polarity heuristic.
+    """
+    try:
+        if news_sources is None:
+            news_sources = [
+                "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms",
+                "https://www.moneycontrol.com/rss/results.xml",
+                "https://www.business-standard.com/rss/markets-106.rss"
+            ]
+        target_key = target.replace(".NS", "").lower()
+        scores = []
+        count = 0
+        for src in news_sources:
+            try:
+                feed = feedparser.parse(src)
+                if not feed or not hasattr(feed, "entries"):
+                    continue
+                for entry in feed.entries[:10]:
+                    title = getattr(entry, "title", "") or ""
+                    summary = getattr(entry, "summary", "") or ""
+                    content = (title + " " + summary).lower()
+                    if target_key in content:
+                        count += 1
+                        if _HAS_TEXTBLOB:
+                            polarity = TextBlob(title + " " + summary).sentiment.polarity
+                        else:
+                            # very simple heuristic: positive if words like 'beats','up','gains', negative if 'miss','down','loss'
+                            pos_tokens = ["beats", "rise", "up", "gains", "gain", "surge", "positive", "bull"]
+                            neg_tokens = ["miss", "down", "loss", "fall", "drop", "decline", "negative", "bear"]
+                            polarity = 0
+                            txt = title + " " + summary
+                            for w in pos_tokens:
+                                if w in txt.lower():
+                                    polarity += 0.2
+                            for w in neg_tokens:
+                                if w in txt.lower():
+                                    polarity -= 0.2
+                            # clamp polarity to [-1,1]
+                            polarity = max(-1.0, min(1.0, polarity))
+                        scores.append(polarity)
+            except Exception:
+                continue
+        if scores:
+            avg = float(np.mean(scores))
+            # convert to 0-100 scale
+            sentiment_score = float((avg + 1) * 50)
+        else:
+            sentiment_score = 50.0
+        return {"score": sentiment_score, "count": count, "raw_scores": scores}
+    except Exception as e:
+        print(f"[ERROR] fetch_news_sentiment: {e}")
+        return {"score": 50.0, "count": 0, "error": str(e)}
+
+def fetch_social_sentiment(target: str) -> Dict[str, Any]:
+    """
+    Placeholder that collects a simulated social score based on recent price change.
+    Replace this with real Twitter/Reddit scraping using APIs if you have credentials.
+    """
+    try:
+        # Use real market data to seed sentiment
+        sym = map_to_yf_symbol(target)
+        md = get_real_market_data([sym])
+        if not md or sym not in md:
+            return {"score": 50.0, "count": 0}
+        ch_pct = md[sym]["change_percent"]
+        # map change_percent to sentiment in 0-100
+        if ch_pct >= 2:
+            score = min(100.0, 60 + ch_pct * 2)
+        elif ch_pct <= -2:
+            score = max(0.0, 40 + ch_pct * 2)
+        else:
+            score = 50.0 + ch_pct * 2.0
+        score = float(max(0.0, min(100.0, score)))
+        return {"score": score, "count": 100, "platforms": ["simulated"]}
+    except Exception as e:
+        print(f"[ERROR] fetch_social_sentiment: {e}")
+        return {"score": 50.0, "count": 0, "error": str(e)}
+
+def fetch_earnings_sentiment(target: str) -> Dict[str, Any]:
+    """
+    Placeholder returning a mild positive by default. Replace with transcript analysis as needed.
+    """
+    try:
+        # As a safe default, return 55 (slightly positive) with a small count
+        return {"score": 55.0, "count": 5, "source": "earnings_calls"}
+    except Exception as e:
+        return {"score": 50.0, "count": 0, "error": str(e)}
+
+def get_real_sentiment_data(target: str, source: str = "all") -> Dict[str, Any]:
+    """
+    Combine news/social/earnings sentiment into an overall score.
+    We weight: news 40%, social 30%, earnings 30% by default.
+    """
+    try:
+        overall = 0.0
+        breakdown = {}
+        datapoints = 0
+        if source in ("news", "all"):
+            n = fetch_news_sentiment(target)
+            breakdown["news"] = n
+            overall += n.get("score", 50.0) * 0.4
+            datapoints += n.get("count", 0)
+        if source in ("social", "all"):
+            s = fetch_social_sentiment(target)
+            breakdown["social"] = s
+            overall += s.get("score", 50.0) * 0.3
+            datapoints += s.get("count", 0)
+        if source in ("earnings", "all"):
+            e = fetch_earnings_sentiment(target)
+            breakdown["earnings"] = e
+            overall += e.get("score", 50.0) * 0.3
+            datapoints += e.get("count", 0)
+        if overall == 0:
+            overall = 50.0
+        return {"overall_score": float(overall), "breakdown": breakdown, "data_points": int(datapoints)}
+    except Exception as e:
+        print(f"[ERROR] get_real_sentiment_data: {e}")
+        return {"overall_score": 50.0, "breakdown": {}, "data_points": 0, "error": str(e)}
+
+# -----------------------
+# Correlation matrix
+# -----------------------
+def calculate_correlation_matrix(symbols: List[str]) -> Dict[str, Dict[str, float]]:
+    try:
+        price_data = {}
+        for s in symbols:
+            try:
+                yf_sym = map_to_yf_symbol(s)
+                tk = yf.Ticker(yf_sym)
+                hist = tk.history(period="1y")
+                if hist is None or hist.empty:
+                    continue
+                price_data[yf_sym.replace(".NS", "")] = hist["Close"].pct_change().dropna()
+            except Exception:
+                continue
+        if len(price_data) < 2:
+            return {}
+        df = pd.DataFrame(price_data)
+        corr = df.corr().round(4)
+        return corr.to_dict()
+    except Exception as e:
+        print(f"[ERROR] calculate_correlation_matrix: {e}")
+        return {"error": str(e)}
+
+# -----------------------
+# Simulated options / insider helpers (realistic shapes)
+# -----------------------
+def get_real_options_data(symbol: str) -> Dict[str, Any]:
+    """
+    Returns a realistic-shaped options summary.
+    For production, integrate with an NSE-data provider or use an official API.
+    """
+    try:
+        yf_sym = map_to_yf_symbol(symbol)
+        # Basic approximation: return placeholders but in realistic keys
+        return {
+            "put_call_ratio": 1.0,
+            "max_pain": None,
+            "open_interest": {"calls": None, "puts": None},
+            "implied_volatility": None,
+            "unusual_activity": []
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+def get_real_insider_data(period: str = "30d") -> List[Dict[str, Any]]:
+    """
+    Placeholder list of insider transactions — replace with actual data source integration.
+    """
+    try:
+        return [
+            {"company": "RELIANCE", "insider": "Sample", "transaction": "SELL", "shares": 100000, "value": 284750000, "date": "2024-01-15"}
+        ]
+    except Exception as e:
+        return {"error": str(e)}
 
 
 # --- Routes ---
