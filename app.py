@@ -44,7 +44,7 @@ print("🔑 DHAN_ACCESS_TOKEN:", os.getenv("DHAN_ACCESS_TOKEN"))
 print("🔑 OPENROUTER_KEY:", os.getenv("OPENROUTER_API_KEY"))
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # Indian Stock symbols for different segments
 INDIAN_SYMBOLS = {
@@ -545,11 +545,11 @@ def get_real_insider_data(period):
 
 
 # Helpers: OpenRouter call (optional)
-# ------------------------------
+# -----------------------
 def call_openrouter(prompt, model="deepseek/deepseek-chat", temperature=0.7, max_tokens=1000):
     """
-    Calls OpenRouter if OPENROUTER_KEY is configured. Otherwise raises RuntimeError.
-    This is used for endpoints that synthesize analysis text where no direct data source exists.
+    Optional: call OpenRouter. If OPENROUTER_KEY not set, raises RuntimeError.
+    This function is not required for core route functionality.
     """
     if not OPENROUTER_KEY:
         raise RuntimeError("OPENROUTER_API_KEY not configured in environment.")
@@ -571,18 +571,21 @@ def call_openrouter(prompt, model="deepseek/deepseek-chat", temperature=0.7, max
     except Exception:
         return json.dumps(j)
 
-# ------------------------------
+# -----------------------
 # Helpers: yfinance data utilities
-# ------------------------------
+# -----------------------
 def get_stock_df(symbol, period="6mo", interval="1d"):
     """
-    Returns a DataFrame of OHLCV for a given symbol (yfinance format).
-    symbol: e.g. 'RELIANCE.NS' or '^NSEI'
+    Returns OHLCV DataFrame for a given symbol, or None if not available.
+    symbol: str like 'RELIANCE.NS' or '^NSEI' or 'AAPL'
     """
     try:
+        # yfinance accepts both single symbol and list; here single
         df = yf.download(symbol, period=period, interval=interval, progress=False, auto_adjust=True)
         if df is None or df.empty:
             return None
+        # Ensure DatetimeIndex and proper column names
+        df.index = pd.to_datetime(df.index)
         return df
     except Exception as e:
         app.logger.exception("yfinance error for %s: %s", symbol, e)
@@ -590,46 +593,64 @@ def get_stock_df(symbol, period="6mo", interval="1d"):
 
 def get_multi_close_df(symbols, period="6mo", interval="1d"):
     """
-    Returns a simple DataFrame with Close prices for multiple tickers (aligned).
-    Accepts a list of symbols or comma-separated string.
+    Returns a DataFrame with Close prices for multiple tickers (aligned).
+    symbols: list of ticker strings.
     """
     try:
         if isinstance(symbols, str):
-            symbols = [s.strip() for s in symbols.split(",") if s.strip()]
+            symbols = [symbols]
         data = yf.download(symbols, period=period, interval=interval, group_by='ticker', progress=False, auto_adjust=True)
-        # if multiindex -> normalize to single Close df
+        # If single ticker, data will be simple DataFrame
+        if data is None or data.empty:
+            return None
+        # If multiindex (group_by='ticker'), normalize
         if isinstance(data.columns, pd.MultiIndex):
             close_df = pd.DataFrame()
             for sym in symbols:
                 try:
                     close_series = data[(sym, 'Close')]
                 except Exception:
-                    close_series = data['Close'] if 'Close' in data else None
+                    # fallback if yfinance returned flat structure
+                    try:
+                        close_series = data['Close']
+                    except Exception:
+                        close_series = None
                 if close_series is not None:
                     close_df[sym] = close_series
+            if close_df.empty:
+                # try flat 'Close' column
+                if 'Close' in data:
+                    close_df = data['Close']
+            if isinstance(close_df, pd.Series):
+                close_df = close_df.to_frame()
+            close_df = close_df.dropna(axis=0, how='all')
+            return close_df
         else:
-            # single symbol or already normalized
+            # single multi-day DataFrame with columns 'Open','High',... or if multiple tickers requested, it might be wide already
             if 'Close' in data.columns:
-                close_df = data['Close'].to_frame() if isinstance(data['Close'], pd.Series) else data['Close']
-                # if a DataFrame of many closes (rare), pass through
+                close_series = data['Close']
+                if isinstance(close_series, pd.Series):
+                    return close_series.to_frame()
+                else:
+                    # DataFrame (maybe multi columns by ticker)
+                    return close_series
             else:
-                close_df = data
-        if isinstance(close_df, pd.Series):
-            close_df = close_df.to_frame()
-        close_df = close_df.dropna(axis=0, how='all')
-        return close_df
+                return pd.DataFrame(data)
     except Exception as e:
         app.logger.exception("get_multi_close_df error: %s", e)
         return None
 
-# ------------------------------
-# Helpers: technical indicators (pandas)
-# ------------------------------
+# -----------------------
+# Helpers: technical indicators (pandas / numpy)
+# -----------------------
 def ema(series, span):
     return series.ewm(span=span, adjust=False).mean()
 
+def sma(series, window):
+    return series.rolling(window).mean()
+
 def rsi(series, length=14):
-    delta = series.diff().dropna()
+    delta = series.diff()
     up = delta.clip(lower=0)
     down = -1 * delta.clip(upper=0)
     ma_up = up.ewm(com=length-1, adjust=False).mean()
@@ -645,84 +666,135 @@ def macd(series, fast=12, slow=26, signal=9):
     hist = macd_line - signal_line
     return macd_line, signal_line, hist
 
-# ------------------------------
-# Backtest engine: simple EMA crossover + risk management
-# ------------------------------
-def backtest_ema_crossover(close_series, short=12, long=26, capital=100000, risk_pct=0.02):
+def atr(df, length=14):
+    # df must contain High, Low, Close
+    high = df['High']
+    low = df['Low']
+    close = df['Close']
+    tr1 = high - low
+    tr2 = (high - close.shift(1)).abs()
+    tr3 = (low - close.shift(1)).abs()
+    tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+    return tr.rolling(length).mean()
+
+def bollinger_bands(series, window=20, num_std=2):
+    ma = series.rolling(window).mean()
+    std = series.rolling(window).std()
+    upper = ma + std * num_std
+    lower = ma - std * num_std
+    return ma, upper, lower
+
+def zscore(series):
+    return (series - series.mean()) / (series.std() + 1e-9)
+
+# -----------------------
+# Backtest engine: EMA crossover with ATR-based stops
+# -----------------------
+def backtest_ema_crossover(close_series, high_series=None, low_series=None, short=12, long=26, capital=100000, risk_pct=0.02):
     """
-    Rolling backtest:
-      - enter long when short EMA crosses above long EMA
-      - exit when short EMA crosses below long EMA
-      - fixed fractional position sizing based on risk_pct per trade with ATR for stoploss (approx)
-    Returns dictionary with trades and performance metrics.
+    Simple long-only EMA crossover backtest.
+    Entry when short EMA crosses above long EMA.
+    Exit when short EMA crosses below long EMA.
+    Position sizing uses risk_pct of equity and ATR to size stop loss (2 * ATR).
+    Returns trade list and statistics.
     """
-    df = pd.DataFrame({'close': close_series}).dropna()
-    if df.empty:
-        return {'trades': [], 'stats': {'capital_start': capital, 'capital_end': capital, 'total_trades': 0}}
-    df['ema_short'] = df['close'].ewm(span=short, adjust=False).mean()
-    df['ema_long'] = df['close'].ewm(span=long, adjust=False).mean()
-    df['signal'] = 0
-    df.loc[df['ema_short'] > df['ema_long'], 'signal'] = 1
-    df['signal_shift'] = df['signal'].shift(1).fillna(0)
-    df['cross'] = df['signal'] - df['signal_shift']
+    try:
+        df = pd.DataFrame({'close': close_series}).dropna()
+        if high_series is not None and low_series is not None:
+            df['High'] = high_series.reindex(df.index)
+            df['Low'] = low_series.reindex(df.index)
+        else:
+            df['High'] = df['close']
+            df['Low'] = df['close']
+        df['ema_short'] = df['close'].ewm(span=short, adjust=False).mean()
+        df['ema_long'] = df['close'].ewm(span=long, adjust=False).mean()
+        df['signal'] = 0
+        df.loc[df['ema_short'] > df['ema_long'], 'signal'] = 1
+        df['signal_shift'] = df['signal'].shift(1).fillna(0)
+        df['cross'] = df['signal'] - df['signal_shift']
+        df['atr'] = atr(df[['High', 'Low', 'close']].rename(columns={'close':'Close'}), length=14).reindex(df.index).fillna(method='bfill')
 
-    # ATR proxy (True Range approximated using high-low if available)
-    # If only closes provided, fall back to fixed stop %
-    # For simplicity assume 2% stop if no ATR
-    trades = []
-    position = 0
-    entry_price = None
-    equity = capital
-    trade_records = []
+        trades = []
+        position = 0
+        entry_price = None
+        equity = float(capital)
+        trade_records = []
 
-    # Determine ATR if high/low available in index (caller may pass full df)
-    atr_series = None
-    if isinstance(close_series, (pd.Series, pd.DataFrame)):
-        # try to get high/low from original source if possible
-        pass
-
-    for idx, row in df.iterrows():
-        try:
+        for idx, row in df.iterrows():
             if row['cross'] == 1 and position == 0:
-                entry_price = row['close']
+                entry_price = float(row['close'])
                 position = 1
-                size = (equity * risk_pct) / (entry_price * 0.02)  # assume 2% stop initially
-                size = max(1, math.floor(size))
-                trades.append({'entry_time': str(idx), 'entry_price': float(entry_price), 'size': int(size)})
+                stop_distance = max(0.01 * entry_price, 2 * float(row.get('atr', 0.0)))  # avoid zero ATR
+                # number of shares sized by risk_pct of equity divided by stop_distance*price approx
+                eq_risk_amount = equity * float(risk_pct)
+                if stop_distance <= 0:
+                    size = 0
+                else:
+                    size = math.floor(eq_risk_amount / stop_distance)
+                if size <= 0:
+                    size = 1
+                trades.append({
+                    'entry_time': str(idx),
+                    'entry_price': entry_price,
+                    'size': int(size),
+                    'stop_distance': float(stop_distance),
+                    'equity_before': float(equity)
+                })
             elif row['cross'] == -1 and position == 1:
-                exit_price = row['close']
+                exit_price = float(row['close'])
                 position = 0
                 last = trades[-1]
                 pl = (exit_price - last['entry_price']) * last['size']
                 equity += pl
-                last.update({'exit_time': str(idx), 'exit_price': float(exit_price), 'pl': float(pl), 'equity_after': float(equity)})
+                last.update({
+                    'exit_time': str(idx),
+                    'exit_price': float(exit_price),
+                    'pl': float(pl),
+                    'equity_after': float(equity)
+                })
                 trade_records.append(last)
-        except Exception:
-            app.logger.exception("Error during backtest iteration: %s", idx)
 
-    total_trades = len(trade_records)
-    wins = sum(1 for t in trade_records if t.get('pl', 0) > 0)
-    losses = total_trades - wins
-    total_pl = sum(t.get('pl', 0) for t in trade_records)
-    returns_pct = (equity - capital) / capital * 100
+        # close any open position at last price
+        if position == 1 and trades:
+            last = trades[-1]
+            if 'exit_time' not in last:
+                last_price = float(df['close'].iloc[-1])
+                pl = (last_price - last['entry_price']) * last['size']
+                equity += pl
+                last.update({
+                    'exit_time': str(df.index[-1]),
+                    'exit_price': float(last_price),
+                    'pl': float(pl),
+                    'equity_after': float(equity)
+                })
+                trade_records.append(last)
 
-    stats = {
-        'capital_start': capital,
-        'capital_end': equity,
-        'total_trades': total_trades,
-        'wins': wins,
-        'losses': losses,
-        'net_pnl': total_pl,
-        'returns_%': returns_pct
-    }
-    return {'trades': trade_records, 'stats': stats}
+        total_trades = len(trade_records)
+        wins = sum(1 for t in trade_records if t['pl'] > 0)
+        losses = total_trades - wins
+        total_pl = sum(t['pl'] for t in trade_records)
+        returns_pct = (equity - capital) / capital * 100 if capital != 0 else 0.0
 
-# ------------------------------
+        stats = {
+            'capital_start': float(capital),
+            'capital_end': float(equity),
+            'total_trades': int(total_trades),
+            'wins': int(wins),
+            'losses': int(losses),
+            'net_pnl': float(total_pl),
+            'returns_pct': float(returns_pct)
+        }
+        return {'trades': trade_records, 'stats': stats}
+    except Exception as e:
+        app.logger.exception("backtest error: %s", e)
+        return {'error': str(e)}
+
+# -----------------------
 # Options helpers
-# ------------------------------
+# -----------------------
 def get_option_chain(symbol):
     """
-    Returns options expiries and option chain for the nearest expiry using yfinance.Ticker.option_chain
+    Returns the nearest expiry option chain (calls & puts) using yfinance.Ticker.option_chain
     """
     try:
         t = yf.Ticker(symbol)
@@ -738,14 +810,65 @@ def get_option_chain(symbol):
         app.logger.exception("get_option_chain error: %s", e)
         return {'expiries': [], 'chains_error': str(e)}
 
-# ------------------------------
-# Utility: safe JSON conversion for numpy/pandas
-# ------------------------------
+# -----------------------
+# Utility: safe JSON conversion
+# -----------------------
 def safe_json(obj):
     try:
-        return json.loads(json.dumps(obj, default=lambda o: (o.isoformat() if hasattr(o, 'isoformat') else str(o))))
+        return json.loads(json.dumps(obj, default=lambda o: (o.isoformat() if hasattr(o, 'isoformat') else (float(o) if isinstance(o, (np.floating, np.integer)) else str(o)))))
     except Exception:
-        return str(obj)
+        try:
+            return str(obj)
+        except Exception:
+            return {}
+
+# -----------------------
+# Small NLP-ish helper for basic natural language trading parsing
+# -----------------------
+def simple_nl_parse(text):
+    """
+    Very small heuristic parser: detects 'buy', 'sell', 'monitor', tickers like ALLCAPS with dots,
+    percentages and timeframes like '1d','1w','1m'
+    """
+    out = {
+        'action': None,
+        'symbols': [],
+        'condition': None,
+        'threshold': None,
+        'timeframe': None,
+        'priority': 'normal'
+    }
+    txt = text.lower()
+    if 'buy' in txt:
+        out['action'] = 'buy'
+    elif 'sell' in txt:
+        out['action'] = 'sell'
+    elif 'alert' in txt:
+        out['action'] = 'alert'
+    elif 'monitor' in txt:
+        out['action'] = 'monitor'
+    # symbols: naive extract uppercase tokens or token with .NS or ^
+    tokens = text.replace(',', ' ').split()
+    syms = []
+    for t in tokens:
+        if t.upper() == t and len(t) >= 2 and any(ch.isalpha() for ch in t):
+            syms.append(t)
+        if '.NS' in t.upper() or '^' in t:
+            syms.append(t.upper())
+    out['symbols'] = list(dict.fromkeys([s.upper() for s in syms]))
+    # thresholds
+    import re
+    m = re.search(r'(\d+\.?\d*)\s*%?', text)
+    if m:
+        out['threshold'] = m.group(1)
+    # timeframe
+    for tf in ['1d','3d','5d','1w','1m','3m','6m','1y']:
+        if tf in txt:
+            out['timeframe'] = tf
+            break
+    if 'urgent' in txt or 'high' in txt:
+        out['priority'] = 'high'
+    return out
 
 
 # --- Routes ---
@@ -1656,54 +1779,56 @@ def voice_list():
 def serve_voice(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-# 1) generateRealStrategy
+# 1. generateRealStrategy
 @app.route("/api/generate-real-strategy", methods=["POST"])
 def api_generate_real_strategy():
     try:
         data = request.get_json(force=True) or {}
-        symbol = data.get("symbol") or data.get("ticker")
-        description = data.get("description", "") or data.get("strategy_description", "")
-        if symbol:
-            df = get_stock_df(symbol, period="1y")
-            if df is None or df.empty:
-                return jsonify({"error": f"No data for {symbol}"}), 400
-            close = df['Close']
-            macd_line, signal_line, hist = macd(close)
-            rsi_series = rsi(close)
-            # Create a deterministic, data-driven strategy skeleton
-            strategy = {
-                "strategy_name": f"EMA Crossover {symbol}",
-                "indicators": {
-                    "ema_short": 12,
-                    "ema_long": 26,
-                    "rsi_period": 14,
-                    "macd": {"fast": 12, "slow": 26, "signal": 9}
-                },
-                "entry_rules": f"Enter long when EMA(12) crosses above EMA(26) on daily close for {symbol}.",
-                "stoploss": "Initial stoploss at 2% below entry (use ATR-adaptive stop if available).",
-                "targets": ["1) 2% target", "2) 5% target", "3) trailing stop for larger moves"],
-                "position_sizing": f"Fixed fractional risk: {0.02*100:.1f}% of equity per trade; position size = risk_amount / (stop_distance * price).",
-                "example_trade": {
-                    "latest_close": float(close.iloc[-1]),
-                    "rsi_latest": float(rsi_series.iloc[-1]) if not rsi_series.empty else None,
-                    "macd_latest": float(macd_line.iloc[-1]) if not macd_line.empty else None
-                },
-                "notes": description
+        symbol = data.get("symbol")
+        description = data.get("description", "")
+        if not symbol:
+            return jsonify({"error": "Please provide 'symbol' in payload."}), 400
+        df = get_stock_df(symbol, period="1y", interval="1d")
+        if df is None or df.empty:
+            return jsonify({"error": f"No data for {symbol}"}), 400
+        close = df['Close']
+        ema_short = ema(close, 12)
+        ema_long = ema(close, 26)
+        rsi_series = rsi(close, 14)
+        macd_line, signal_line, hist = macd(close)
+        latest_price = float(close.iloc[-1])
+        latest_rsi = float(rsi_series.iloc[-1])
+        latest_macd = float(macd_line.iloc[-1])
+        latest_signal = float(signal_line.iloc[-1])
+        atr_val = float(atr(df[['High','Low','Close']].rename(columns={'Close':'close'}), length=14).iloc[-1])
+        # Strategy rules (deterministic)
+        strategy = {
+            "name": f"EMA({12},{26}) + RSI(14) Strategy for {symbol}",
+            "indicators": {
+                "ema_short": 12,
+                "ema_long": 26,
+                "rsi": 14,
+                "atr_window": 14
+            },
+            "entry_rule": "Enter long when EMA(12) crosses above EMA(26) and RSI(14) > 50.",
+            "exit_rule": "Exit when EMA(12) crosses below EMA(26) or RSI(14) < 40.",
+            "stoploss": f"ATR-based stoploss at 2 * ATR ({2*atr_val:.4f}) below entry.",
+            "targets": ["1:1 first target", "2:1 second target (aggressive)"],
+            "position_sizing": f"Risk {data.get('risk_pct', 0.02)} of equity per trade, position size = floor((equity * risk_pct) / (2 * ATR * price))",
+            "example_trade": {
+                "price": latest_price,
+                "rsi": latest_rsi,
+                "macd": latest_macd,
+                "signal": latest_signal,
+                "atr": atr_val
             }
-            return jsonify({"status": "success", "symbol": symbol, "strategy": strategy})
-        else:
-            # Without a symbol, return a generic multi-asset idea using available indices
-            prompt = f"Create a production-grade multi-asset strategy. User description: {description}"
-            try:
-                ai = call_openrouter(prompt)
-                return jsonify({"status": "success", "ai_strategy": ai})
-            except RuntimeError:
-                return jsonify({"error": "No symbol provided and OPENROUTER_API_KEY missing to generate multi-asset AI strategy."}), 501
+        }
+        return jsonify({"status": "success", "symbol": symbol, "strategy": strategy})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e), "trace": traceback.format_exc()}), 500
 
-# 2) processNaturalLanguageTrading
+# 2. processNaturalLanguageTrading
 @app.route("/api/process-natural-language", methods=["POST"])
 def api_process_nl_trading():
     try:
@@ -1711,101 +1836,141 @@ def api_process_nl_trading():
         text = data.get("text") or data.get("command") or ""
         if not text:
             return jsonify({"error": "No command provided"}), 400
-        try:
-            parsed = call_openrouter(f"You are Lakshmi AI parser. Convert the following natural language trading instruction into actionable JSON. Instruction: {text}\nReturn JSON with keys: action,symbols,condition,threshold,timeframe,priority")
-            return jsonify({"status": "success", "parsed": parsed})
-        except RuntimeError:
-            # Provide a simple local parser fallback (very basic heuristics)
-            tokens = text.upper().split()
-            action = "monitor"
-            if "BUY" in tokens or "LONG" in tokens:
-                action = "trade"
-            elif "ALERT" in tokens or "NOTIFY" in tokens:
-                action = "alert"
-            symbols = [t for t in tokens if t.endswith(".NS") or t.isupper() and len(t) <= 6]
-            return jsonify({"status": "success", "parsed": {"action": action, "symbols": symbols, "condition": text}})
-
+        parsed = simple_nl_parse(text)
+        return jsonify({"status": "success", "parsed": parsed})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 3) runAIAnalysis (requires OpenRouter)
+# 3. runAIAnalysis (renamed: runTechnicalAnalysis)
 @app.route("/api/run-ai-analysis", methods=["POST"])
 def api_run_ai_analysis():
+    """
+    Performs institutional-grade technical analysis based on requested query.
+    No LLM required: returns trend, vol, momentum, recommendation.
+    """
     try:
         data = request.get_json(force=True) or {}
         query = data.get("query") or data.get("ai_query") or ""
-        if not query:
-            return jsonify({"error": "No AI query"}), 400
-        try:
-            ai = call_openrouter(f"Perform an institutional-grade analysis: {query}")
-            return jsonify({"status": "success", "ai_analysis": ai})
-        except RuntimeError:
-            return jsonify({"error": "OPENROUTER_API_KEY not configured."}), 501
+        symbol = data.get("symbol", None)
+        # If user provided symbol, use it; else default to NIFTY index
+        symbol = symbol or "^NSEI"
+        df = get_stock_df(symbol, period="6mo", interval="1d")
+        if df is None or df.empty:
+            return jsonify({"error": "No market data for symbol"}), 400
+        close = df['Close']
+        macd_line, signal_line, hist = macd(close)
+        rsi_series = rsi(close)
+        vol = close.pct_change().rolling(21).std().iloc[-1] * math.sqrt(252)
+        ema_short = ema(close, 12).iloc[-1]
+        ema_long = ema(close, 26).iloc[-1]
+        # simple recommendation
+        rec = "Neutral"
+        if ema_short > ema_long and rsi_series.iloc[-1] > 55 and macd_line.iloc[-1] > signal_line.iloc[-1]:
+            rec = "Bullish"
+        elif ema_short < ema_long and rsi_series.iloc[-1] < 45 and macd_line.iloc[-1] < signal_line.iloc[-1]:
+            rec = "Bearish"
+        analysis = {
+            "symbol": symbol,
+            "latest_price": float(close.iloc[-1]),
+            "ema_short": float(ema_short),
+            "ema_long": float(ema_long),
+            "rsi": float(rsi_series.iloc[-1]),
+            "macd": float(macd_line.iloc[-1]),
+            "macd_signal": float(signal_line.iloc[-1]),
+            "annualized_vol": float(vol),
+            "recommendation": rec,
+            "note": "Deterministic technical analysis (no LLM)."
+        }
+        return jsonify({"status": "success", "analysis": analysis})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 4) runAdvancedScan
+# 4. runAdvancedScan
 @app.route("/api/run-advanced-scan", methods=["POST"])
 def api_run_advanced_scan():
     try:
         data = request.get_json(force=True) or {}
-        symbols = data.get("symbols", [])
-        if not symbols:
-            symbols = ["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS"]
+        symbols = data.get("symbols", []) or ["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS"]
         df = get_multi_close_df(symbols, period="1mo", interval="1d")
         if df is None or df.empty:
             return jsonify({"error": "Failed to fetch data"}), 500
         perf = (df.iloc[-1] / df.iloc[0] - 1) * 100
-        top = perf.sort_values(ascending=False).to_dict()
-        return jsonify({"status": "success", "top": safe_json(top)})
+        vol = df.pct_change().std() * math.sqrt(252)
+        rsi_vals = {}
+        for s in df.columns:
+            try:
+                srs = df[s].dropna()
+                rsi_vals[s] = float(rsi(srs).iloc[-1])
+            except Exception:
+                rsi_vals[s] = None
+        combined = []
+        for s in perf.index:
+            combined.append({
+                "symbol": s,
+                "perf_pct": float(perf[s]),
+                "ann_vol": float(vol[s]) if s in vol else None,
+                "rsi": rsi_vals.get(s)
+            })
+        combined_sorted = sorted(combined, key=lambda x: x['perf_pct'], reverse=True)
+        top = combined_sorted[:10]
+        return jsonify({"status": "success", "top": top})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 5) runAlgoPatternRecognition
+# 5. runAlgoPatternRecognition
 @app.route("/api/run-algo-pattern-recognition", methods=["POST"])
 def api_run_algo_pattern():
     try:
         data = request.get_json(force=True) or {}
         symbol = data.get("symbol", "RELIANCE.NS")
-        df = get_stock_df(symbol, period="6mo")
+        df = get_stock_df(symbol, period="6mo", interval="1d")
         if df is None or df.empty:
             return jsonify({"error": "No data"}), 400
         df['body'] = df['Close'] - df['Open']
         df['range'] = df['High'] - df['Low']
         df['upper_wick'] = df['High'] - df[['Close', 'Open']].max(axis=1)
         df['lower_wick'] = df[['Close', 'Open']].min(axis=1) - df['Low']
-        recent = df.tail(30)
+        recent = df.tail(20)
         patterns = []
         for idx, row in recent.iterrows():
-            if row['lower_wick'] > 2 * abs(row['body']) and abs(row['body'])/row['range'] < 0.5:
+            if row['lower_wick'] > 2 * abs(row['body']):
                 patterns.append({"time": str(idx), "pattern": "Hammer-like", "price": float(row['Close'])})
-            if row['upper_wick'] > 2 * abs(row['body']) and abs(row['body'])/row['range'] < 0.5:
+            if row['upper_wick'] > 2 * abs(row['body']):
                 patterns.append({"time": str(idx), "pattern": "Shooting-star-like", "price": float(row['Close'])})
         return jsonify({"status": "success", "patterns": patterns})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 6) runAlternativeDataAnalysis (not available via yfinance)
+# 6. runAlternativeDataAnalysis (proxy)
 @app.route("/api/run-alternative-data-analysis", methods=["POST"])
 def api_run_alt_data():
     try:
         data = request.get_json(force=True) or {}
         topic = data.get("topic", "satellite imagery effect on retail")
-        # This requires external alt-data sources - if OpenRouter available, fall back to AI synthesis
-        try:
-            ai = call_openrouter(f"Analyze alternative data effects: {topic}. Provide actionable trade signals if any.")
-            return jsonify({"status": "success", "ai_analysis": ai})
-        except RuntimeError:
-            return jsonify({"error": "Alternative data analysis requires external data sources or OPENROUTER_API_KEY."}), 501
+        # No direct alternative data sources. Provide proxy analysis based on volume and price anomalies.
+        symbols = data.get("symbols", ["RELIANCE.NS", "TCS.NS"])
+        df = get_multi_close_df(symbols, period="3mo", interval="1d")
+        if df is None:
+            return jsonify({"status": "success", "analysis": f"No alternative data available for '{topic}'. No market proxy data found."})
+        vol_spikes = {}
+        for s in df.columns:
+            series = df[s].dropna()
+            if len(series) < 10:
+                continue
+            returns = series.pct_change().dropna()
+            z = (returns - returns.mean()) / (returns.std() + 1e-9)
+            spikes = returns[np.abs(z) > 2].tail(10).to_dict()
+            vol_spikes[s] = spikes
+        return jsonify({"status": "success", "topic": topic, "proxy_alt_signals": safe_json(vol_spikes)})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 7) runAutoBacktest
+# 7. runAutoBacktest
 @app.route("/api/run-auto-backtest", methods=["POST"])
 def api_run_auto_backtest():
     try:
@@ -1816,18 +1981,19 @@ def api_run_auto_backtest():
         risk_pct = float(data.get("risk_pct", 0.02))
         results = {}
         for s in symbols:
-            df = get_stock_df(s, period=period)
+            df = get_stock_df(s, period=period, interval="1d")
             if df is None or df.empty:
                 results[s] = {"error": "no data"}
                 continue
-            bt = backtest_ema_crossover(df['Close'], short=12, long=26, capital=capital, risk_pct=risk_pct)
+            bt = backtest_ema_crossover(df['Close'], high_series=df['High'], low_series=df['Low'],
+                                        short=12, long=26, capital=capital, risk_pct=risk_pct)
             results[s] = bt
         return jsonify({"status": "success", "results": safe_json(results)})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 8) runBehavioralBiasDetector (requires textual input; can use AI if available)
+# 8. runBehavioralBiasDetector (simple keyword-based)
 @app.route("/api/run-behavioral-bias-detector", methods=["POST"])
 def api_bias_detector():
     try:
@@ -1835,23 +2001,33 @@ def api_bias_detector():
         journal_text = data.get("journal_text", "")
         if not journal_text:
             return jsonify({"error": "No journal text provided"}), 400
-        try:
-            ai = call_openrouter(f"Detect behavioral biases in the following trading journal. Return list of biases and remediation steps:\n\n{journal_text}")
-            return jsonify({"status": "success", "ai_analysis": ai})
-        except RuntimeError:
-            # fallback: simple keyword heuristics
-            biases = []
-            txt = journal_text.lower()
-            if "hold" in txt and "loss" in txt:
-                biases.append("loss aversion")
-            if "overtrade" in txt or "too many" in txt:
-                biases.append("overtrading")
-            return jsonify({"status": "success", "detected_biases": biases})
+        text = journal_text.lower()
+        biases = []
+        mapping = {
+            'loss aversion': ['loss', 'lost', 'gave up'],
+            'overconfidence': ['sure', 'guarantee', 'always win', 'no risk'],
+            'confirmation bias': ['only buy', 'i believed', 'i knew'],
+            'recency bias': ['recent', 'last week', 'yesterday'],
+            'anchoring': ['bought at', 'cost basis', 'entry price']
+        }
+        for bias, kw in mapping.items():
+            for k in kw:
+                if k in text:
+                    biases.append(bias)
+                    break
+        # heuristics for dispositional errors
+        if 'averag' in text or 'dca' in text:
+            biases.append('averaging down')
+        result = {
+            "detected_biases": list(dict.fromkeys(biases)),
+            "recommendation": "Keep a trading plan, set max risk per trade, avoid averaging down without plan."
+        }
+        return jsonify({"status": "success", "analysis": result})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 9) runCommodityStockMapper
+# 9. runCommodityStockMapper
 @app.route("/api/run-commodity-stock-mapper", methods=["POST"])
 def api_commodity_stock_mapper():
     try:
@@ -1866,13 +2042,15 @@ def api_commodity_stock_mapper():
         close_df = get_multi_close_df(symbols, period="6mo")
         if close_df is None:
             return jsonify({"error": "failed to fetch"}), 500
-        corr = close_df.corr().to_dict()
-        return jsonify({"status": "success", "mapping": symbols, "correlation": corr})
+        corr = close_df.corr().round(4).to_dict()
+        # compute performance
+        perf = ((close_df.iloc[-1] / close_df.iloc[0]) - 1) * 100
+        return jsonify({"status": "success", "mapping": symbols, "correlation": corr, "performance_pct": safe_json(perf.to_dict())})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 10) runCorrelationMatrix
+# 10. runCorrelationMatrix
 @app.route("/api/run-correlation-matrix", methods=["POST"])
 def api_run_correlation_matrix():
     try:
@@ -1887,23 +2065,24 @@ def api_run_correlation_matrix():
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 11) runCurrencyImpactCalculator
+# 11. runCurrencyImpactCalculator
 @app.route("/api/run-currency-impact", methods=["POST"])
 def api_currency_impact():
     try:
         data = request.get_json(force=True) or {}
         pair = data.get("pair", "USD-INR")
-        symbol = data.get("symbol", "^INR=X")  # Yahoo FX pair for INR
+        symbol = data.get("symbol", "^INR=X")
         df = get_stock_df(symbol, period="1mo")
         if df is None or df.empty:
-            return jsonify({"error": "FX data not available"}), 500
+            # fallback: return empty
+            return jsonify({"status": "success", "pair": pair, "ai_analysis": "FX data unavailable. Use external FX provider."})
         change = (df['Close'].iloc[-1] - df['Close'].iloc[0]) / (df['Close'].iloc[0] + 1e-9) * 100
-        return jsonify({"status": "success", "pair": pair, "change%": float(change)})
+        return jsonify({"status": "success", "pair": pair, "change_pct_1m": float(change)})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 12) runDrawdownRecoveryPredictor
+# 12. runDrawdownRecoveryPredictor
 @app.route("/api/run-drawdown-recovery", methods=["POST"])
 def api_drawdown_recovery():
     try:
@@ -1914,29 +2093,66 @@ def api_drawdown_recovery():
             return jsonify({"error": "No data"}), 400
         close = df['Close']
         roll_max = close.cummax()
-        drawdown = (close - roll_max) / roll_max
+        drawdown = (close - roll_max) / (roll_max + 1e-9)
         max_dd = float(drawdown.min())
-        return jsonify({"status": "success", "max_drawdown": max_dd})
+        # estimate recovery time assuming average monthly return of recent period
+        monthly_returns = close.pct_change().resample('M').apply(lambda x: (x + 1.0).prod() - 1.0)
+        avg_monthly = monthly_returns.mean() if not monthly_returns.empty else 0.01
+        if avg_monthly <= 0:
+            est_months_to_recover = None
+        else:
+            # required gain = -max_dd, months = log(1+required_gain)/log(1+avg_monthly)
+            try:
+                est_months_to_recover = math.log(1 - max_dd + 1e-9) / math.log(1 + float(avg_monthly))
+                est_months_to_recover = int(max(1, round(est_months_to_recover)))
+            except Exception:
+                est_months_to_recover = None
+        return jsonify({"status": "success", "max_drawdown": max_dd, "estimated_months_to_recover": est_months_to_recover})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 13) runDreamTradeSimulator (AI)
+# 13. runDreamTradeSimulator
 @app.route("/api/run-dream-trade-simulator", methods=["POST"])
 def api_dream_trade_simulator():
     try:
         data = request.get_json(force=True) or {}
         scenario = data.get("scenario", "")
-        try:
-            ai = call_openrouter(f"Simulate a dream trade scenario: {scenario}. Provide P&L, ROI, and risk profile.")
-            return jsonify({"status": "success", "simulation": ai})
-        except RuntimeError:
-            return jsonify({"error": "Dream trade simulation requires OPENROUTER_API_KEY."}), 501
+        # Scenario format example: {"symbol": "RELIANCE.NS", "action":"buy", "size":100, "entry":2500, "exit_pct": 0.1}
+        # We'll attempt to parse JSON-like or accept parameters
+        if isinstance(scenario, str):
+            try:
+                scenario_obj = json.loads(scenario)
+            except Exception:
+                scenario_obj = data
+        else:
+            scenario_obj = scenario or data
+        symbol = scenario_obj.get("symbol", "RELIANCE.NS")
+        size = int(scenario_obj.get("size", 100))
+        entry = float(scenario_obj.get("entry", 0.0))
+        if entry <= 0:
+            df = get_stock_df(symbol, period="1mo")
+            if df is None or df.empty:
+                return jsonify({"error": "No market data to simulate entry price."}), 400
+            entry = float(df['Close'].iloc[-1])
+        exit_pct = float(scenario_obj.get("exit_pct", 0.1))
+        exit_price = entry * (1 + exit_pct)
+        pl = (exit_price - entry) * size
+        roi = (pl / (entry * size + 1e-9)) * 100
+        sim = {
+            "symbol": symbol,
+            "entry_price": entry,
+            "exit_price": exit_price,
+            "size": size,
+            "pnl": pl,
+            "roi_pct": roi
+        }
+        return jsonify({"status": "success", "simulation": sim})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 14) runDynamicPositionSizing
+# 14. runDynamicPositionSizing
 @app.route("/api/run-dynamic-position-sizing", methods=["POST"])
 def api_dynamic_position():
     try:
@@ -1947,104 +2163,159 @@ def api_dynamic_position():
         df = get_stock_df(symbol, period="1y")
         if df is None or df.empty:
             return jsonify({"error": "No data"}), 400
-        atr = (df['High'] - df['Low']).rolling(14).mean().dropna()
-        atr_value = float(atr.iloc[-1]) if not atr.empty else None
-        stop_loss_distance = atr_value * 2 if atr_value else df['Close'].iloc[-1] * 0.02
+        atr_series = (df['High'] - df['Low']).rolling(14).mean().dropna()
+        if atr_series.empty:
+            atr_val = (df['High'] - df['Low']).iloc[-1]
+        else:
+            atr_val = float(atr_series.iloc[-1])
+        stop_loss_distance = max(0.01 * df['Close'].iloc[-1], atr_val * 2)
         price = float(df['Close'].iloc[-1])
-        position_size = max(1, int((capital * risk_per_trade) / (stop_loss_distance * price)))
-        return jsonify({"status": "success", "symbol": symbol, "position_size": position_size, "atr": atr_value})
+        position_size = max(1, int((capital * risk_per_trade) / (stop_loss_distance * price + 1e-9)))
+        return jsonify({"status": "success", "symbol": symbol, "position_size": position_size, "atr": float(atr_val)})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 15) runESGImpactScorer (not in yfinance) -> requires external data or AI
+# 15. runESGImpactScorer
 @app.route("/api/run-esg-impact-scorer", methods=["POST"])
 def api_esg_impact():
     try:
         data = request.get_json(force=True) or {}
         symbol = data.get("symbol", "RELIANCE.NS")
+        t = yf.Ticker(symbol)
         try:
-            ai = call_openrouter(f"Provide an ESG impact score analysis for {symbol} and explain key drivers.")
-            return jsonify({"status": "success", "symbol": symbol, "esg_analysis": ai})
-        except RuntimeError:
-            return jsonify({"error": "ESG scoring requires external datasets or OPENROUTER_API_KEY."}), 501
+            sustainability = t.sustainability
+            if sustainability is None or sustainability.empty:
+                raise Exception("No sustainability data")
+            # convert to dict if possible
+            sus = sustainability.to_dict()
+            return jsonify({"status": "success", "symbol": symbol, "sustainability": safe_json(sus)})
+        except Exception:
+            # fallback heuristic: no ESG data available
+            return jsonify({"status": "success", "symbol": symbol, "esg_analysis": "ESG data not available via yfinance for this ticker."})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 16) runEarningsCallAnalysis (requires transcripts / external source)
+# 16. runEarningsCallAnalysis
 @app.route("/api/run-earnings-call-analysis", methods=["POST"])
 def api_earnings_call():
     try:
         data = request.get_json(force=True) or {}
         symbol = data.get("symbol", "RELIANCE.NS")
+        t = yf.Ticker(symbol)
         try:
-            ai = call_openrouter(f"Analyze recent earnings calls and generate a concise actionable summary for {symbol}.")
-            return jsonify({"status": "success", "symbol": symbol, "analysis": ai})
-        except RuntimeError:
-            return jsonify({"error": "Earnings call analysis requires external transcripts or OPENROUTER_API_KEY."}), 501
+            earnings = t.earnings
+            if earnings is None or earnings.empty:
+                raise Exception("No earnings data")
+            recent = earnings.tail(4).to_dict()
+            # compute basic growth
+            eps_growth = None
+            try:
+                eps = earnings['Earnings']
+                eps_growth = float((eps.iloc[-1] - eps.iloc[0]) / (abs(eps.iloc[0]) + 1e-9) * 100)
+            except Exception:
+                eps_growth = None
+            return jsonify({"status": "success", "symbol": symbol, "earnings": safe_json(recent), "eps_growth_pct": eps_growth})
+        except Exception:
+            # little info available
+            cal = t.calendar
+            return jsonify({"status": "success", "symbol": symbol, "calendar": safe_json(cal.to_dict() if hasattr(cal, 'to_dict') else str(cal))})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 17) runEconomicImpactPredictor (AI)
+# 17. runEconomicImpactPredictor (proxy)
 @app.route("/api/run-economic-impact", methods=["POST"])
 def api_economic_impact():
     try:
         data = request.get_json(force=True) or {}
         event = data.get("event", "rbi-policy")
-        try:
-            ai = call_openrouter(f"Predict market impact for event: {event}. Provide sector-level implications and trade ideas.")
-            return jsonify({"status": "success", "event": event, "ai_analysis": ai})
-        except RuntimeError:
-            return jsonify({"error": "Economic impact prediction requires OPENROUTER_API_KEY."}), 501
+        # Proxy: compute recent sector responses — approximate using banking vs broader market
+        banks = ["HDFCBANK.NS", "ICICIBANK.NS", "SBIN.NS"]
+        market = "^NSEI"
+        df_market = get_stock_df(market, period="3mo")
+        df_banks = get_multi_close_df(banks, period="3mo")
+        if df_market is None or df_banks is None:
+            return jsonify({"status": "success", "event": event, "analysis": "Insufficient market data to compute proxy impact."})
+        market_perf = (df_market['Close'].iloc[-1] / df_market['Close'].iloc[0] - 1) * 100
+        banks_perf = {}
+        for b in banks:
+            try:
+                series = df_banks[b].dropna()
+                banks_perf[b] = float((series.iloc[-1] / series.iloc[0] - 1) * 100)
+            except Exception:
+                banks_perf[b] = None
+        return jsonify({"status": "success", "event": event, "market_change_pct": float(market_perf), "banks_change_pct": banks_perf})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 18) runGeopoliticalRiskScorer (AI)
+# 18. runGeopoliticalRiskScorer (proxy)
 @app.route("/api/run-geopolitical-risk", methods=["POST"])
 def api_geo_risk():
     try:
         data = request.get_json(force=True) or {}
         region = data.get("region", "india-china")
-        try:
-            ai = call_openrouter(f"Score geopolitical risk for {region} and supply specific trade hedges and timeline.")
-            return jsonify({"status": "success", "region": region, "ai_analysis": ai})
-        except RuntimeError:
-            return jsonify({"error": "Geopolitical risk scoring requires OPENROUTER_API_KEY."}), 501
+        # Proxy: compute volatility on Nifty; higher vol -> higher risk score
+        symbol = "^NSEI"
+        df = get_stock_df(symbol, period="6mo")
+        if df is None or df.empty:
+            return jsonify({"error": "No data"}), 400
+        returns = df['Close'].pct_change().dropna()
+        vol = returns.rolling(21).std().iloc[-1]
+        vol_val = float(vol) * math.sqrt(252)
+        risk_score = min(1.0, max(0.0, vol_val / 0.5))  # normalized heuristic
+        return jsonify({"status": "success", "region": region, "volatility": vol_val, "risk_score": risk_score})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 19) runGlobalMarketSync
+# 19. runGlobalMarketSync
 @app.route("/api/run-global-market-sync", methods=["POST"])
 def api_global_sync():
     try:
         data = request.get_json(force=True) or {}
         region = data.get("region", "us-markets")
-        try:
-            ai = call_openrouter(f"Analyze how {region} will impact Indian markets today. Provide short-term signals.")
-            return jsonify({"status": "success", "region": region, "ai_analysis": ai})
-        except RuntimeError:
-            return jsonify({"error": "Global market sync requires OPENROUTER_API_KEY."}), 501
+        # compute correlation with US indices
+        us_symbols = ["^GSPC", "^IXIC", "^DJI"]
+        india = "^NSEI"
+        df_us = get_multi_close_df(us_symbols, period="6mo")
+        df_ind = get_stock_df(india, period="6mo")
+        if df_us is None or df_ind is None:
+            return jsonify({"error": "No data"}), 400
+        corr_results = {}
+        for s in df_us.columns:
+            try:
+                merged = pd.concat([df_us[s], df_ind['Close']], axis=1).dropna()
+                corr_results[s] = float(merged.corr().iloc[0,1])
+            except Exception:
+                corr_results[s] = None
+        return jsonify({"status": "success", "region": region, "correlations_with_nifty": corr_results})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 20) runInsiderAnalysis (requires external insider-trade datasets)
+# 20. runInsiderAnalysis (proxy: major holders)
 @app.route("/api/run-insider-analysis", methods=["POST"])
 def api_insider_analysis():
     try:
         data = request.get_json(force=True) or {}
+        symbol = data.get("symbol")
         period = data.get("period", "30d")
-        symbol = data.get("symbol", None)
-        return jsonify({"status": "success", "note": "Insider trading analysis requires external datasource (NSE/BSE filings).", "symbol": symbol, "period": period}), 501
+        if not symbol:
+            return jsonify({"error": "Provide 'symbol'"}), 400
+        t = yf.Ticker(symbol)
+        try:
+            major_holders = t.major_holders
+            return jsonify({"status": "success", "symbol": symbol, "major_holders": safe_json(major_holders.to_dict() if hasattr(major_holders, 'to_dict') else str(major_holders))})
+        except Exception:
+            return jsonify({"status": "success", "symbol": symbol, "message": "No insider/major holders data available via yfinance."})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 21) runInstitutionalFlowTracker
+# 21. runInstitutionalFlowTracker
 @app.route("/api/run-institutional-flow-tracker", methods=["POST"])
 def api_institutional_flow():
     try:
@@ -2053,30 +2324,36 @@ def api_institutional_flow():
         df = get_stock_df(symbol, period="1mo")
         if df is None or df.empty:
             return jsonify({"error": "No data"}), 400
-        if 'Volume' not in df.columns:
-            return jsonify({"error": "Volume data unavailable for symbol"}), 400
         vol_change = ((df['Volume'].iloc[-1] - df['Volume'].iloc[0]) / (df['Volume'].iloc[0] + 1e-9)) * 100
-        return jsonify({"status": "success", "volume_change_pct": float(vol_change)})
+        return jsonify({"status": "success", "symbol": symbol, "volume_change_pct": float(vol_change)})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 22) runInterestRateSensitivity (AI)
+# 22. runInterestRateSensitivity (proxy)
 @app.route("/api/run-interest-rate-sensitivity", methods=["POST"])
 def api_rate_sensitivity():
     try:
         data = request.get_json(force=True) or {}
         sector = data.get("sector", "banking")
-        try:
-            ai = call_openrouter(f"Analyze interest rate sensitivity for sector {sector}. Provide names of most sensitive tickers and hedges.")
-            return jsonify({"status": "success", "sector": sector, "ai_analysis": ai})
-        except RuntimeError:
-            return jsonify({"error": "Interest rate sensitivity analysis requires OPENROUTER_API_KEY."}), 501
+        sector_map = {
+            "banking": ["HDFCBANK.NS", "ICICIBANK.NS", "KOTAKBANK.NS"],
+            "real-estate": ["DLF.NS", "LARSEN.NS"],
+            "auto": ["MARUTI.NS", "M&M.NS"]
+        }
+        symbols = sector_map.get(sector, ["HDFCBANK.NS"])
+        close_df = get_multi_close_df(symbols, period="1y")
+        if close_df is None:
+            return jsonify({"error": "No data"}), 400
+        rets = close_df.pct_change().dropna()
+        vol = rets.std() * math.sqrt(252)
+        sensitivity = {s: float(vol[s]) for s in vol.index}
+        return jsonify({"status": "success", "sector": sector, "sensitivity_proxy": sensitivity})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 23) runLiquidityHeatMap
+# 23. runLiquidityHeatMap
 @app.route("/api/run-liquidity-heatmap", methods=["POST"])
 def api_liquidity_heatmap():
     try:
@@ -2086,7 +2363,7 @@ def api_liquidity_heatmap():
         for sym in symbols:
             try:
                 hist = yf.download(sym, period="3mo", progress=False, auto_adjust=True)
-                if hist is None or hist.empty or 'Volume' not in hist.columns:
+                if hist is None or hist.empty or 'Volume' not in hist:
                     liquidity[sym] = None
                 else:
                     avg_vol = hist['Volume'].tail(30).mean()
@@ -2099,7 +2376,7 @@ def api_liquidity_heatmap():
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 24) runMarketRegimeDetection
+# 24. runMarketRegimeDetection
 @app.route("/api/run-market-regime-detection", methods=["POST"])
 def api_market_regime():
     try:
@@ -2109,15 +2386,22 @@ def api_market_regime():
         if df is None or df.empty:
             return jsonify({"error": "No data"}), 400
         returns = df['Close'].pct_change().dropna()
-        vol = float(returns.rolling(21).std().iloc[-1])
-        trend = float((df['Close'].iloc[-1] - df['Close'].iloc[-63]) / df['Close'].iloc[-63])
-        regime = "Bullish-Trend" if trend > 0.05 and vol < 0.02 else "Volatile" if vol > 0.03 else "Range-bound"
-        return jsonify({"status": "success", "regime": regime, "trend": trend, "volatility": vol})
+        vol = returns.rolling(21).std().iloc[-1]
+        trend = (df['Close'].iloc[-1] - df['Close'].iloc[-63]) / (df['Close'].iloc[-63] + 1e-9)
+        vol_val = float(vol)
+        trend_val = float(trend)
+        if trend_val > 0.05 and vol_val < 0.02:
+            regime = "Bullish-Trend"
+        elif vol_val > 0.03:
+            regime = "Volatile"
+        else:
+            regime = "Range-bound"
+        return jsonify({"status": "success", "regime": regime, "trend": trend_val, "volatility": vol_val})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 25) runOptionsFlow
+# 25. runOptionsFlow
 @app.route("/api/run-options-flow", methods=["POST"])
 def api_options_flow():
     try:
@@ -2130,8 +2414,14 @@ def api_options_flow():
         try:
             calls = pd.DataFrame(oc['calls'])
             puts = pd.DataFrame(oc['puts'])
-            top_calls = calls.sort_values('openInterest', ascending=False).head(5).to_dict(orient='records') if not calls.empty else []
-            top_puts = puts.sort_values('openInterest', ascending=False).head(5).to_dict(orient='records') if not puts.empty else []
+            if not calls.empty and 'openInterest' in calls.columns:
+                top_calls = calls.sort_values('openInterest', ascending=False).head(5).to_dict(orient='records')
+            else:
+                top_calls = []
+            if not puts.empty and 'openInterest' in puts.columns:
+                top_puts = puts.sort_values('openInterest', ascending=False).head(5).to_dict(orient='records')
+            else:
+                top_puts = []
             return jsonify({"status": "success", "expiry": oc.get('expiry_used'), "top_calls": safe_json(top_calls), "top_puts": safe_json(top_puts)})
         except Exception:
             return jsonify({"error": "Failed to parse option chains"}), 500
@@ -2139,7 +2429,7 @@ def api_options_flow():
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 26) runPortfolioOptimization
+# 26. runPortfolioOptimization (simple inverse-volatility weights)
 @app.route("/api/run-portfolio-optimization", methods=["POST"])
 def api_portfolio_optimization():
     try:
@@ -2149,31 +2439,44 @@ def api_portfolio_optimization():
         if df is None or df.empty:
             return jsonify({"error": "No data"}), 400
         rets = df.pct_change().dropna()
-        mu = (rets.mean() * 252).round(6).to_dict()
-        sigma = (rets.cov() * 252).round(6).to_dict()
-        weights = {s: 1/len(symbols) for s in symbols}
-        return jsonify({"status": "success", "weights": weights, "mu": mu, "sigma": sigma})
+        vol = rets.std() * math.sqrt(252)
+        inv_vol = 1 / (vol + 1e-9)
+        weights = (inv_vol / inv_vol.sum()).round(4).to_dict()
+        expected_returns = (rets.mean() * 252).to_dict()
+        return jsonify({"status": "success", "weights": safe_json(weights), "expected_annual_returns": safe_json({k: float(v) for k,v in expected_returns.items()})})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 27) runPortfolioStressTesting (AI for scenario reasoning)
+# 27. runPortfolioStressTesting
 @app.route("/api/run-portfolio-stress-testing", methods=["POST"])
 def api_portfolio_stress():
     try:
         data = request.get_json(force=True) or {}
         portfolio = data.get("portfolio", {})
         scenario = data.get("scenario", "market-crash")
-        try:
-            ai = call_openrouter(f"Stress test portfolio {portfolio} under scenario {scenario}. Return expected drawdown and recovery suggestions.")
-            return jsonify({"status": "success", "scenario": scenario, "ai_analysis": ai})
-        except RuntimeError:
-            return jsonify({"error": "Stress testing scenario analysis requires OPENROUTER_API_KEY."}), 501
+        # portfolio: dict symbol->weight
+        if not portfolio:
+            return jsonify({"error": "Provide 'portfolio' as dict of symbol->weight"}), 400
+        weights = portfolio
+        symbols = list(weights.keys())
+        df = get_multi_close_df(symbols, period="1y")
+        if df is None or df.empty:
+            return jsonify({"error": "No data"}), 400
+        rets = df.pct_change().dropna()
+        # apply scenario: market crash -> -20% uniformly
+        scenario_map = {
+            "market-crash": -0.2,
+            "mild-correction": -0.1
+        }
+        shock = scenario_map.get(scenario, -0.15)
+        portfolio_value_change = sum(weights[s] * shock for s in symbols)
+        return jsonify({"status": "success", "scenario": scenario, "estimated_portfolio_drawdown_pct": portfolio_value_change})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 28) runPriceTargetConsensus (AI)
+# 28. runPriceTargetConsensus
 @app.route("/api/run-price-target-consensus", methods=["POST"])
 def api_price_target_consensus():
     try:
@@ -2182,17 +2485,19 @@ def api_price_target_consensus():
         df = get_stock_df(symbol, period="6mo")
         if df is None or df.empty:
             return jsonify({"error": "No data"}), 400
-        try:
-            prompt = f"Generate price target consensus for {symbol} using recent price history. Provide low/medium/high targets and probability."
-            ai = call_openrouter(prompt)
-            return jsonify({"status": "success", "symbol": symbol, "ai_analysis": ai})
-        except RuntimeError:
-            return jsonify({"error": "Price target consensus requires OPENROUTER_API_KEY."}), 501
+        price = float(df['Close'].iloc[-1])
+        returns = df['Close'].pct_change().dropna()
+        hist_vol = returns.std() * math.sqrt(252)
+        # heuristic targets
+        low = price * (1 - hist_vol * 0.5)
+        medium = price
+        high = price * (1 + hist_vol)
+        return jsonify({"status": "success", "symbol": symbol, "price": price, "targets": {"low": low, "medium": medium, "high": high}, "hist_vol": hist_vol})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 29) runRealBacktest
+# 29. runRealBacktest
 @app.route("/api/run-real-backtest", methods=["POST"])
 def api_run_real_backtest():
     try:
@@ -2200,17 +2505,16 @@ def api_run_real_backtest():
         symbol = data.get("symbol", "RELIANCE.NS")
         period = data.get("period", "2y")
         capital = float(data.get("capital", 100000))
-        risk_pct = float(data.get("risk_pct", 0.02))
         df = get_stock_df(symbol, period=period)
         if df is None or df.empty:
             return jsonify({"error": "No data"}), 400
-        bt = backtest_ema_crossover(df['Close'], short=12, long=26, capital=capital, risk_pct=risk_pct)
-        return jsonify({"status": "success", "symbol": symbol, "backtest": bt})
+        bt = backtest_ema_crossover(df['Close'], high_series=df['High'], low_series=df['Low'], short=12, long=26, capital=capital, risk_pct=float(data.get("risk_pct", 0.02)))
+        return jsonify({"status": "success", "symbol": symbol, "backtest": safe_json(bt)})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 30) runRealDataMining
+# 30. runRealDataMining
 @app.route("/api/run-real-data-mining", methods=["POST"])
 def api_real_data_mining():
     try:
@@ -2228,7 +2532,7 @@ def api_real_data_mining():
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 31) runRealTimeScreener
+# 31. runRealTimeScreener
 @app.route("/api/run-real-time-screener", methods=["POST"])
 def api_realtime_screener():
     try:
@@ -2238,32 +2542,44 @@ def api_realtime_screener():
         if df is None or df.empty:
             return jsonify({"error": "No data"}), 400
         momentum = {}
-        for col in df.columns:
-            if len(df) >= 5:
-                momentum[col] = float((df[col].iloc[-1] / df[col].iloc[0] - 1) * 100)
+        for s in df.columns:
+            ser = df[s].dropna()
+            if len(ser) >= 5:
+                momentum[s] = float((ser.iloc[-1] / ser.iloc[0] - 1) * 100)
             else:
-                momentum[col] = None
+                momentum[s] = None
         return jsonify({"status": "success", "momentum": momentum})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 32) runSectorRotationPredictor (AI)
+# 32. runSectorRotationPredictor
 @app.route("/api/run-sector-rotation-predictor", methods=["POST"])
 def api_sector_rotation():
     try:
         data = request.get_json(force=True) or {}
         timeframe = data.get("timeframe", "1m")
-        try:
-            ai = call_openrouter(f"Sector rotation predictions for the next {timeframe}. Provide top 3 sectors and reasons.")
-            return jsonify({"status": "success", "ai_analysis": ai})
-        except RuntimeError:
-            return jsonify({"error": "Sector rotation predictions require OPENROUTER_API_KEY."}), 501
+        # basic sector proxies with representative tickers
+        sectors = {
+            "banking": ["HDFCBANK.NS", "ICICIBANK.NS"],
+            "technology": ["INFY.NS", "TCS.NS"],
+            "energy": ["RELIANCE.NS", "ONGC.NS"]
+        }
+        perf = {}
+        for sec, syms in sectors.items():
+            df = get_multi_close_df(syms, period="1m")
+            if df is None or df.empty:
+                perf[sec] = None
+                continue
+            avg_perf = float(((df.iloc[-1] / df.iloc[0] - 1) * 100).mean())
+            perf[sec] = avg_perf
+        top = sorted([(k, v) for k,v in perf.items() if v is not None], key=lambda x: x[1], reverse=True)[:3]
+        return jsonify({"status": "success", "timeframe": timeframe, "sector_performance_pct": perf, "top_3": top})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 33) runSentimentAnalysis (basic price-change proxy)
+# 33. runSentimentAnalysis (alias)
 @app.route("/api/run-sentiment-analysis", methods=["POST"])
 def api_run_sentiment_analysis():
     try:
@@ -2273,66 +2589,93 @@ def api_run_sentiment_analysis():
         if df is None or df.empty:
             return jsonify({"error": f"No data for {symbol}"}), 400
         change = (df['Close'].iloc[-1] - df['Close'].iloc[0]) / (df['Close'].iloc[0] + 1e-9) * 100
-        return jsonify({"status": "success", "symbol": symbol, "change%": float(change)})
+        sentiment = "Neutral"
+        if change > 1.0:
+            sentiment = "Positive"
+        elif change < -1.0:
+            sentiment = "Negative"
+        return jsonify({"status": "success", "symbol": symbol, "change_pct": float(change), "sentiment": sentiment})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 34) runSocialMomentumScanner (requires social APIs -> 501)
+# 34. runSocialMomentumScanner (proxy)
 @app.route("/api/run-social-momentum-scanner", methods=["POST"])
 def api_social_momentum():
     try:
-        return jsonify({"error": "Social momentum scan requires external social APIs (Twitter/Reddit) or OPENROUTER_API_KEY for synthesis."}), 501
+        data = request.get_json(force=True) or {}
+        topic = data.get("topic", "RELIANCE")
+        # No social API: use volume & price spike as proxy for social momentum
+        symbol = topic if topic.endswith(".NS") else topic + ".NS"
+        df = get_stock_df(symbol, period="1mo")
+        if df is None or df.empty:
+            return jsonify({"status": "success", "ai_analysis": "No market proxy data available."})
+        vol = df['Volume'].pct_change().tail(5).mean() if 'Volume' in df else None
+        price_change = (df['Close'].iloc[-1] - df['Close'].iloc[0]) / (df['Close'].iloc[0] + 1e-9) * 100
+        momentum_proxy = {"volume_change_5d_pct": float(vol) if vol is not None else None, "price_change_1m_pct": float(price_change)}
+        return jsonify({"status": "success", "topic": topic, "momentum_proxy": momentum_proxy})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 35) runSocialTrendMonetizer (AI)
+# 35. runSocialTrendMonetizer (simple mapping)
 @app.route("/api/run-social-trend-monetizer", methods=["POST"])
 def api_social_trend_monetizer():
     try:
         data = request.get_json(force=True) or {}
         trend = data.get("trend", "EV stock interest")
-        try:
-            ai = call_openrouter(f"Monetize social trend '{trend}' into short-term trade ideas. Provide entry/stop/targets.")
-            return jsonify({"status": "success", "ai_analysis": ai})
-        except RuntimeError:
-            return jsonify({"error": "Social trend monetizer requires OPENROUTER_API_KEY."}), 501
+        # Suggest trade themes based on trend
+        themes = {
+            "EV": ["TATAELXSI.NS", "MGL.NS"],
+            "EV stock interest": ["TATAELXSI.NS", "TATASTEEL.NS"]
+        }
+        candidates = themes.get(trend, ["RELIANCE.NS"])
+        return jsonify({"status": "success", "trend": trend, "candidate_stocks": candidates})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 36) runSupplyChainVisibility (AI)
+# 36. runSupplyChainVisibility (proxy)
 @app.route("/api/run-supply-chain-visibility", methods=["POST"])
 def api_supply_chain_visibility():
     try:
         data = request.get_json(force=True) or {}
         sector = data.get("sector", "manufacturing")
-        try:
-            ai = call_openrouter(f"Supply chain visibility analysis for sector {sector}. Provide companies likely impacted and trade ideas.")
-            return jsonify({"status": "success", "ai_analysis": ai})
-        except RuntimeError:
-            return jsonify({"error": "Supply chain visibility requires OPENROUTER_API_KEY."}), 501
+        # Provide suppliers list heuristically
+        suppliers = {
+            "manufacturing": ["TATASTEEL.NS", "JSWSTEEL.NS"],
+            "electronics": ["BOSCHLTD.NS", "HCLTECH.NS"]
+        }
+        return jsonify({"status": "success", "sector": sector, "likely_suppliers": suppliers.get(sector, [])})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 37) runTailRiskHedging (AI)
+# 37. runTailRiskHedging (simple VAR-based estimate + hedge suggestion)
 @app.route("/api/run-tail-risk-hedging", methods=["POST"])
 def api_tail_risk_hedging():
     try:
         data = request.get_json(force=True) or {}
         portfolio = data.get("portfolio", {})
-        try:
-            ai = call_openrouter(f"Generate tail-risk hedging strategies for portfolio: {json.dumps(portfolio, default=str)}. Provide costs and expected protection.")
-            return jsonify({"status": "success", "ai_analysis": ai})
-        except RuntimeError:
-            return jsonify({"error": "Tail risk hedging requires OPENROUTER_API_KEY."}), 501
+        if not portfolio:
+            return jsonify({"error": "Provide 'portfolio'"}), 400
+        symbols = list(portfolio.keys())
+        df = get_multi_close_df(symbols, period="1y")
+        if df is None or df.empty:
+            return jsonify({"error": "No data"}), 400
+        rets = df.pct_change().dropna()
+        portfolio_weights = np.array([float(portfolio[s]) for s in symbols])
+        cov = rets.cov() * 252
+        port_var = float(portfolio_weights @ cov.values @ portfolio_weights.T)
+        port_vol = math.sqrt(max(0.0, port_var))
+        # Suggest hedge: buy protective put or allocate to gold; we provide notional % as suggestion
+        hedge_notional_pct = min(0.5, port_vol / 0.3)  # heuristic
+        return jsonify({"status": "success", "portfolio_vol_estimate": port_vol, "suggested_hedge_notional_pct": hedge_notional_pct})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 38) runTradingJournalAnalysis (AI or simple local)
+# 38. runTradingJournalAnalysis
 @app.route("/api/run-trading-journal-analysis", methods=["POST"])
 def api_trading_journal_analysis():
     try:
@@ -2340,18 +2683,40 @@ def api_trading_journal_analysis():
         journal = data.get("journal", "")
         if not journal:
             return jsonify({"error": "No journal entered"}), 400
-        try:
-            ai = call_openrouter(f"Analyze trading journal and produce performance summary and improvement plan: {journal}")
-            return jsonify({"status": "success", "ai_analysis": ai})
-        except RuntimeError:
-            # simple local summary
-            words = journal.split()
-            return jsonify({"status": "success", "summary": {"words": len(words)}})
+        # Expect journal to be JSON list of trades optionally
+        trades = []
+        if isinstance(journal, str):
+            try:
+                trades = json.loads(journal)
+            except Exception:
+                # fallback: simple parse lines like "AAPL buy 100 150 160"
+                lines = journal.splitlines()
+                for ln in lines:
+                    parts = ln.split()
+                    if len(parts) >= 5:
+                        trades.append({"symbol": parts[0], "side": parts[1], "size": int(parts[2]), "entry": float(parts[3]), "exit": float(parts[4])})
+        elif isinstance(journal, list):
+            trades = journal
+        # calculate P&L summary
+        total_pl = 0.0
+        win = 0
+        loss = 0
+        for t in trades:
+            try:
+                pl = (float(t.get('exit', 0)) - float(t.get('entry', 0))) * float(t.get('size', 0))
+                total_pl += pl
+                if pl > 0:
+                    win += 1
+                elif pl < 0:
+                    loss += 1
+            except Exception:
+                continue
+        return jsonify({"status": "success", "total_trades": len(trades), "wins": win, "losses": loss, "net_pl": total_pl})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 39) runVolatilitySurface (historical vol approximation)
+# 39. runVolatilitySurface (approximation)
 @app.route("/api/run-volatility-surface", methods=["POST"])
 def api_volatility_surface():
     try:
@@ -2362,12 +2727,19 @@ def api_volatility_surface():
             return jsonify({"error": "No data"}), 400
         returns = df['Close'].pct_change().dropna()
         hist_vol = float(returns.std() * math.sqrt(252))
-        return jsonify({"status": "success", "historical_vol": hist_vol})
+        # approximate surface: shorter maturities slightly lower/higher by heuristic
+        surface = {
+            "1m": hist_vol * 0.9,
+            "3m": hist_vol * 0.95,
+            "6m": hist_vol,
+            "1y": hist_vol * 1.05
+        }
+        return jsonify({"status": "success", "historical_vol": hist_vol, "approx_surface": surface})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 40) runWalkForwardTest (simplified)
+# 40. runWalkForwardTest
 @app.route("/api/run-walk-forward-test", methods=["POST"])
 def api_walk_forward_test():
     try:
@@ -2376,47 +2748,48 @@ def api_walk_forward_test():
         df = get_stock_df(symbol, period="3y")
         if df is None or df.empty:
             return jsonify({"error": "No data"}), 400
-        window_train = 252
-        step = 63
+        closes = df['Close'].dropna()
+        window_train = int(data.get("window_train", 252))
+        step = int(data.get("step", 63))
         results = []
-        closes = df['Close']
-        for start in range(0, len(closes) - window_train - step, step):
+        for start in range(0, max(0, len(closes) - window_train - step + 1), step):
             train = closes.iloc[start:start+window_train]
             test = closes.iloc[start+window_train:start+window_train+step]
-            bt = backtest_ema_crossover(train, short=12, long=26, capital=100000, risk_pct=0.02)
-            if not test.empty:
-                test_return = float((test.iloc[-1] - test.iloc[0]) / test.iloc[0])
-            else:
-                test_return = None
-            results.append({"train_end": str(train.index[-1]), "test_return": test_return})
-        return jsonify({"status": "success", "samples": len(results), "results": results})
+            if len(test) < 2:
+                continue
+            train_ema_short = train.ewm(span=12).mean().iloc[-1]
+            train_ema_long = train.ewm(span=26).mean().iloc[-1]
+            test_return = float((test.iloc[-1] - test.iloc[0]) / (test.iloc[0] + 1e-9))
+            results.append({"train_end": str(train.index[-1]), "train_signal": float(train_ema_short > train_ema_long), "test_return": test_return})
+        return jsonify({"status": "success", "samples": len(results), "results": safe_json(results)})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 41) runWeatherPatternTrading (AI)
+# 41. runWeatherPatternTrading (proxy)
 @app.route("/api/run-weather-pattern-trading", methods=["POST"])
 def api_weather_pattern_trading():
     try:
         data = request.get_json(force=True) or {}
         sector = data.get("sector", "agriculture")
-        try:
-            ai = call_openrouter(f"Create weather pattern trading ideas for sector {sector}. Provide stocks, entry and stoploss.")
-            return jsonify({"status": "success", "ai_analysis": ai})
-        except RuntimeError:
-            return jsonify({"error": "Weather pattern trading requires OPENROUTER_API_KEY or external weather datasets."}), 501
+        # return proxy ideas based on commodities mapping
+        mapping = {
+            "agriculture": ["LTTS.NS", "ITC.NS"],  # ITC has FMCG/agri exposure
+            "energy": ["ONGC.NS"]
+        }
+        return jsonify({"status": "success", "sector": sector, "suggested_stocks": mapping.get(sector, ["RELIANCE.NS"])})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
 
-# 42) runDreamTradeSimulator alias
+# 42. run-dream-trade-sim alias
 @app.route("/api/run-dream-trade-sim", methods=["POST"])
 def api_dream_trade_alias():
     return api_dream_trade_simulator()
 
-# ------------------------------
-# Convenience routes (existing ones fixed)
-# ------------------------------
+# -----------------------
+# Convenience routes
+# -----------------------
 @app.route("/api/correlation-matrix", methods=["POST"])
 def correlation_matrix():
     try:
@@ -2440,10 +2813,16 @@ def sentiment_analysis():
         if df is None or df.empty:
             return jsonify({"error": "No data for symbol"}), 400
         change = (df['Close'].iloc[-1] - df['Close'].iloc[0]) / (df['Close'].iloc[0] + 1e-9) * 100
-        return jsonify({"status": "success", "symbol": symbol, "change%": float(change)})
+        sentiment = "Neutral"
+        if change > 1.0:
+            sentiment = "Positive"
+        elif change < -1.0:
+            sentiment = "Negative"
+        return jsonify({"status": "success", "symbol": symbol, "change_pct": float(change), "sentiment": sentiment})
     except Exception as e:
         app.logger.exception(e)
         return jsonify({"error": str(e)}), 500
+
 
 # ------------------------------
 # Page render
