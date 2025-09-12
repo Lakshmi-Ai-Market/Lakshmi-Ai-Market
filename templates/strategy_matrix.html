@@ -460,6 +460,7 @@
     </style>
 </head>
 <body>
+<div id="matrix-results" style="white-space:pre-wrap;padding:1rem;background:#071024;color:#d6f3ff;margin:1rem;border-radius:8px;">Results will appear here...</div>
     <div class="quantum-bg"></div>
 
     <header class="header">
@@ -1809,5 +1810,1326 @@
 
         // Add all other formatting functions...
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'973d08bf42c37a04',t:'MTc1NTk3NzUyOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'973d08bf42c37a04',t:'MTc1NTk3NzUyOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();
+
+<!-- Auto-added JS functions for missing buttons -->
+
+</script>
+
+<script>
+
+async function generateRealStrategy() {
+    try {
+        showNotification("Running generateRealStrategy...", "info");
+        const body = { action: "generateRealStrategy" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("generateRealStrategy error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "generateRealStrategy" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "generateRealStrategy" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("generateRealStrategy completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running generateRealStrategy", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function processNaturalLanguageTrading() {
+    try {
+        showNotification("Running processNaturalLanguageTrading...", "info");
+        const body = { action: "processNaturalLanguageTrading" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("processNaturalLanguageTrading error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "processNaturalLanguageTrading" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "processNaturalLanguageTrading" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("processNaturalLanguageTrading completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running processNaturalLanguageTrading", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runAIAnalysis() {
+    try {
+        showNotification("Running runAIAnalysis...", "info");
+        const body = { action: "runAIAnalysis" };
+        const resp = await fetch("/api/ai-narrative", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runAIAnalysis error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runAIAnalysis" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runAIAnalysis" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runAIAnalysis completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runAIAnalysis", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runAdvancedScan() {
+    try {
+        showNotification("Running runAdvancedScan...", "info");
+        const body = { action: "runAdvancedScan" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runAdvancedScan error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runAdvancedScan" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runAdvancedScan" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runAdvancedScan completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runAdvancedScan", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runAlgoPatternRecognition() {
+    try {
+        showNotification("Running runAlgoPatternRecognition...", "info");
+        const body = { action: "runAlgoPatternRecognition" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runAlgoPatternRecognition error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runAlgoPatternRecognition" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runAlgoPatternRecognition" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runAlgoPatternRecognition completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runAlgoPatternRecognition", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runAlternativeDataAnalysis() {
+    try {
+        showNotification("Running runAlternativeDataAnalysis...", "info");
+        const body = { action: "runAlternativeDataAnalysis" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runAlternativeDataAnalysis error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runAlternativeDataAnalysis" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runAlternativeDataAnalysis" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runAlternativeDataAnalysis completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runAlternativeDataAnalysis", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runAutoBacktest() {
+    try {
+        showNotification("Running runAutoBacktest...", "info");
+        const body = { action: "runAutoBacktest" };
+        const resp = await fetch("/analyze-strategy", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runAutoBacktest error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runAutoBacktest" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runAutoBacktest" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runAutoBacktest completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runAutoBacktest", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runBehavioralBiasDetector() {
+    try {
+        showNotification("Running runBehavioralBiasDetector...", "info");
+        const body = { action: "runBehavioralBiasDetector" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runBehavioralBiasDetector error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runBehavioralBiasDetector" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runBehavioralBiasDetector" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runBehavioralBiasDetector completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runBehavioralBiasDetector", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runCommodityStockMapper() {
+    try {
+        showNotification("Running runCommodityStockMapper...", "info");
+        const body = { action: "runCommodityStockMapper" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runCommodityStockMapper error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runCommodityStockMapper" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runCommodityStockMapper" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runCommodityStockMapper completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runCommodityStockMapper", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runCorrelationMatrix() {
+    try {
+        showNotification("Running runCorrelationMatrix...", "info");
+        const body = { action: "runCorrelationMatrix" };
+        const resp = await fetch("/api/correlation-matrix", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runCorrelationMatrix error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runCorrelationMatrix" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runCorrelationMatrix" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runCorrelationMatrix completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runCorrelationMatrix", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runCurrencyImpactCalculator() {
+    try {
+        showNotification("Running runCurrencyImpactCalculator...", "info");
+        const body = { action: "runCurrencyImpactCalculator" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runCurrencyImpactCalculator error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runCurrencyImpactCalculator" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runCurrencyImpactCalculator" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runCurrencyImpactCalculator completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runCurrencyImpactCalculator", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runDrawdownRecoveryPredictor() {
+    try {
+        showNotification("Running runDrawdownRecoveryPredictor...", "info");
+        const body = { action: "runDrawdownRecoveryPredictor" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runDrawdownRecoveryPredictor error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runDrawdownRecoveryPredictor" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runDrawdownRecoveryPredictor" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runDrawdownRecoveryPredictor completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runDrawdownRecoveryPredictor", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runDreamTradeSimulator() {
+    try {
+        showNotification("Running runDreamTradeSimulator...", "info");
+        const body = { action: "runDreamTradeSimulator" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runDreamTradeSimulator error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runDreamTradeSimulator" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runDreamTradeSimulator" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runDreamTradeSimulator completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runDreamTradeSimulator", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runDynamicPositionSizing() {
+    try {
+        showNotification("Running runDynamicPositionSizing...", "info");
+        const body = { action: "runDynamicPositionSizing" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runDynamicPositionSizing error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runDynamicPositionSizing" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runDynamicPositionSizing" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runDynamicPositionSizing completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runDynamicPositionSizing", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runESGImpactScorer() {
+    try {
+        showNotification("Running runESGImpactScorer...", "info");
+        const body = { action: "runESGImpactScorer" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runESGImpactScorer error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runESGImpactScorer" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runESGImpactScorer" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runESGImpactScorer completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runESGImpactScorer", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runEarningsCallAnalysis() {
+    try {
+        showNotification("Running runEarningsCallAnalysis...", "info");
+        const body = { action: "runEarningsCallAnalysis" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runEarningsCallAnalysis error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runEarningsCallAnalysis" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runEarningsCallAnalysis" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runEarningsCallAnalysis completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runEarningsCallAnalysis", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runEconomicImpactPredictor() {
+    try {
+        showNotification("Running runEconomicImpactPredictor...", "info");
+        const body = { action: "runEconomicImpactPredictor" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runEconomicImpactPredictor error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runEconomicImpactPredictor" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runEconomicImpactPredictor" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runEconomicImpactPredictor completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runEconomicImpactPredictor", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runGeopoliticalRiskScorer() {
+    try {
+        showNotification("Running runGeopoliticalRiskScorer...", "info");
+        const body = { action: "runGeopoliticalRiskScorer" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runGeopoliticalRiskScorer error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runGeopoliticalRiskScorer" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runGeopoliticalRiskScorer" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runGeopoliticalRiskScorer completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runGeopoliticalRiskScorer", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runGlobalMarketSync() {
+    try {
+        showNotification("Running runGlobalMarketSync...", "info");
+        const body = { action: "runGlobalMarketSync" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runGlobalMarketSync error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runGlobalMarketSync" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runGlobalMarketSync" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runGlobalMarketSync completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runGlobalMarketSync", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runInsiderAnalysis() {
+    try {
+        showNotification("Running runInsiderAnalysis...", "info");
+        const body = { action: "runInsiderAnalysis" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runInsiderAnalysis error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runInsiderAnalysis" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runInsiderAnalysis" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runInsiderAnalysis completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runInsiderAnalysis", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runInstitutionalFlowTracker() {
+    try {
+        showNotification("Running runInstitutionalFlowTracker...", "info");
+        const body = { action: "runInstitutionalFlowTracker" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runInstitutionalFlowTracker error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runInstitutionalFlowTracker" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runInstitutionalFlowTracker" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runInstitutionalFlowTracker completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runInstitutionalFlowTracker", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runInterestRateSensitivity() {
+    try {
+        showNotification("Running runInterestRateSensitivity...", "info");
+        const body = { action: "runInterestRateSensitivity" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runInterestRateSensitivity error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runInterestRateSensitivity" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runInterestRateSensitivity" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runInterestRateSensitivity completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runInterestRateSensitivity", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runLiquidityHeatMap() {
+    try {
+        showNotification("Running runLiquidityHeatMap...", "info");
+        const body = { action: "runLiquidityHeatMap" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runLiquidityHeatMap error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runLiquidityHeatMap" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runLiquidityHeatMap" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runLiquidityHeatMap completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runLiquidityHeatMap", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runMarketRegimeDetection() {
+    try {
+        showNotification("Running runMarketRegimeDetection...", "info");
+        const body = { action: "runMarketRegimeDetection" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runMarketRegimeDetection error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runMarketRegimeDetection" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runMarketRegimeDetection" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runMarketRegimeDetection completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runMarketRegimeDetection", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runOptionsFlow() {
+    try {
+        showNotification("Running runOptionsFlow...", "info");
+        const body = { action: "runOptionsFlow" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runOptionsFlow error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runOptionsFlow" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runOptionsFlow" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runOptionsFlow completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runOptionsFlow", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runPortfolioOptimization() {
+    try {
+        showNotification("Running runPortfolioOptimization...", "info");
+        const body = { action: "runPortfolioOptimization" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runPortfolioOptimization error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runPortfolioOptimization" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runPortfolioOptimization" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runPortfolioOptimization completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runPortfolioOptimization", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runPortfolioStressTesting() {
+    try {
+        showNotification("Running runPortfolioStressTesting...", "info");
+        const body = { action: "runPortfolioStressTesting" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runPortfolioStressTesting error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runPortfolioStressTesting" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runPortfolioStressTesting" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runPortfolioStressTesting completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runPortfolioStressTesting", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runPriceTargetConsensus() {
+    try {
+        showNotification("Running runPriceTargetConsensus...", "info");
+        const body = { action: "runPriceTargetConsensus" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runPriceTargetConsensus error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runPriceTargetConsensus" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runPriceTargetConsensus" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runPriceTargetConsensus completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runPriceTargetConsensus", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runRealBacktest() {
+    try {
+        showNotification("Running runRealBacktest...", "info");
+        const body = { action: "runRealBacktest" };
+        const resp = await fetch("/analyze-strategy", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runRealBacktest error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runRealBacktest" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runRealBacktest" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runRealBacktest completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runRealBacktest", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runRealDataMining() {
+    try {
+        showNotification("Running runRealDataMining...", "info");
+        const body = { action: "runRealDataMining" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runRealDataMining error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runRealDataMining" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runRealDataMining" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runRealDataMining completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runRealDataMining", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runRealTimeScreener() {
+    try {
+        showNotification("Running runRealTimeScreener...", "info");
+        const body = { action: "runRealTimeScreener" };
+        const resp = await fetch("/api/market-status", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runRealTimeScreener error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runRealTimeScreener" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runRealTimeScreener" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runRealTimeScreener completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runRealTimeScreener", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runSectorRotationPredictor() {
+    try {
+        showNotification("Running runSectorRotationPredictor...", "info");
+        const body = { action: "runSectorRotationPredictor" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runSectorRotationPredictor error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runSectorRotationPredictor" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runSectorRotationPredictor" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runSectorRotationPredictor completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runSectorRotationPredictor", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runSentimentAnalysis() {
+    try {
+        showNotification("Running runSentimentAnalysis...", "info");
+        const body = { action: "runSentimentAnalysis" };
+        const resp = await fetch("/api/sentiment-analysis", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runSentimentAnalysis error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runSentimentAnalysis" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runSentimentAnalysis" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runSentimentAnalysis completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runSentimentAnalysis", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runSocialMomentumScanner() {
+    try {
+        showNotification("Running runSocialMomentumScanner...", "info");
+        const body = { action: "runSocialMomentumScanner" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runSocialMomentumScanner error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runSocialMomentumScanner" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runSocialMomentumScanner" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runSocialMomentumScanner completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runSocialMomentumScanner", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runSocialTrendMonetizer() {
+    try {
+        showNotification("Running runSocialTrendMonetizer...", "info");
+        const body = { action: "runSocialTrendMonetizer" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runSocialTrendMonetizer error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runSocialTrendMonetizer" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runSocialTrendMonetizer" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runSocialTrendMonetizer completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runSocialTrendMonetizer", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runSupplyChainVisibility() {
+    try {
+        showNotification("Running runSupplyChainVisibility...", "info");
+        const body = { action: "runSupplyChainVisibility" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runSupplyChainVisibility error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runSupplyChainVisibility" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runSupplyChainVisibility" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runSupplyChainVisibility completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runSupplyChainVisibility", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runTailRiskHedging() {
+    try {
+        showNotification("Running runTailRiskHedging...", "info");
+        const body = { action: "runTailRiskHedging" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runTailRiskHedging error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runTailRiskHedging" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runTailRiskHedging" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runTailRiskHedging completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runTailRiskHedging", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runTradingJournalAnalysis() {
+    try {
+        showNotification("Running runTradingJournalAnalysis...", "info");
+        const body = { action: "runTradingJournalAnalysis" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runTradingJournalAnalysis error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runTradingJournalAnalysis" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runTradingJournalAnalysis" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runTradingJournalAnalysis completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runTradingJournalAnalysis", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runVolatilitySurface() {
+    try {
+        showNotification("Running runVolatilitySurface...", "info");
+        const body = { action: "runVolatilitySurface" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runVolatilitySurface error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runVolatilitySurface" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runVolatilitySurface" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runVolatilitySurface completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runVolatilitySurface", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runWalkForwardTest() {
+    try {
+        showNotification("Running runWalkForwardTest...", "info");
+        const body = { action: "runWalkForwardTest" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runWalkForwardTest error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runWalkForwardTest" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runWalkForwardTest" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runWalkForwardTest completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runWalkForwardTest", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+
+async function runWeatherPatternTrading() {
+    try {
+        showNotification("Running runWeatherPatternTrading...", "info");
+        const body = { action: "runWeatherPatternTrading" };
+        const resp = await fetch("/api/ai-predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            console.error("runWeatherPatternTrading error", data);
+            showNotification("Failed: " + (data.error || resp.statusText), "error");
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+            return;
+        }
+        // If specific formatters exist, use them
+        if (typeof formatCorrelationResults === "function" && "runWeatherPatternTrading" === "runCorrelationMatrix") {
+            document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
+        } else if (typeof formatSentimentResults === "function" && "runWeatherPatternTrading" === "runSentimentAnalysis") {
+            document.getElementById("matrix-results").innerHTML = formatSentimentResults(data);
+        } else {
+            document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);
+        }
+        showNotification("runWeatherPatternTrading completed", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error running runWeatherPatternTrading", "error");
+        document.getElementById("matrix-results").innerText = String(err);
+    }
+}
+</script>
+
+</body>
 </html>
