@@ -1330,21 +1330,32 @@ def get_market_data(symbol):
 def ai_predict():
     try:
         data = request.get_json(force=True) or {}
-        market_data = data.get("marketData")
-        raw_symbol = data.get("symbol")
-         print("DEBUG /api/ai-predict input:", data)
-        # ⚡ FIX: if marketData is missing but symbol is provided → fetch automatically
-        if (not market_data or len(market_data) == 0) and raw_symbol:
-            from helpers import get_stock_df, map_to_yf_symbol
-            yf_symbol = map_to_yf_symbol(raw_symbol)
-            df = get_stock_df(yf_symbol, period="3mo", interval="1d")
-            if df is None or df.empty:
-                return jsonify({"error": f"No market data found for {yf_symbol}"}), 400
-            market_data = df.tail(60).reset_index().to_dict(orient="records")
+market_data = data.get("marketData")
+raw_symbol = data.get("symbol")
 
-        # ⚡ If still empty → reject
-        if not market_data or len(market_data) == 0:
-            return jsonify({"error": "No market data provided"}), 400
+# 🔍 Debug log
+print("DEBUG /api/ai-predict input:", data)
+
+# ⚡ FIX: If frontend only passes a symbol → fetch candles from yfinance
+if (not market_data or len(market_data) == 0) and raw_symbol:
+    # convert to yfinance symbol
+    yf_symbols = {
+        "BANKNIFTY": "^NSEBANK",
+        "NIFTY": "^NSEI",
+        "SENSEX": "^BSESN"
+    }
+    yf_symbol = yf_symbols.get(raw_symbol.upper(), raw_symbol)
+
+    df = get_stock_df(yf_symbol, period="3mo", interval="1d")
+    if df is None or df.empty:
+        return jsonify({"error": f"No market data found for {yf_symbol}"}), 400
+
+    # convert df → list of dicts
+    market_data = df.tail(60).reset_index().to_dict(orient="records")
+
+# ❌ If still nothing → reject
+if not market_data or len(market_data) == 0:
+    return jsonify({"error": "No market data provided"}), 400
 
 # ✅ AI Market Narrative API
 @app.route("/api/ai-narrative", methods=["POST"])
