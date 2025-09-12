@@ -1251,33 +1251,42 @@ def get_market_data(symbol):
 
 # ✅ AI Prediction API for Indian Market Trader
 @app.route("/api/ai-predict", methods=["POST"])
-def ai_predict():
+def api_ai_predict():
     try:
-        data = request.get_json()
-        market_data = data.get('marketData', [])
-        symbol = data.get('symbol', '')
-        
+        data = request.get_json(force=True) or {}
+        symbol = data.get("symbol", "")
+        market_data = data.get("marketData", [])
+
+        # ✅ Auto fetch data if marketData not provided
+        if not market_data and symbol:
+            df = get_stock_df(symbol, period="3mo", interval="1d")
+            if df is None or df.empty:
+                return jsonify({"error": f"No market data found for {symbol}"}), 400
+            market_data = df.tail(60).reset_index().to_dict(orient="records")
+
         if not market_data:
             return jsonify({"error": "No market data provided"}), 400
-        
+
         if not OPENROUTER_KEY:
             return jsonify({"error": "AI service not configured"}), 500
-        
-        # Prepare technical analysis data
-        closes = [candle['close'] for candle in market_data[-50:]]  # Last 50 candles
-        volumes = [candle['volume'] for candle in market_data[-10:]]  # Last 10 volumes
-        
-        # Calculate basic indicators
+
+        # ✅ Extract closes and volumes (support both dict styles)
+        closes = [c.get("Close") or c.get("close") for c in market_data if "Close" in c or "close" in c]
+        volumes = [c.get("Volume") or c.get("volume") for c in market_data if "Volume" in c or "volume" in c]
+
+        if not closes:
+            return jsonify({"error": "Invalid market data format"}), 400
+
+        # ✅ Technical indicators
         sma_20 = sum(closes[-20:]) / 20 if len(closes) >= 20 else closes[-1]
         sma_50 = sum(closes[-50:]) / 50 if len(closes) >= 50 else closes[-1]
         current_price = closes[-1]
-        
-        # Volume analysis
-        avg_volume = sum(volumes) / len(volumes) if volumes else 0
+
+        avg_volume = sum(volumes[-10:]) / 10 if len(volumes) >= 10 else (volumes[-1] if volumes else 0)
         current_volume = volumes[-1] if volumes else 0
         volume_ratio = current_volume / avg_volume if avg_volume > 0 else 1
-        
-        # Build comprehensive prompt for AI
+
+        # ✅ Build AI prompt
         prompt = f"""
 You are an expert Indian stock market analyst with deep knowledge of NSE/BSE trading patterns.
 
@@ -1304,38 +1313,17 @@ Provide a concise analysis with:
 Keep response under 200 words and focus on actionable insights.
 """
 
-        headers = {
-            "Authorization": f"Bearer {OPENROUTER_KEY}",
-            "Content-Type": "application/json",
-        }
+        # ✅ Use your existing OpenRouter helper
+        ai_response = call_openrouter(prompt, model="deepseek/deepseek-chat", temperature=0.3, max_tokens=500)
 
-        payload = {
-            "model": "deepseek/deepseek-chat",
-            "messages": [
-                {"role": "system", "content": "You are a professional Indian stock market analyst specializing in technical analysis and NSE/BSE trading patterns."},
-                {"role": "user", "content": prompt}
-            ],
-            "temperature": 0.3,
-            "max_tokens": 500
-        }
-
-        # Call OpenRouter API
-        response = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=30)
-
-        if response.status_code == 200:
-            ai_response = response.json()["choices"][0]["message"]["content"].strip()
-            return jsonify({
-                "prediction": "Analysis Complete",
-                "confidence": 75,
-                "reasoning": ai_response,
-                "timeframe": "Short term"
-            })
-        else:
-            print(f"❌ AI API Error: {response.status_code} - {response.text}")
-            return jsonify({"error": f"AI service error: {response.status_code}"}), 500
+        return jsonify({
+            "status": "success",
+            "symbol": symbol,
+            "ai_analysis": ai_response
+        })
 
     except Exception as e:
-        print(f"❌ AI Prediction Error: {str(e)}")
+        app.logger.exception(f"AI Prediction Error: {str(e)}")
         return jsonify({"error": f"Prediction failed: {str(e)}"}), 500
 
 # ✅ AI Market Narrative API
