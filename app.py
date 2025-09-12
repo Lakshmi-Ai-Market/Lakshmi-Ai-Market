@@ -1331,22 +1331,23 @@ def get_market_data(symbol):
 def ai_predict():
     try:
         data = request.get_json(force=True) or {}
-        raw_symbol = data.get("symbol")  # e.g. "NIFTY", "BANKNIFTY", "SENSEX", "RELIANCE.NS"
+        raw_symbol = data.get("symbol")   # e.g. "NIFTY"
         market_data = data.get("marketData")
 
-        print("DEBUG /api/ai-predict input:", data)  # log input
+        print("DEBUG /api/ai-predict received:", data)
 
-        # ⚡ If marketData is not provided, fetch from yfinance
-        if not market_data:
+        # 🚨 If neither marketData nor symbol is provided → fail early
+        if not market_data and not raw_symbol:
+            return jsonify({"error": "No symbol or market data provided"}), 400
+
+        # ✅ If only symbol provided → fetch candles via yfinance
+        if not market_data and raw_symbol:
             yf_symbols = {
                 "BANKNIFTY": "^NSEBANK",
                 "NIFTY": "^NSEI",
                 "SENSEX": "^BSESN"
             }
-            yf_symbol = yf_symbols.get(raw_symbol.upper(), raw_symbol if raw_symbol else None)
-
-            if not yf_symbol:
-                return jsonify({"error": "No symbol provided"}), 400
+            yf_symbol = yf_symbols.get(raw_symbol.upper(), raw_symbol)
 
             df = get_stock_df(yf_symbol, period="3mo", interval="1d")
             if df is None or df.empty:
@@ -1355,16 +1356,16 @@ def ai_predict():
             # Convert DataFrame → list of dicts for consistency
             market_data = df.tail(60).reset_index().to_dict(orient="records")
 
-        # ❌ Still empty after fetch → hard fail
+        # 🚨 If still empty after all attempts → fail
         if not market_data or len(market_data) == 0:
-            return jsonify({"error": "No market data available"}), 400
+            return jsonify({"error": f"No market data available for {raw_symbol}"}), 400
 
-        # === Prepare technical features ===
-        closes = [float(candle["Close"]) for candle in market_data if "Close" in candle][-50:]
-        volumes = [float(candle["Volume"]) for candle in market_data if "Volume" in candle][-10:]
+        # === Prepare indicators ===
+        closes = [float(c.get("Close", 0)) for c in market_data if "Close" in c][-50:]
+        volumes = [float(c.get("Volume", 0)) for c in market_data if "Volume" in c][-10:]
 
         if not closes:
-            return jsonify({"error": "No closing prices found in market data"}), 400
+            return jsonify({"error": "No closing prices in market data"}), 400
 
         sma_20 = sum(closes[-20:]) / 20 if len(closes) >= 20 else closes[-1]
         sma_50 = sum(closes[-50:]) / 50 if len(closes) >= 50 else closes[-1]
