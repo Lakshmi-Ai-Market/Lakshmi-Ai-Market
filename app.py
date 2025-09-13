@@ -31,10 +31,15 @@ import hashlib
 import math
 import traceback
 import secrets
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 import feedparser
 warnings.filterwarnings('ignore')
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import asyncio
+import aiohttp
+from functools import lru_cache
+import redis
 
 # configure logging once at startup
 logging.basicConfig(
@@ -44,6 +49,18 @@ logging.basicConfig(
 
 # ✅ Default risk percent
 DEFAULT_RISK_PCT = 0.01
+
+
+# Initialize Redis for caching (optional)
+try:
+    redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+    REDIS_AVAILABLE = True
+except:
+    REDIS_AVAILABLE = False
+    logger.warning("Redis not available, using in-memory caching")
+
+# In-memory cache as fallback
+memory_cache = {}
 
 # Load environment variables safely
 env_path = Path(__file__).parent / ".env"
