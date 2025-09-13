@@ -35,6 +35,14 @@ from typing import Dict, List, Optional
 import feedparser
 warnings.filterwarnings('ignore')
 
+import logging
+
+# configure logging once at startup
+logging.basicConfig(
+    level=logging.INFO,   # or DEBUG for more details
+    format="%(asctime)s [%(levelname)s] %(message)s",
+)
+
 # Load environment variables safely
 env_path = Path(__file__).parent / ".env"
 load_dotenv(dotenv_path=env_path)
