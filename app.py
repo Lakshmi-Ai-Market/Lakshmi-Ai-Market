@@ -1000,8 +1000,8 @@ class AdvancedMarketDataFetcher:
             self._fetch_finnhub,
             self._fetch_yahoo_alternative
         ]
- # Initialize the fetcher
-market_fetcher = AdvancedMarketDataFetcher()
+    # Initialize the fetcher
+    market_fetcher = AdvancedMarketDataFetcher()
        
 
     def get_symbol_variants(self, symbol: str) -> List[str]:
