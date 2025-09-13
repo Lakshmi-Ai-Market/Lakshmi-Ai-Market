@@ -4419,6 +4419,10 @@ def api_select_strategy():
         return jsonify(strategy), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route("/health")
+def health():
+    return jsonify({"status": "ok"}), 200
         
 # --- Start App ---
 import os
