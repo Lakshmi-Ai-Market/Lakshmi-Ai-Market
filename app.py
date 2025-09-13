@@ -3156,7 +3156,7 @@ def strategy_engine():
 @app.route("/analyze-strategy", methods=["POST"])
 def analyze_strategy():
     try:
-        # Handle both JSON and form data
+        # Handle Bh JSON and form data
         if request.content_type == 'application/json':
             data = request.get_json() or {}
         else:
@@ -3165,18 +3165,47 @@ def analyze_strategy():
         print(f"Received request data: {data}")
         print(f"Content-Type: {request.content_type}")
         
+        # Check if this is a runRealBacktest action without proper data
+        if data.get('action') == 'runRealBacktest':
+            # Get current market price for NIFTY automatically
+            symbol = 'NIFTY'
+            
+            try:
+                import yfinance as yf
+                ticker = yf.Ticker('^NSEI')  # NIFTY symbol
+                current_data = ticker.history(period="1d")
+                if not current_data.empty:
+                    current_price = float(current_data['Close'].iloc[-1])
+                    print(f"Auto-fetched current NIFTY price: ₹{current_price}")
+                    
+                    # Use current market price for analysis
+                    data['price'] = current_price
+                    data['symbol'] = symbol
+                else:
+                    # Fallback price if data fetch fails
+                    data['price'] = 19500  # Approximate NIFTY level
+                    data['symbol'] = symbol
+                    print("Using fallback NIFTY price: ₹19500")
+                    
+            except Exception as e:
+                print(f"Error fetching current price: {e}")
+                # Use fallback
+                data['price'] = 19500
+                data['symbol'] = 'NIFTY'
+        
         # Get inputs with multiple fallback methods
         price_input = data.get('price') or data.get('current_price') or data.get('entry_price')
         symbol = (data.get('symbol') or 'NIFTY').upper().strip()
         
-        print(f"Extracted - Price: {repr(price_input)}, Symbol: {symbol}")
+        print(f"Final extracted - Price: {repr(price_input)}, Symbol: {symbol}")
         
         # Robust price validation
         if not price_input:
             return {
-                'error': 'Price is required. Please enter a valid price.',
+                'error': 'Price is required. Please enter a valid price or symbol.',
                 'status': 'failed',
-                'received_data': str(data)
+                'received_data': str(data),
+                'help': 'Send data like: {"price": 19500, "symbol": "NIFTY"} or {"action": "runRealBacktest"}'
             }
         
         # Convert price to float with comprehensive cleaning
