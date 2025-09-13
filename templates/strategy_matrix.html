@@ -1825,13 +1825,17 @@ async function generateRealStrategy() {
         const resp = await fetch("/api/ai-predict", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
-            const text = await resp.text();   // ✅ read plain text instead
-if (!resp.ok) {
-    console.error("runDrawdownRecoveryPredictor error", text);
-    showNotification("Failed: " + text, "error");
-    document.getElementById("matrix-results").innerText = text;
-    return;
-}
+            body: JSON.stringify(body)  
+    });  
+    const data = await resp.json();  
+    if (!resp.ok) {  
+        console.error("runDrawdownRecoveryPredictor error", data);  
+        showNotification("Failed: " + (data.error || resp.statusText), "error");  
+        document.getElementById("matrix-results").innerText = JSON.stringify(data, null, 2);  
+        return;  
+    }
+
+
         // If specific formatters exist, use them
         if (typeof formatCorrelationResults === "function" && "generateRealStrategy" === "runCorrelationMatrix") {
             document.getElementById("matrix-results").innerHTML = formatCorrelationResults(data);
