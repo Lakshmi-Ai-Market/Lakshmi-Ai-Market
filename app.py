@@ -3163,16 +3163,13 @@ def analyze_strategy():
             data = request.form.to_dict()
         
         print(f"Received request data: {data}")
-        print(f"Content-Type: {request.content_type}")
         
         # Check if this is a runRealBacktest action without proper data
         if data.get('action') == 'runRealBacktest':
-            # Get current market price for NIFTY automatically
             symbol = 'NIFTY'
             
             try:
                 import yfinance as yf
-                import pandas as pd
                 
                 # Try multiple NIFTY symbols in order of reliability
                 nifty_symbols = ['^NSEI', 'NIFTY50.NS', '^NSEBANK', 'RELIANCE.NS']
@@ -3183,7 +3180,6 @@ def analyze_strategy():
                         print(f"Trying to fetch data for: {test_symbol}")
                         ticker = yf.Ticker(test_symbol)
                         
-                        # Try different time periods
                         for period in ['5d', '1mo', '3mo']:
                             try:
                                 current_data = ticker.history(period=period)
@@ -3191,15 +3187,13 @@ def analyze_strategy():
                                     current_price = float(current_data['Close'].iloc[-1])
                                     print(f"Successfully fetched {test_symbol} price: ₹{current_price}")
                                     break
-                            except Exception as e:
-                                print(f"Failed {test_symbol} with period {period}: {e}")
+                            except:
                                 continue
                         
                         if current_price:
                             break
                             
-                    except Exception as e:
-                        print(f"Failed to fetch {test_symbol}: {e}")
+                    except:
                         continue
                 
                 if current_price:
@@ -3207,30 +3201,27 @@ def analyze_strategy():
                     data['symbol'] = symbol
                     print(f"Using live price: ₹{current_price}")
                 else:
-                    # Use realistic current NIFTY level (as of 2024)
-                    data['price'] = 19650  # Current approximate NIFTY level
+                    # Use realistic current NIFTY level
+                    data['price'] = 19650
                     data['symbol'] = symbol
                     print("Using current market estimate: ₹19650")
                     
             except Exception as e:
                 print(f"Error in price fetching: {e}")
-                # Use current market level
                 data['price'] = 19650
                 data['symbol'] = 'NIFTY'
         
-        # Get inputs with multiple fallback methods
+        # Get inputs
         price_input = data.get('price') or data.get('current_price') or data.get('entry_price')
         symbol = (data.get('symbol') or 'NIFTY').upper().strip()
         
-        print(f"Final extracted - Price: {repr(price_input)}, Symbol: {symbol}")
+        print(f"Final extracted - Price: {price_input}, Symbol: {symbol}")
         
-        # Robust price validation
+        # Price validation
         if not price_input:
             return {
                 'error': 'Price is required. Please enter a valid price or symbol.',
-                'status': 'failed',
-                'received_data': str(data),
-                'help': 'Send data like: {"price": 19650, "symbol": "NIFTY"} or {"action": "runRealBacktest"}'
+                'status': 'failed'
             }
         
         # Convert price to float
@@ -3258,13 +3249,13 @@ def analyze_strategy():
                 
             print(f"Successfully parsed price: ₹{price}")
             
-        except (ValueError, TypeError) as e:
+        except (ValueError, TypeError):
             return {
                 'error': f'Cannot convert "{price_input}" to a valid price.',
                 'status': 'failed'
             }
         
-        # Enhanced symbol mapping with multiple fallbacks
+        # Enhanced symbol mapping
         symbol_map = {
             'NIFTY': ['^NSEI', 'NIFTY50.NS', '^NSEBANK'],
             'BANKNIFTY': ['^NSEBANK', 'BANKNIFTY.NS'],
@@ -3278,14 +3269,13 @@ def analyze_strategy():
             'ITC': ['ITC.NS', 'ITC.BO']
         }
         
-        # Get possible symbols for this stock
         possible_symbols = symbol_map.get(symbol, [f"{symbol}.NS", f"{symbol}.BO", symbol])
-        
         print(f"Trying symbols: {possible_symbols}")
         
-        # Try to fetch REAL market data with multiple fallbacks
+        # Try to fetch REAL market data
         hist_data = None
         yf_symbol = None
+        is_live_data = False
         
         try:
             import yfinance as yf
@@ -3295,52 +3285,47 @@ def analyze_strategy():
                     print(f"Attempting to fetch data for: {test_symbol}")
                     ticker = yf.Ticker(test_symbol)
                     
-                    # Try different periods to find available data
                     for period in ['1y', '6mo', '3mo', '1mo']:
                         try:
                             temp_data = ticker.history(period=period)
-                            if not temp_data.empty and len(temp_data) >= 20:  # Need at least 20 days for indicators
+                            if not temp_data.empty and len(temp_data) >= 20:
                                 hist_data = temp_data
                                 yf_symbol = test_symbol
-                                print(f"Successfully fetched {len(hist_data)} days of data for {test_symbol}")
+                                is_live_data = True
+                                print(f"Successfully fetched {len(hist_data)} days of REAL data for {test_symbol}")
                                 break
-                        except Exception as e:
-                            print(f"Period {period} failed for {test_symbol}: {e}")
+                        except:
                             continue
                     
                     if hist_data is not None:
                         break
                         
-                except Exception as e:
-                    print(f"Symbol {test_symbol} failed completely: {e}")
+                except:
                     continue
             
             # If no real data found, create synthetic data for analysis
             if hist_data is None or hist_data.empty:
                 print("No real market data available, generating synthetic data for analysis")
                 
-                # Generate realistic synthetic data based on current price
                 import pandas as pd
                 import numpy as np
                 
                 # Create 100 days of synthetic data
                 dates = pd.date_range(end=pd.Timestamp.now(), periods=100, freq='D')
                 
-                # Generate realistic price movements (random walk with trend)
-                np.random.seed(42)  # For reproducible results
-                returns = np.random.normal(0.001, 0.02, 100)  # 0.1% daily return, 2% volatility
+                # Generate realistic price movements
+                np.random.seed(42)
+                returns = np.random.normal(0.001, 0.02, 100)
                 
-                # Start from a base price and apply returns
-                base_price = price * 0.95  # Start 5% below current price
+                base_price = price * 0.95
                 prices = [base_price]
                 
                 for ret in returns[1:]:
                     new_price = prices[-1] * (1 + ret)
                     prices.append(new_price)
                 
-                # Ensure the last price is close to our input price
                 prices = np.array(prices)
-                prices = prices * (price / prices[-1])  # Scale to end at our price
+                prices = prices * (price / prices[-1])
                 
                 # Create OHLC data
                 highs = prices * (1 + np.random.uniform(0, 0.02, 100))
@@ -3348,10 +3333,8 @@ def analyze_strategy():
                 opens = np.roll(prices, 1)
                 opens[0] = prices[0]
                 
-                # Create volume data
                 volumes = np.random.uniform(1000000, 5000000, 100)
                 
-                # Create DataFrame
                 hist_data = pd.DataFrame({
                     'Open': opens,
                     'High': highs,
@@ -3361,6 +3344,7 @@ def analyze_strategy():
                 }, index=dates)
                 
                 yf_symbol = f"{symbol}_SYNTHETIC"
+                is_live_data = False
                 print(f"Generated synthetic data with final price: ₹{prices[-1]:.2f}")
             
         except Exception as e:
@@ -3638,7 +3622,7 @@ def analyze_strategy():
                 'data_range': f"{hist_data.index[0].strftime('%Y-%m-%d')} to {hist_data.index[-1].strftime('%Y-%m-%d')}",
                 'last_trading_day': hist_data.index[-1].strftime('%Y-%m-%d'),
                 'data_source': yf_symbol,
-                'is_live_data': 'SYNTHETIC' not in yf_symbol
+                'is_live_data': is_live_data
             },
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S IST')
         }
