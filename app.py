@@ -1350,7 +1350,6 @@ def ai_predict():
         else:
             text = handle_stock_prediction(data)
 
-        # ✅ Always return plain text (not JSON)
         return Response(text, mimetype="text/plain")
 
     except Exception as e:
@@ -1359,7 +1358,7 @@ def ai_predict():
 
 
 # -------------------------
-# L1: GENERATE REAL STRATEGY (AI)
+# L1: AI STRATEGY GENERATOR
 # -------------------------
 def handle_generate_real_strategy(data: dict) -> str:
     try:
@@ -1367,7 +1366,6 @@ def handle_generate_real_strategy(data: dict) -> str:
 You are an expert Indian stock market strategist with 15+ years of experience in NSE/BSE trading.
 
 Generate a comprehensive real-time trading strategy for today's market conditions:
-
 1. STRATEGY NAME
 2. MARKET OUTLOOK
 3. KEY SECTORS
@@ -1387,7 +1385,7 @@ Keep it actionable and under 300 words.
                 {"role": "user", "content": prompt}
             ],
             "temperature": 0.7,
-            "max_tokens": 600
+            "max_tokens": 600,
         }
         resp = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=30)
 
@@ -1401,14 +1399,15 @@ Keep it actionable and under 300 words.
 Market Session: {"🟢 Active" if 9 <= datetime.now().hour <= 15 else "🔴 Closed"}
 """
         else:
-            return f"❌ AI service error {resp.status_code}"
+            return f"❌ AI service error: {resp.status_code}"
+
     except Exception as e:
         logging.exception("Strategy generation failed")
         return f"❌ Strategy generation failed: {str(e)}"
 
 
 # -------------------------
-# L2: RUN REAL DATA MINING
+# L2: REAL DATA MINING
 # -------------------------
 def handle_real_data_mining(data: dict) -> str:
     try:
@@ -1416,19 +1415,17 @@ def handle_real_data_mining(data: dict) -> str:
         capital = float(data.get("capital", 100000))
         risk_pct = float(data.get("riskPct", DEFAULT_RISK_PCT))
 
+        # fetch datasets
         intraday_df, intraday_sym = fetch_best(symbol, "7d", "15m")
         daily_df, daily_sym = fetch_best(symbol, "3mo", "1d")
         yearly_df, yearly_sym = fetch_best(symbol, "1y", "1d")
 
-        if intraday_df is None or intraday_df.empty:
-            intraday_df = generate_synthetic_market_data("7d")
-            intraday_sym = "SYNTHETIC"
-        if daily_df is None or daily_df.empty:
-            daily_df = generate_synthetic_market_data("3mo")
-            daily_sym = "SYNTHETIC"
-        if yearly_df is None or yearly_df.empty:
-            yearly_df = generate_synthetic_market_data("1y")
-            yearly_sym = "SYNTHETIC"
+        if not intraday_df or intraday_df.empty:
+            return f"❌ No intraday data found for {symbol}"
+        if not daily_df or daily_df.empty:
+            return f"❌ No daily data found for {symbol}"
+        if not yearly_df or yearly_df.empty:
+            return f"❌ No yearly data found for {symbol}"
 
         intraday = analyze_timeframe(intraday_df, "intraday", capital, risk_pct)
         swing = analyze_timeframe(daily_df, "swing", capital, risk_pct)
@@ -1458,7 +1455,6 @@ def handle_real_data_mining(data: dict) -> str:
 
         return f"""📊 REAL DATA MINING REPORT — {symbol}
 {"="*70}
-Requested symbol: {symbol}
 Intraday src: {intraday_sym} | Swing src: {daily_sym} | Positional src: {yearly_sym}
 {"-"*70}
 {fmt("Intraday (15m)", intraday)}
@@ -1467,7 +1463,7 @@ Intraday src: {intraday_sym} | Swing src: {daily_sym} | Positional src: {yearly_
 {"="*70}
 📡 Data Quality: Real
 💰 Capital: ₹{capital} | Risk: {int(risk_pct*100)}%
-⏰ Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S IST")}
+⏰ {datetime.now().strftime("%Y-%m-%d %H:%M:%S IST")}
 """
 
     except Exception as e:
@@ -1476,7 +1472,7 @@ Intraday src: {intraday_sym} | Swing src: {daily_sym} | Positional src: {yearly_
 
 
 # -------------------------
-# Default: STOCK PREDICTION
+# DEFAULT: STOCK PREDICTION
 # -------------------------
 def handle_stock_prediction(data: dict) -> str:
     try:
@@ -1492,7 +1488,7 @@ def handle_stock_prediction(data: dict) -> str:
         trend = "Bullish" if current_price > sma20 > sma50 else "Bearish" if current_price < sma20 < sma50 else "Neutral"
 
         prompt = f"""
-You are an expert Indian stock analyst.
+You are an expert Indian stock market analyst.
 
 Symbol: {raw_symbol}
 Price: ₹{current_price:.2f}
@@ -1500,15 +1496,15 @@ SMA20: ₹{sma20:.2f}
 SMA50: ₹{sma50:.2f}
 Trend: {trend}
 
-Give prediction with:
+Provide:
 - Direction
 - Confidence %
-- Key reasons
+- Reasons
 - Risks
 """
         headers = {"Authorization": f"Bearer {OPENROUTER_KEY}", "Content-Type": "application/json"}
         payload = {"model": "deepseek/deepseek-chat-v3",
-                   "messages": [{"role": "system", "content": "You are a professional NSE/BSE stock analyst."},
+                   "messages": [{"role": "system", "content": "You are a professional stock analyst."},
                                 {"role": "user", "content": prompt}],
                    "temperature": 0.3, "max_tokens": 400}
         resp = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=30)
@@ -1532,19 +1528,23 @@ SMA20: ₹{sma20:.2f} | SMA50: ₹{sma50:.2f}
 
 
 # -------------------------
-# Helpers
+# HELPERS
 # -------------------------
-def fetch_best(symbol: str, period: str, interval: str) -> (Optional[pd.DataFrame], str):
+def fetch_best(symbol: str, period: str, interval: str):
     mapping = {
         "NIFTY50": ["^NSEI", "NIFTYBEES.NS"],
         "NIFTY": ["^NSEI", "NIFTYBEES.NS"],
         "BANKNIFTY": ["^NSEBANK", "BANKBEES.NS"],
-        "SENSEX": ["^BSESN"]
+        "SENSEX": ["^BSESN"],
+        "RELIANCE": ["RELIANCE.NS"],
+        "TCS": ["TCS.NS"],
+        "INFY": ["INFY.NS"],
+        "HDFCBANK": ["HDFCBANK.NS"],
+        "ICICIBANK": ["ICICIBANK.NS"],
     }
     tries = mapping.get(symbol.upper(), [symbol])
     if symbol not in tries:
         tries.insert(0, symbol)
-    tries.extend(["^NSEI", "NIFTYBEES.NS", "BANKBEES.NS", "^BSESN"])
 
     for t in tries:
         try:
@@ -1580,11 +1580,9 @@ def analyze_timeframe(df: pd.DataFrame, label: str, capital: float, risk_pct: fl
     bb_upper = (bb_mid + 2 * bb_std).iloc[-1]
     bb_lower = (bb_mid - 2 * bb_std).iloc[-1]
 
-    tr = pd.concat([
-        (df["High"] - df["Low"]).abs(),
-        (df["High"] - close.shift()).abs(),
-        (df["Low"] - close.shift()).abs()
-    ], axis=1).max(axis=1)
+    tr = pd.concat([(df["High"] - df["Low"]).abs(),
+                    (df["High"] - close.shift()).abs(),
+                    (df["Low"] - close.shift()).abs()], axis=1).max(axis=1)
     atr = tr.rolling(14).mean().iloc[-1]
 
     current_price = close.iloc[-1]
@@ -1615,24 +1613,6 @@ def analyze_timeframe(df: pd.DataFrame, label: str, capital: float, risk_pct: fl
             "atr": atr, "signal": {"label": sig, "score": score},
             "risk": {"stoploss": stoploss, "target1": target1, "target2": target2, "rr1": rr1, "rr2": rr2},
             "positionSizing": {"quantity": qty}}
-
-
-def generate_synthetic_market_data(period: str) -> pd.DataFrame:
-    days_map = {"7d": 7, "1mo": 30, "3mo": 90, "6mo": 180, "1y": 365}
-    days = days_map.get(period, 90)
-    dates = pd.date_range(end=datetime.now(), periods=days)
-    np.random.seed(42)
-    prices = [15000]
-    for _ in range(1, days):
-        prices.append(prices[-1] * (1 + np.random.normal(0.0005, 0.01)))
-    rows = []
-    for i, p in enumerate(prices):
-        high, low = p * (1 + np.random.rand()*0.01), p * (1 - np.random.rand()*0.01)
-        openp = prices[i-1] if i > 0 else p
-        rows.append({"Open": openp, "High": high, "Low": low, "Close": p, "Volume": int(np.random.randint(1e5, 2e6))})
-    df = pd.DataFrame(rows, index=dates)
-    df.index.name = "synthetic"
-    return df
 
 # ✅ AI Market Narrative API
 @app.route("/api/ai-narrative", methods=["POST"])
