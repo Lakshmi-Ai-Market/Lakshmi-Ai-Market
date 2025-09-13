@@ -3153,7 +3153,7 @@ def strategy_engine():
         return redirect("/login")
     return render_template("strategy_engine.html")
 
-@@app.route("/analyze-strategy", methods=["POST"])
+@app.route("/analyze-strategy", methods=["POST"])
 def analyze_strategy():
     try:
         data = request.get_json() or {}
