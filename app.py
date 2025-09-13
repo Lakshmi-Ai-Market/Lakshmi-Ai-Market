@@ -1339,16 +1339,15 @@ def ai_predict():
         elif action == "runRealDataMining":
             return handle_real_data_mining(data)
         else:
-            # Default: stock prediction branch (AI-backed), optionally used by your UI
             return handle_stock_prediction(data)
 
     except Exception as e:
         logging.exception("Error in ai_predict")
-        return jsonify({"error": f"Server error: {str(e)}"}), 500
+        return f"❌ Server error: {str(e)}"
 
 
 # -------------------------
-# L1: GENERATE REAL STRATEGY (AI)
+# L1: GENERATE REAL STRATEGY (AI via OpenRouter / DeepSeek v3)
 # -------------------------
 def handle_generate_real_strategy(data: dict):
     try:
@@ -1369,12 +1368,9 @@ Please provide:
 
 Keep it actionable and under 300 words.
 """
-        headers = {
-            "Authorization": f"Bearer {OPENROUTER_KEY}",
-            "Content-Type": "application/json",
-        }
+        headers = {"Authorization": f"Bearer {OPENROUTER_KEY}", "Content-Type": "application/json"}
         payload = {
-            "model": "deepseek/deepseek-chat",
+            "model": "deepseek/deepseek-chat-v3",
             "messages": [
                 {"role": "system", "content": "You are a professional Indian stock market strategist specializing in NSE/BSE trading strategies and risk management."},
                 {"role": "user", "content": prompt}
@@ -1385,101 +1381,126 @@ Keep it actionable and under 300 words.
         resp = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=30)
         if resp.status_code == 200:
             ai_text = resp.json()["choices"][0]["message"]["content"].strip()
-            return jsonify({
-                "success": True,
-                "type": "real_strategy",
-                "strategy_text": ai_text,
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S IST"),
-                "market_session": "NSE/BSE Active" if 9 <= datetime.now().hour <= 15 else "Market Closed"
-            })
+            return f"""📑 NSE/BSE DAILY STRATEGY REPORT
+{"="*60}
+{ai_text}
+
+⏰ {datetime.now().strftime("%Y-%m-%d %H:%M:%S IST")}
+Market Session: {"🟢 Active" if 9 <= datetime.now().hour <= 15 else "🔴 Closed"}
+"""
         else:
             logging.error("OpenRouter error: %s %s", resp.status_code, resp.text)
-            return jsonify({"error": f"AI service error: {resp.status_code}"}), 500
+            return f"❌ AI service error: {resp.status_code} - {resp.text}"
     except Exception as e:
         logging.exception("Strategy generation failed")
-        return jsonify({"error": f"Strategy generation failed: {str(e)}"}), 500
+        return f"❌ Strategy generation failed: {str(e)}"
 
 
 # -------------------------
-# L2: RUN REAL DATA MINING (Multi-timeframe TA + risk + sizing)
+# L2: RUN REAL DATA MINING (Multi-timeframe real indicators + risk + sizing)
 # -------------------------
 def handle_real_data_mining(data: dict):
     try:
+        # symbol requested by user (e.g. NIFTY50, RELIANCE, INFY)
         symbol = (data.get("symbol") or "NIFTY50").upper()
-        period = data.get("period", "1y")
-        interval = data.get("interval", "1d")
         user_capital = float(data.get("capital", 100000))
+        risk_pct = float(data.get("riskPct", DEFAULT_RISK_PCT))
 
-        # 1) fetch market data with fallbacks + retries
-        df = get_market_data_with_fallbacks(symbol, period, interval)
+        # Fetch datasets for each timeframe:
+        # Intraday -> try 15m for last 7d
+        intraday_df, intraday_sym = fetch_best(symbol, period="7d", interval="15m")
+        # Swing (daily) -> last 3 months
+        daily_df, daily_sym = fetch_best(symbol, period="3mo", interval="1d")
+        # Positional -> weekly resample from 1y daily
+        yearly_df, yearly_sym = fetch_best(symbol, period="1y", interval="1d")
 
-        if df is None or df.empty:
-            return jsonify({"error": "No market data available after fallbacks"}), 400
+        # If any real df is None/empty, fallback to synthetic for that timeframe
+        if intraday_df is None or intraday_df.empty:
+            intraday_df = generate_synthetic_market_data("7d")
+            intraday_sym = "SYNTHETIC"
+        if daily_df is None or daily_df.empty:
+            daily_df = generate_synthetic_market_data("3mo")
+            daily_sym = "SYNTHETIC"
+        if yearly_df is None or yearly_df.empty:
+            yearly_df = generate_synthetic_market_data("1y")
+            yearly_sym = "SYNTHETIC"
 
-        # 2) multi-timeframe analysis
-        analysis = perform_multi_timeframe_analysis(df, symbol, user_capital)
+        # Compute indicators for each timeframe
+        intraday_analysis = analyze_timeframe(intraday_df, timeframe_label="intraday", capital=user_capital, risk_pct=risk_pct)
+        daily_analysis = analyze_timeframe(daily_df, timeframe_label="swing", capital=user_capital, risk_pct=risk_pct)
+        weekly_df = yearly_df.resample("W").agg({"Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"}).dropna()
+        positional_analysis = analyze_timeframe(weekly_df, timeframe_label="positional", capital=user_capital, risk_pct=risk_pct)
 
-        return jsonify({
-            "success": True,
-            "action": "runRealDataMining",
-            "symbol_requested": symbol,
-            "yf_symbol_used": analysis.get("yf_symbol_used"),
-            "timestamp": datetime.now().isoformat(),
-            "analysis": analysis
-        })
+        # Build styled plain-text report
+        report = []
+        report.append(f"📊 REAL DATA MINING REPORT — {symbol}")
+        report.append("=" * 70)
+        report.append(f"Requested symbol: {symbol}")
+        report.append(f"Intraday source: {intraday_sym} | Swing source: {daily_sym} | Positional source: {yearly_sym}")
+        report.append("-" * 70)
+
+        # helper to format each timeframe
+        def format_tf(name, res):
+            lines = []
+            lines.append(f"\n⏱ {name.upper()} ANALYSIS")
+            lines.append("-" * 40)
+            lines.append(f"📌 Close: ₹{res['close']:.2f}")
+            lines.append(f"📈 SMA20: ₹{res['sma20']:.2f} | SMA50: ₹{res['sma50']:.2f}")
+            lines.append(f"📉 EMA20: ₹{res['ema20']:.2f} | EMA50: ₹{res['ema50']:.2f}")
+            lines.append(f"📊 RSI(14): {res['rsi']:.2f}")
+            lines.append(f"📊 MACD: {res['macd']:.4f} | Signal: {res['macd_signal']:.4f}")
+            lines.append(f"📊 Bollinger: Upper ₹{res['bb_upper']:.2f} | Lower ₹{res['bb_lower']:.2f}")
+            lines.append(f"📊 ATR(14): ₹{res['atr']:.4f}")
+            lines.append(f"\n🎯 Signal: {res['signal']['label']} (score {res['signal']['score']})")
+            lines.append(f"🛑 Stoploss: ₹{res['risk']['stoploss']:.2f}")
+            lines.append(f"🎯 Target1: ₹{res['risk']['target1']:.2f} | Target2: ₹{res['risk']['target2']:.2f}")
+            lines.append(f"⚖️ RR1: {res['risk']['rr1']} | RR2: {res['risk']['rr2']}")
+            lines.append(f"📦 Suggested Qty (risk {int(risk_pct*100)}%): {res['positionSizing']['quantity']} shares")
+            return "\n".join(lines)
+
+        report.append(format_tf("Intraday (15m)", intraday_analysis))
+        report.append(format_tf("Swing (Daily)", daily_analysis))
+        report.append(format_tf("Positional (Weekly)", positional_analysis))
+
+        report.append("\n" + "=" * 70)
+        dq = "Synthetic" if ("synthetic" in str(daily_df.index.name).lower() or "synthetic" in str(intraday_df.index.name).lower()) else "Real"
+        report.append(f"📡 Data Quality: {dq}")
+        report.append(f"💰 Capital used: ₹{user_capital} | Risk per trade: {int(risk_pct*100)}%")
+        report.append(f"⏰ Generated at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S IST')}")
+        report.append("\nNotes: Intraday uses 15m historic from Yahoo Finance when available; Yahoo can restrict intraday history. If intraday missing, synthetic data was used.")
+
+        return "\n".join(report)
+
     except Exception as e:
-        logging.exception("runRealDataMining failed")
-        return jsonify({"error": f"Data mining failed: {str(e)}"}), 500
+        logging.exception("Data mining failed")
+        return f"❌ Data mining failed: {str(e)}"
 
 
 # -------------------------
-# Default: STOCK PREDICTION (AI-backed) - keeps previous behavior
+# Default: STOCK PREDICTION (AI-backed brief text)
 # -------------------------
 def handle_stock_prediction(data: dict):
     try:
-        raw_symbol = data.get("symbol")
+        raw_symbol = data.get("symbol") or "NIFTY"
         market_data = data.get("marketData")
         if not market_data and raw_symbol:
-            # Map some known tickers to reliable yfinance tickers
-            yf_symbols = {
-                "BANKNIFTY": "^NSEBANK",
-                "NIFTY": "^NSEI",
-                "SENSEX": "^BSESN",
-                "RELIANCE": "RELIANCE.NS",
-                "TCS": "TCS.NS",
-                "INFY": "INFY.NS",
-                "HDFCBANK": "HDFCBANK.NS",
-                "ICICIBANK": "ICICIBANK.NS"
-            }
-            yf_symbol = yf_symbols.get(raw_symbol.upper(), raw_symbol)
-            df = fetch_yfinance_data(yf_symbol, period="3mo", interval="1d")
+            # fetch daily 3mo
+            df, used = fetch_best(raw_symbol, period="3mo", interval="1d")
             if df is None or df.empty:
-                return jsonify({"error": f"No market data found for {yf_symbol}"}), 400
+                return f"❌ No market data found for {raw_symbol}"
             market_data = df.tail(60).reset_index().to_dict(orient="records")
-        if not market_data or len(market_data) == 0:
-            return jsonify({"error": "No market data available"}), 400
 
-        closes, volumes = [], []
-        for rec in market_data:
-            close_price = rec.get("Close") or rec.get("close")
-            vol = rec.get("Volume") or rec.get("volume")
-            if close_price is not None:
-                closes.append(float(close_price))
-            if vol is not None:
-                volumes.append(float(vol))
-
+        closes = [float(rec.get("Close") or rec.get("close")) for rec in market_data if rec.get("Close") or rec.get("close")]
         if not closes:
-            return jsonify({"error": "No valid closing prices found"}), 400
+            return "❌ No valid closing prices found"
 
         closes = closes[-50:]
-        volumes = volumes[-10:] if volumes else [0]
         current_price = closes[-1]
         sma20 = sum(closes[-20:]) / 20 if len(closes) >= 20 else current_price
         sma50 = sum(closes[-50:]) / 50 if len(closes) >= 50 else current_price
         price_change = ((current_price - closes[-2]) / closes[-2] * 100) if len(closes) > 1 else 0
         trend = "Bullish" if current_price > sma20 > sma50 else "Bearish" if current_price < sma20 < sma50 else "Neutral"
 
-        # Prepare prompt for AI
         prompt = f"""
 You are an expert Indian stock market analyst.
 
@@ -1497,346 +1518,264 @@ Provide:
 Keep concise.
 """
         headers = {"Authorization": f"Bearer {OPENROUTER_KEY}", "Content-Type": "application/json"}
-        payload = {"model": "deepseek/deepseek-chat",
+        payload = {"model": "deepseek/deepseek-chat-v3",
                    "messages": [{"role": "system", "content": "You are a professional Indian stock market analyst."},
                                 {"role": "user", "content": prompt}],
                    "temperature": 0.3, "max_tokens": 400}
         resp = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=30)
-        ai_text = ""
+        ai_text = "⚠️ AI service unavailable"
         confidence = 75
         if resp.status_code == 200:
             ai_text = resp.json()["choices"][0]["message"]["content"].strip()
-            # try extract confidence
-            import re
-            m = re.search(r'confidence[:\s]*([0-9]{1,3})', ai_text.lower())
-            if m:
-                confidence = int(m.group(1))
-        else:
-            logging.warning("AI prediction failed: %s", resp.text)
 
-        return jsonify({
-            "prediction": trend,
-            "confidence": confidence,
-            "reasoning": ai_text or "AI service not available",
-            "currentPrice": f"₹{current_price:.2f}",
-            "priceChange": f"{price_change:+.2f}%"
-        })
+        return f"""📈 STOCK PREDICTION REPORT : {raw_symbol}
+{"="*60}
+Trend: {trend}
+Confidence: {confidence}%
+
+🤖 AI Insights:
+{ai_text}
+
+Price: ₹{current_price:.2f} ({price_change:+.2f}%)
+SMA20: ₹{sma20:.2f} | SMA50: ₹{sma50:.2f}
+
+⏰ {datetime.now().strftime("%Y-%m-%d %H:%M:%S IST")}
+"""
     except Exception as e:
         logging.exception("Stock prediction failed")
-        return jsonify({"error": f"Stock prediction failed: {str(e)}"}), 500
+        return f"❌ Stock prediction failed: {str(e)}"
 
 
 # -------------------------
-# FETCH + FALLBACKS
+# Helper: Try multiple tickers / periods and return first good df and symbol used
 # -------------------------
-def get_market_data_with_fallbacks(symbol: str, period: str, interval: str) -> Optional[pd.DataFrame]:
-    # Stronger fallback lists for Indian tickers
+def fetch_best(symbol: str, period: str, interval: str) -> (Optional[pd.DataFrame], str):
+    """
+    Try a list of candidate tickers (index, ETF, stock) for the requested symbol and desired period/interval.
+    Returns (df, used_symbol) or (None, "").
+    """
+    symbol = symbol.upper()
     fallback_map = {
         "NIFTY50": ["^NSEI", "NIFTYBEES.NS", "ICICINIFTY.NS"],
         "NIFTY": ["^NSEI", "NIFTYBEES.NS", "ICICINIFTY.NS"],
         "BANKNIFTY": ["^NSEBANK", "BANKBEES.NS"],
         "SENSEX": ["^BSESN"],
     }
-    tries = fallback_map.get(symbol.upper(), [symbol])
-    # If custom symbol not in map, try it first
+    tries = fallback_map.get(symbol, [symbol])
+    # ensure original symbol first
     if symbol not in tries:
         tries.insert(0, symbol)
-
-    # also add some general fallbacks (safe)
+    # add safe fallback options
     tries.extend(["^NSEI", "NIFTYBEES.NS", "BANKBEES.NS", "^BSESN"])
 
-    # try each
-    for s in tries:
+    for t in tries:
         try:
-            df = fetch_yfinance_data(s, period, interval)
-            if df is not None and not df.empty:
-                # normalize columns to Open,High,Low,Close,Volume
+            df = fetch_yfinance_data(t, period=period, interval=interval)
+            if df is not None and not df.empty and len(df) > 8:
+                # normalize columns
                 df = df.rename(columns={c: c.capitalize() for c in df.columns})
-                return df
+                return df, t
         except Exception:
             continue
-
-    # all real attempts failed -> synthetic
-    return generate_synthetic_market_data(period)
+    return None, ""
 
 
 def fetch_yfinance_data(symbol: str, period: str, interval: str) -> Optional[pd.DataFrame]:
-    # Try a few period variants and limited retries
-    ticker = yf.Ticker(symbol)
-    periods_to_try = [period, "1y", "6mo", "3mo", "1mo"]
-
-    for p in periods_to_try:
-        try:
-            df = ticker.history(period=p, interval=interval, progress=False)
-            if df is not None and not df.empty and len(df) > 8:
-                return df
-        except Exception:
-            continue
-
-    # Explicit date-range attempt
+    """
+    Fetch via yfinance ticker.history; return None if unavailable.
+    """
     try:
+        ticker = yf.Ticker(symbol)
+        # try direct period/interval first
+        df = ticker.history(period=period, interval=interval, progress=False)
+        if df is not None and not df.empty and len(df) > 8:
+            return df
+        # try some fallback periods
+        for p in ["1y", "6mo", "3mo", "1mo", "7d"]:
+            try:
+                df = ticker.history(period=p, interval=interval, progress=False)
+                if df is not None and not df.empty and len(df) > 8:
+                    return df
+            except Exception:
+                continue
+        # final explicit date range attempt
         end = datetime.now()
         start = end - timedelta(days=365)
         df = ticker.history(start=start, end=end, interval=interval, progress=False)
         if df is not None and not df.empty:
             return df
-    except Exception:
-        pass
-
+    except Exception as e:
+        logging.debug("yfinance fetch failed for %s: %s", symbol, str(e))
     return None
 
 
+# -------------------------
+# Indicator calculations + signal/risk/position sizing per timeframe
+# -------------------------
+def analyze_timeframe(df: pd.DataFrame, timeframe_label: str, capital: float, risk_pct: float) -> Dict:
+    """
+    Given a dataframe with Open,High,Low,Close,Volume, returns an analysis dict with indicators,
+    signal, ATR-based stops, targets, risk reward, and position sizing.
+    """
+    # Ensure index is datetime and sorted
+    try:
+        if not isinstance(df.index, pd.DatetimeIndex):
+            df = df.copy()
+            df.index = pd.to_datetime(df.index)
+    except Exception:
+        pass
+    df = df.sort_index()
+
+    close = df["Close"].astype(float)
+
+    # SMAs, EMAs
+    sma20 = close.rolling(20).mean().iloc[-1] if len(close) >= 20 else close.iloc[-1]
+    sma50 = close.rolling(50).mean().iloc[-1] if len(close) >= 50 else close.iloc[-1]
+    ema20 = close.ewm(span=20, adjust=False).mean().iloc[-1]
+    ema50 = close.ewm(span=50, adjust=False).mean().iloc[-1]
+
+    # RSI(14)
+    delta = close.diff()
+    gain = delta.where(delta > 0, 0).rolling(14).mean()
+    loss = -delta.where(delta < 0, 0).rolling(14).mean()
+    rs = gain / loss
+    rsi = (100 - (100 / (1 + rs))).iloc[-1] if not rs.empty else 50.0
+
+    # MACD
+    ema12 = close.ewm(span=12).mean()
+    ema26 = close.ewm(span=26).mean()
+    macd = (ema12 - ema26).iloc[-1]
+    macd_signal = (ema12 - ema26).ewm(span=9).mean().iloc[-1]
+
+    # Bollinger Bands (20,2)
+    bb_mid = close.rolling(20).mean()
+    bb_std = close.rolling(20).std()
+    bb_upper = (bb_mid + 2 * bb_std).iloc[-1] if not bb_mid.empty else close.iloc[-1]
+    bb_lower = (bb_mid - 2 * bb_std).iloc[-1] if not bb_mid.empty else close.iloc[-1]
+
+    # ATR(14)
+    high = df["High"].astype(float)
+    low = df["Low"].astype(float)
+    tr = pd.concat([
+        (high - low).abs(),
+        (high - close.shift()).abs(),
+        (low - close.shift()).abs()
+    ], axis=1).max(axis=1)
+    atr = tr.rolling(14).mean().iloc[-1] if len(tr) >= 14 else tr.mean()
+
+    current_price = float(close.iloc[-1])
+
+    # Signal scoring logic
+    score = 0
+    # EMA crossover bias
+    if ema20 and ema50:
+        score += 2 if ema20 > ema50 else -2
+    # RSI
+    if rsi < 30:
+        score += 1
+    elif rsi > 70:
+        score -= 1
+    # MACD
+    if macd > macd_signal:
+        score += 1
+    else:
+        score -= 1
+    # Bollinger breakout
+    if current_price < bb_lower:
+        score += 1
+    elif current_price > bb_upper:
+        score -= 1
+
+    if score >= 3:
+        signal_label = "Strong Buy"
+    elif score == 2:
+        signal_label = "Buy"
+    elif score >= -1 and score <= 1:
+        signal_label = "Neutral"
+    elif score == -2:
+        signal_label = "Sell"
+    else:
+        signal_label = "Strong Sell"
+
+    # ATR-based stops & targets
+    if atr is None or np.isnan(atr) or atr == 0:
+        # fallback percentage-based stops if atr invalid
+        if timeframe_label == "intraday":
+            stoploss = current_price * 0.9975
+            target1 = current_price * 1.005
+            target2 = current_price * 1.01
+        elif timeframe_label == "swing":
+            stoploss = current_price * 0.985
+            target1 = current_price * 1.02
+            target2 = current_price * 1.05
+        else:
+            stoploss = current_price * 0.95
+            target1 = current_price * 1.08
+            target2 = current_price * 1.15
+    else:
+        stoploss = current_price - 1.5 * atr
+        target1 = current_price + 2 * atr
+        target2 = current_price + 4 * atr
+
+    # Risk rewards
+    rr1 = round((target1 - current_price) / (current_price - stoploss), 2) if (current_price - stoploss) != 0 else None
+    rr2 = round((target2 - current_price) / (current_price - stoploss), 2) if (current_price - stoploss) != 0 else None
+
+    # Position sizing (fixed fraction: risk_pct of capital)
+    risk_amount = capital * risk_pct
+    if stoploss is None:
+        quantity = 0
+    else:
+        per_share_risk = abs(current_price - stoploss)
+        quantity = int(risk_amount / per_share_risk) if per_share_risk > 0 else 0
+
+    return {
+        "close": current_price,
+        "sma20": float(sma20),
+        "sma50": float(sma50),
+        "ema20": float(ema20),
+        "ema50": float(ema50),
+        "rsi": float(rsi),
+        "macd": float(macd),
+        "macd_signal": float(macd_signal),
+        "bb_upper": float(bb_upper),
+        "bb_lower": float(bb_lower),
+        "atr": float(atr) if atr is not None else 0.0,
+        "signal": {"label": signal_label, "score": score},
+        "risk": {"stoploss": float(stoploss), "target1": float(target1), "target2": float(target2), "rr1": rr1, "rr2": rr2},
+        "positionSizing": {"riskAmount": risk_amount, "quantity": int(quantity)},
+        "data_quality": "Synthetic" if "synthetic" in str(df.index.name).lower() else "Real"
+    }
+
+
+# -------------------------
+# Synthetic generator (fallback)
+# -------------------------
 def generate_synthetic_market_data(period: str) -> pd.DataFrame:
-    days_map = {"1d": 1, "5d": 5, "1mo": 30, "3mo": 90, "6mo": 180, "1y": 365}
-    days = days_map.get(period, 365)
+    days_map = {"7d": 7, "1mo": 30, "3mo": 90, "6mo": 180, "1y": 365}
+    days = days_map.get(period, 90)
     end_date = datetime.now()
     start_date = end_date - timedelta(days=days)
     dates = pd.date_range(start=start_date, end=end_date, freq="D")
 
     np.random.seed(42)
     initial_price = 15000
-    returns = np.random.normal(0.0005, 0.015, len(dates))
+    returns = np.random.normal(0.0004, 0.012, len(dates))
     prices = [initial_price]
     for r in returns[1:]:
         prices.append(prices[-1] * (1 + r))
 
     rows = []
-    for i, (date, close) in enumerate(zip(dates, prices)):
+    for i, close in enumerate(prices):
         high = close * (1 + np.random.uniform(0, 0.01))
         low = close * (1 - np.random.uniform(0, 0.01))
         open_p = prices[i - 1] if i > 0 else close
-        volume = int(np.random.randint(1_000_000, 10_000_000))
+        volume = int(np.random.randint(100000, 2000000))
         rows.append({"Open": open_p, "High": high, "Low": low, "Close": close, "Volume": volume})
 
     df = pd.DataFrame(rows, index=dates)
     df.index.name = "synthetic_index"
     return df
-
-
-# -------------------------
-# MULTI-TIMEFRAME ANALYSIS
-# -------------------------
-def perform_multi_timeframe_analysis(df: pd.DataFrame, symbol: str, capital: float) -> Dict:
-    # Normalize column names
-    df = df.rename(columns={c: c.capitalize() for c in df.columns})
-    # ensure required cols
-    for col in ["Open", "High", "Low", "Close", "Volume"]:
-        if col not in df.columns:
-            raise ValueError(f"Missing column {col} in market data")
-
-    # compute indicators helper
-    def compute_indicators(dframe: pd.DataFrame) -> pd.DataFrame:
-        d = dframe.copy()
-        d["SMA20"] = d["Close"].rolling(20).mean()
-        d["SMA50"] = d["Close"].rolling(50).mean()
-        d["SMA200"] = d["Close"].rolling(200).mean()
-        d["EMA20"] = d["Close"].ewm(span=20, adjust=False).mean()
-        d["EMA50"] = d["Close"].ewm(span=50, adjust=False).mean()
-
-        # RSI
-        delta = d["Close"].diff()
-        gain = delta.where(delta > 0, 0).rolling(14).mean()
-        loss = -delta.where(delta < 0, 0).rolling(14).mean()
-        rs = gain / loss
-        d["RSI14"] = 100 - (100 / (1 + rs))
-
-        # MACD
-        ema12 = d["Close"].ewm(span=12, adjust=False).mean()
-        ema26 = d["Close"].ewm(span=26, adjust=False).mean()
-        d["MACD"] = ema12 - ema26
-        d["MACD_Signal"] = d["MACD"].ewm(span=9, adjust=False).mean()
-
-        # ATR
-        tr1 = d["High"] - d["Low"]
-        tr2 = (d["High"] - d["Close"].shift()).abs()
-        tr3 = (d["Low"] - d["Close"].shift()).abs()
-        tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
-        d["ATR14"] = tr.rolling(14).mean()
-
-        # Bollinger
-        sma20 = d["Close"].rolling(20).mean()
-        std20 = d["Close"].rolling(20).std()
-        d["BB_Upper"] = sma20 + (2 * std20)
-        d["BB_Lower"] = sma20 - (2 * std20)
-
-        return d
-
-    # daily, weekly, and short window (intraday-like)
-    df_daily = compute_indicators(df.copy())
-    try:
-        df_weekly = df.resample("W").agg({"Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"}).dropna()
-        df_weekly = compute_indicators(df_weekly)
-    except Exception:
-        df_weekly = df_daily.copy()
-
-    df_short = df_daily.tail(30).copy()  # intraday-like
-
-    def latest_stats(dframe: pd.DataFrame) -> Dict:
-        return {
-            "close": float(dframe["Close"].iloc[-1]),
-            "sma20": float(dframe["SMA20"].iloc[-1]) if "SMA20" in dframe else None,
-            "sma50": float(dframe["SMA50"].iloc[-1]) if "SMA50" in dframe else None,
-            "ema20": float(dframe["EMA20"].iloc[-1]) if "EMA20" in dframe else None,
-            "ema50": float(dframe["EMA50"].iloc[-1]) if "EMA50" in dframe else None,
-            "rsi": float(dframe["RSI14"].iloc[-1]) if "RSI14" in dframe else None,
-            "macd": float(dframe["MACD"].iloc[-1]) if "MACD" in dframe else None,
-            "macd_signal": float(dframe["MACD_Signal"].iloc[-1]) if "MACD_Signal" in dframe else None,
-            "atr": float(dframe["ATR14"].iloc[-1]) if "ATR14" in dframe else None,
-            "bb_upper": float(dframe["BB_Upper"].iloc[-1]) if "BB_Upper" in dframe else None,
-            "bb_lower": float(dframe["BB_Lower"].iloc[-1]) if "BB_Lower" in dframe else None,
-        }
-
-    latest_intraday = latest_stats(df_short)
-    latest_daily = latest_stats(df_daily)
-    latest_weekly = latest_stats(df_weekly)
-
-    # signal generator (scoring)
-    def generate_signal(latest: Dict) -> Dict:
-        score = 0
-        # EMA trend
-        if latest["ema20"] and latest["ema50"]:
-            if latest["ema20"] > latest["ema50"]:
-                score += 2
-            else:
-                score -= 2
-        # RSI
-        if latest["rsi"] is not None:
-            if latest["rsi"] < 30:
-                score += 1
-            elif latest["rsi"] > 70:
-                score -= 1
-        # MACD
-        if latest["macd"] is not None and latest["macd_signal"] is not None:
-            if latest["macd"] > latest["macd_signal"]:
-                score += 1
-            else:
-                score -= 1
-        # Bollinger breakout
-        if latest["bb_lower"] and latest["bb_upper"] and latest["close"]:
-            if latest["close"] < latest["bb_lower"]:
-                score += 1
-            elif latest["close"] > latest["bb_upper"]:
-                score -= 1
-
-        if score >= 3:
-            return {"signal": "Strong Buy", "score": score}
-        elif score == 2:
-            return {"signal": "Buy", "score": score}
-        elif score == 1 or score == 0:
-            return {"signal": "Neutral", "score": score}
-        elif score == -1 or score == -2:
-            return {"signal": "Sell", "score": score}
-        else:
-            return {"signal": "Strong Sell", "score": score}
-
-    sig_intraday = generate_signal(latest_intraday)
-    sig_swing = generate_signal(latest_daily)
-    sig_pos = generate_signal(latest_weekly)
-
-    # risk levels (ATR-based where possible)
-    def compute_risk(latest: Dict, timeframe: str) -> Dict:
-        close = latest["close"]
-        atr = latest.get("atr") or 0
-        if atr and atr > 0:
-            stoploss = round(close - 1.5 * atr, 2)
-            t1 = round(close + 2 * atr, 2)
-            t2 = round(close + 4 * atr, 2)
-        else:
-            if timeframe == "intraday":
-                stoploss = round(close * 0.9975, 2)
-                t1 = round(close * 1.005, 2)
-                t2 = round(close * 1.01, 2)
-            elif timeframe == "swing":
-                stoploss = round(close * 0.985, 2)
-                t1 = round(close * 1.02, 2)
-                t2 = round(close * 1.05, 2)
-            else:
-                stoploss = round(close * 0.95, 2)
-                t1 = round(close * 1.08, 2)
-                t2 = round(close * 1.15, 2)
-        rr1 = None
-        rr2 = None
-        if close - stoploss != 0:
-            rr1 = round((t1 - close) / (close - stoploss), 2)
-            rr2 = round((t2 - close) / (close - stoploss), 2)
-        return {"stoploss": stoploss, "target1": t1, "target2": t2, "rr1": rr1, "rr2": rr2}
-
-    risk_intraday = compute_risk(latest_intraday, "intraday")
-    risk_swing = compute_risk(latest_daily, "swing")
-    risk_pos = compute_risk(latest_weekly, "positional")
-
-    # position sizing (simple fixed-fraction)
-    risk_pct = 0.01  # default 1% per trade
-    risk_amount = capital * risk_pct
-
-    def position_size(close, stoploss, risk_amt):
-        if close and stoploss and close - stoploss != 0:
-            qty = int(risk_amt / abs(close - stoploss))
-            return max(qty, 0)
-        return 0
-
-    qty_intraday = position_size(latest_intraday["close"], risk_intraday["stoploss"], risk_amount)
-    qty_swing = position_size(latest_daily["close"], risk_swing["stoploss"], risk_amount)
-    qty_pos = position_size(latest_weekly["close"], risk_pos["stoploss"], risk_amount)
-
-    # Compose final analysis
-    result = {
-        "yf_symbol_used": df.columns.name if hasattr(df, "columns") else None,
-        "timeframes": {
-            "intraday_like": {
-                "latest": latest_intraday,
-                "signal": sig_intraday,
-                "risk": risk_intraday,
-                "positionSizing": {"capital": f"₹{capital}", "riskAmount": f"₹{risk_amount}", "quantity": qty_intraday}
-            },
-            "swing": {
-                "latest": latest_daily,
-                "signal": sig_swing,
-                "risk": risk_swing,
-                "positionSizing": {"capital": f"₹{capital}", "riskAmount": f"₹{risk_amount}", "quantity": qty_swing}
-            },
-            "positional": {
-                "latest": latest_weekly,
-                "signal": sig_pos,
-                "risk": risk_pos,
-                "positionSizing": {"capital": f"₹{capital}", "riskAmount": f"₹{risk_amount}", "quantity": qty_pos}
-            }
-        },
-        "overall": {
-            "dailySignal": sig_swing,
-            "weeklySignal": sig_pos
-        },
-        "notes": "Intraday-like uses short lookbacks on daily data. For real intraday replace interval with 15m/5m via your data source.",
-        "data_quality": "Synthetic" if "synthetic" in str(df.index.name).lower() else "Real"
-    }
-
-    return result
-
-
-# -------------------------
-# Re-usable simple indicator helpers (if needed elsewhere)
-# -------------------------
-def calculate_rsi(prices: pd.Series, window: int = 14) -> pd.Series:
-    delta = prices.diff()
-    gain = delta.where(delta > 0, 0).rolling(window).mean()
-    loss = -delta.where(delta < 0, 0).rolling(window).mean()
-    rs = gain / loss
-    return 100 - (100 / (1 + rs))
-
-
-def calculate_macd(prices: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9):
-    ema_fast = prices.ewm(span=fast).mean()
-    ema_slow = prices.ewm(span=slow).mean()
-    macd = ema_fast - ema_slow
-    macd_signal = macd.ewm(span=signal).mean()
-    return macd, macd_signal
-
-
-# -------------------------
-# Run Flask (for local testing)
-# -------------------------
-if __name__ == "__main__":
-    app.run(debug=True, port=5000)
 
 # ✅ AI Market Narrative API
 @app.route("/api/ai-narrative", methods=["POST"])
