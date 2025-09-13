@@ -1344,21 +1344,24 @@ def ai_predict():
         action = data.get("action")
 
         if action == "generateRealStrategy":
-            return handle_generate_real_strategy(data)
+            text = handle_generate_real_strategy(data)
         elif action == "runRealDataMining":
-            return handle_real_data_mining(data)
+            text = handle_real_data_mining(data)
         else:
-            return handle_stock_prediction(data)
+            text = handle_stock_prediction(data)
+
+        # ✅ Always return plain text (not JSON)
+        return Response(text, mimetype="text/plain")
 
     except Exception as e:
         logging.exception("Error in ai_predict")
-        return f"❌ Server error: {str(e)}"
+        return Response(f"❌ Server error: {str(e)}", mimetype="text/plain")
 
 
 # -------------------------
 # L1: GENERATE REAL STRATEGY (AI)
 # -------------------------
-def handle_generate_real_strategy(data: dict):
+def handle_generate_real_strategy(data: dict) -> str:
     try:
         prompt = """
 You are an expert Indian stock market strategist with 15+ years of experience in NSE/BSE trading.
@@ -1407,17 +1410,14 @@ Market Session: {"🟢 Active" if 9 <= datetime.now().hour <= 15 else "🔴 Clos
 # -------------------------
 # L2: RUN REAL DATA MINING
 # -------------------------
-def handle_real_data_mining(data: dict):
+def handle_real_data_mining(data: dict) -> str:
     try:
         symbol = (data.get("symbol") or "NIFTY50").upper()
         capital = float(data.get("capital", 100000))
         risk_pct = float(data.get("riskPct", DEFAULT_RISK_PCT))
 
-        # Intraday (15m 7d)
         intraday_df, intraday_sym = fetch_best(symbol, "7d", "15m")
-        # Swing (daily 3mo)
         daily_df, daily_sym = fetch_best(symbol, "3mo", "1d")
-        # Positional (weekly from 1y)
         yearly_df, yearly_sym = fetch_best(symbol, "1y", "1d")
 
         if intraday_df is None or intraday_df.empty:
@@ -1478,7 +1478,7 @@ Intraday src: {intraday_sym} | Swing src: {daily_sym} | Positional src: {yearly_
 # -------------------------
 # Default: STOCK PREDICTION
 # -------------------------
-def handle_stock_prediction(data: dict):
+def handle_stock_prediction(data: dict) -> str:
     try:
         raw_symbol = data.get("symbol") or "NIFTY"
         df, used = fetch_best(raw_symbol, "3mo", "1d")
