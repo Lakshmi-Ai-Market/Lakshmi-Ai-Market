@@ -1349,17 +1349,16 @@ MARKET CONTEXT:
 - Include risk management protocols
 
 Please provide:
-1. STRATEGY NAME: Creative, professional name
-2. MARKET OUTLOOK: Bullish/Bearish/Neutral with reasoning
-3. KEY SECTORS: 2-3 sectors to focus on today
-4. ENTRY SIGNALS: Specific technical indicators to watch
-5. EXIT STRATEGY: Stop-loss and profit-taking levels
-6. RISK MANAGEMENT: Position sizing and portfolio allocation
-7. TIMEFRAME: Intraday/Swing/Positional
-8. STOCKS TO WATCH: 3-5 specific Indian stocks with rationale
+1. STRATEGY NAME
+2. MARKET OUTLOOK
+3. KEY SECTORS
+4. ENTRY SIGNALS
+5. EXIT STRATEGY
+6. RISK MANAGEMENT
+7. TIMEFRAME
+8. STOCKS TO WATCH
 
-Keep it actionable and specific to Indian markets. Include actual NSE stock symbols where relevant.
-Response should be detailed but under 300 words.
+Keep it actionable and under 300 words.
 """
             headers = {
                 "Authorization": f"Bearer {OPENROUTER_KEY}",
@@ -1391,51 +1390,257 @@ Response should be detailed but under 300 words.
                 return jsonify({"error": f"AI service error: {response.status_code}"}), 500
 
         # -----------------------
-        # Action: Run Real Data Mining (L2)
+        # Action: Run Real Data Mining (L2) - FULL multi-timeframe + risk
         # -----------------------
         if data.get("action") == "runRealDataMining":
-    symbol = data.get("symbol", "NIFTY")  # default if none passed
-    yf_symbols = {
-        "BANKNIFTY": "^NSEBANK",
-        "NIFTY": "^NSEI",
-        "SENSEX": "^BSESN",
-        "NIFTYETF": "NIFTYBEES.NS",
-        "BANKETF": "BANKBEES.NS"
-    }
-    yf_symbol = yf_symbols.get(symbol.upper(), symbol)
+            symbol = data.get("symbol", "NIFTY")
+            yf_symbols = {
+                "BANKNIFTY": "^NSEBANK",
+                "NIFTY": "^NSEI",
+                "SENSEX": "^BSESN",
+                "NIFTYETF": "NIFTYBEES.NS",
+                "BANKETF": "BANKBEES.NS"
+            }
+            yf_symbol = yf_symbols.get(symbol.upper(), symbol)
 
-    # Try fetching data
-    df = get_stock_df(yf_symbol, period="6mo", interval="1d")
+            # Primary fetch: daily last 1 year for robust multi-timeframe
+            df = get_stock_df(yf_symbol, period="1y", interval="1d")
 
-    # If fails, retry with ETF equivalents
-    if (df is None or df.empty) and symbol.upper() == "NIFTY":
-        df = get_stock_df("NIFTYBEES.NS", period="6mo", interval="1d")
-        yf_symbol = "NIFTYBEES.NS"
-    if (df is None or df.empty) and symbol.upper() == "BANKNIFTY":
-        df = get_stock_df("BANKBEES.NS", period="6mo", interval="1d")
-        yf_symbol = "BANKBEES.NS"
+            # ETF fallback if index symbols fail
+            if (df is None or df.empty) and symbol.upper() == "NIFTY":
+                print("⚠️ Falling back to NIFTYBEES.NS")
+                df = get_stock_df("NIFTYBEES.NS", period="1y", interval="1d")
+                yf_symbol = "NIFTYBEES.NS"
+            if (df is None or df.empty) and symbol.upper() == "BANKNIFTY":
+                print("⚠️ Falling back to BANKBEES.NS")
+                df = get_stock_df("BANKBEES.NS", period="1y", interval="1d")
+                yf_symbol = "BANKBEES.NS"
 
-    if df is None or df.empty:
-        return jsonify({"error": f"No real market data found for {yf_symbol}"}), 400
+            if df is None or df.empty:
+                return jsonify({"error": f"No real market data found for {yf_symbol}"}), 400
 
-    closes = df["Close"].tail(100).tolist()
-    current_price = closes[-1]
+            # Ensure datetime index
+            if not isinstance(df.index, (pd.DatetimeIndex,)):
+                try:
+                    df.index = pd.to_datetime(df.index)
+                except Exception as ex:
+                    print("Index conversion failed:", str(ex))
 
-    sma_20 = sum(closes[-20:]) / 20
-    sma_50 = sum(closes[-50:]) / 50
-    trend = "Bullish" if current_price > sma_20 > sma_50 else "Bearish" if current_price < sma_20 < sma_50 else "Neutral"
+            # Helper: compute indicators on a dataframe
+            def compute_indicators(dataframe):
+                dfc = dataframe.copy()
+                dfc["sma20"] = dfc["Close"].rolling(20).mean()
+                dfc["sma50"] = dfc["Close"].rolling(50).mean()
+                dfc["sma200"] = dfc["Close"].rolling(200).mean()
+                dfc["ema20"] = dfc["Close"].ewm(span=20, adjust=False).mean()
+                dfc["ema50"] = dfc["Close"].ewm(span=50, adjust=False).mean()
+                # RSI 14
+                delta = dfc["Close"].diff()
+                gain = delta.where(delta > 0, 0).rolling(14).mean()
+                loss = -delta.where(delta < 0, 0).rolling(14).mean()
+                rs = gain / loss
+                dfc["rsi14"] = 100 - (100 / (1 + rs))
+                # MACD
+                ema12 = dfc["Close"].ewm(span=12, adjust=False).mean()
+                ema26 = dfc["Close"].ewm(span=26, adjust=False).mean()
+                dfc["macd"] = ema12 - ema26
+                dfc["macd_signal"] = dfc["macd"].ewm(span=9, adjust=False).mean()
+                # ATR (true-range simplified)
+                tr1 = dfc["High"] - dfc["Low"]
+                tr2 = (dfc["High"] - dfc["Close"].shift()).abs()
+                tr3 = (dfc["Low"] - dfc["Close"].shift()).abs()
+                tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+                dfc["atr14"] = tr.rolling(14).mean()
+                return dfc
 
-    return jsonify({
-        "success": True,
-        "action": "runRealDataMining",
-        "symbol": symbol,
-        "yf_symbol": yf_symbol,  # show actual fetched symbol
-        "currentPrice": f"₹{current_price:.2f}",
-        "sma20": f"₹{sma_20:.2f}",
-        "sma50": f"₹{sma_50:.2f}",
-        "trend": trend,
-        "recordsAnalyzed": len(closes)
-    })
+            # Compute indicators on daily
+            df_daily = compute_indicators(df)
+
+            # Build weekly (positional) by resampling
+            try:
+                df_weekly = df.resample('W').agg({
+                    "Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"
+                }).dropna()
+                df_weekly = compute_indicators(df_weekly)
+            except Exception as ex:
+                print("Weekly resample failed, using daily for weekly:", str(ex))
+                df_weekly = df_daily.copy()
+
+            # Short-window slice for intraday-style signals (using daily data but short lookbacks)
+            df_short = df_daily.tail(30).copy()  # last ~30 trading days used as 'intraday-like' reference
+
+            # Latest values per timeframe
+            def latest(dfc):
+                return {
+                    "close": float(dfc["Close"].iloc[-1]),
+                    "sma20": float(dfc.get("sma20").iloc[-1]) if "sma20" in dfc.columns else None,
+                    "sma50": float(dfc.get("sma50").iloc[-1]) if "sma50" in dfc.columns else None,
+                    "ema20": float(dfc.get("ema20").iloc[-1]) if "ema20" in dfc.columns else None,
+                    "ema50": float(dfc.get("ema50").iloc[-1]) if "ema50" in dfc.columns else None,
+                    "rsi14": float(dfc.get("rsi14").iloc[-1]) if "rsi14" in dfc.columns else None,
+                    "macd": float(dfc.get("macd").iloc[-1]) if "macd" in dfc.columns else None,
+                    "macd_signal": float(dfc.get("macd_signal").iloc[-1]) if "macd_signal" in dfc.columns else None,
+                    "atr14": float(dfc.get("atr14").iloc[-1]) if "atr14" in dfc.columns else None
+                }
+
+            latest_short = latest(df_short)
+            latest_daily = latest(df_daily)
+            latest_weekly = latest(df_weekly)
+
+            # Signal logic per timeframe
+            def generate_signal(latest_vals):
+                close = latest_vals["close"]
+                ema20 = latest_vals["ema20"]
+                ema50 = latest_vals["ema50"]
+                rsi = latest_vals["rsi14"]
+                macd = latest_vals["macd"]
+                macd_sig = latest_vals["macd_signal"]
+
+                # Trend bias
+                if ema20 and ema50:
+                    if ema20 > ema50 and close > ema20:
+                        bias = "Bullish"
+                    elif ema20 < ema50 and close < ema20:
+                        bias = "Bearish"
+                    else:
+                        bias = "Neutral"
+                else:
+                    bias = "Neutral"
+
+                # RSI signal
+                if rsi is not None:
+                    if rsi < 30:
+                        rsi_signal = "Oversold"
+                    elif rsi > 70:
+                        rsi_signal = "Overbought"
+                    else:
+                        rsi_signal = "Neutral"
+                else:
+                    rsi_signal = "Neutral"
+
+                # MACD crossover
+                if macd is not None and macd_sig is not None:
+                    macd_signal = "Bullish" if macd > macd_sig else "Bearish"
+                else:
+                    macd_signal = "Neutral"
+
+                # Final combined signal
+                score = 0
+                if bias == "Bullish": score += 2
+                if rsi_signal == "Oversold": score += 1
+                if macd_signal == "Bullish": score += 1
+                if bias == "Bearish": score -= 2
+                if rsi_signal == "Overbought": score -= 1
+                if macd_signal == "Bearish": score -= 1
+
+                if score >= 3:
+                    final = {"signal": "Strong Buy", "score": score}
+                elif score == 2:
+                    final = {"signal": "Buy", "score": score}
+                elif score == 1 or score == 0:
+                    final = {"signal": "Neutral", "score": score}
+                elif score <= -1 and score >= -2:
+                    final = {"signal": "Sell", "score": score}
+                else:
+                    final = {"signal": "Strong Sell", "score": score}
+                return final
+
+            signal_short = generate_signal(latest_short)
+            signal_swing = generate_signal(latest_daily)
+            signal_pos = generate_signal(latest_weekly)
+
+            # Risk: dynamic stoploss using ATR where possible
+            def compute_risk_levels(latest_vals, timeframe_label):
+                close = latest_vals["close"]
+                atr = latest_vals.get("atr14") or 0
+                # If ATR exists, prefer ATR-based stoploss; else use percentage
+                if atr and atr > 0:
+                    stoploss = round(close - (1.5 * atr), 2)  # conservative - 1.5 ATR
+                    target1 = round(close + (2 * atr), 2)
+                    target2 = round(close + (4 * atr), 2)
+                else:
+                    # fallback percentages
+                    if timeframe_label == "intraday":
+                        stoploss = round(close * 0.9975, 2)  # -0.25%
+                        target1 = round(close * 1.005, 2)    # +0.5%
+                        target2 = round(close * 1.01, 2)     # +1%
+                    elif timeframe_label == "swing":
+                        stoploss = round(close * 0.985, 2)   # -1.5%
+                        target1 = round(close * 1.02, 2)     # +2%
+                        target2 = round(close * 1.05, 2)     # +5%
+                    else:  # positional
+                        stoploss = round(close * 0.95, 2)    # -5%
+                        target1 = round(close * 1.08, 2)     # +8%
+                        target2 = round(close * 1.15, 2)     # +15%
+                # risk reward rough
+                rr1 = round((target1 - stoploss) / (close - stoploss), 2) if (close - stoploss) != 0 else None
+                rr2 = round((target2 - stoploss) / (close - stoploss), 2) if (close - stoploss) != 0 else None
+                return {
+                    "stoploss": f"₹{stoploss}",
+                    "target1": f"₹{target1}",
+                    "target2": f"₹{target2}",
+                    "riskReward1": f"{rr1}:1" if rr1 is not None else "N/A",
+                    "riskReward2": f"{rr2}:1" if rr2 is not None else "N/A"
+                }
+
+            risk_intraday = compute_risk_levels(latest_short, "intraday")
+            risk_swing = compute_risk_levels(latest_daily, "swing")
+            risk_pos = compute_risk_levels(latest_weekly, "positional")
+
+            # Position sizing suggestion (simple Kelly-lite / fixed fraction)
+            # Suggest using at most 1-2% of capital per trade; give sample based on userCapital if provided
+            user_capital = float(data.get("capital", 100000))  # default ₹100k if not provided
+            per_trade_pct = 0.01  # 1% default
+            suggested_risk_amt = round(user_capital * per_trade_pct, 2)
+
+            def position_size(close_price, stoploss_price, risk_amt):
+                # shares = risk_amt / (close - stoploss)
+                if close_price and stoploss_price:
+                    risk_per_share = abs(close_price - stoploss_price)
+                    if risk_per_share == 0:
+                        return 0
+                    qty = int(risk_amt / risk_per_share)
+                    return max(qty, 0)
+                return 0
+
+            qty_intraday = position_size(latest_short["close"], float(risk_intraday["stoploss"].replace("₹", "")), suggested_risk_amt)
+            qty_swing = position_size(latest_daily["close"], float(risk_swing["stoploss"].replace("₹", "")), suggested_risk_amt)
+            qty_pos = position_size(latest_weekly["close"], float(risk_pos["stoploss"].replace("₹", "")), suggested_risk_amt)
+
+            # Compose final response
+            return jsonify({
+                "success": True,
+                "action": "runRealDataMining",
+                "symbol": symbol,
+                "yf_symbol": yf_symbol,
+                "currentPrice": f"₹{float(df_daily['Close'].iloc[-1]):.2f}",
+                "recordsAnalyzed": int(len(df)),
+                "timeframes": {
+                    "intraday_like": {
+                        "latest": latest_short,
+                        "signal": signal_short,
+                        "risk_levels": risk_intraday,
+                        "positionSizing": {"capital": f"₹{user_capital}", "riskPerTrade": f"₹{suggested_risk_amt}", "quantityExample": qty_intraday}
+                    },
+                    "swing": {
+                        "latest": latest_daily,
+                        "signal": signal_swing,
+                        "risk_levels": risk_swing,
+                        "positionSizing": {"capital": f"₹{user_capital}", "riskPerTrade": f"₹{suggested_risk_amt}", "quantityExample": qty_swing}
+                    },
+                    "positional": {
+                        "latest": latest_weekly,
+                        "signal": signal_pos,
+                        "risk_levels": risk_pos,
+                        "positionSizing": {"capital": f"₹{user_capital}", "riskPerTrade": f"₹{suggested_risk_amt}", "quantityExample": qty_pos}
+                    }
+                },
+                "overallTrend": {
+                    "daily": signal_swing.get("signal"),
+                    "weekly": signal_pos.get("signal")
+                },
+                "notes": "Intraday signals are approximated using short lookbacks on daily data. For true intraday (15m/5m) replace get_stock_df period/interval accordingly."
+            })
 
         # -----------------------
         # Action: Stock Prediction (Default)
@@ -1509,8 +1714,6 @@ Based on this technical analysis, provide:
 3. Key reasoning (2-3 technical points)
 4. Risk factors to watch
 5. Suggested timeframe for this prediction
-
-Keep response concise (under 200 words) and focus on actionable insights for Indian traders.
 """
         headers = {
             "Authorization": f"Bearer {OPENROUTER_KEY}",
