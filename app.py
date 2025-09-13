@@ -3159,186 +3159,266 @@ def analyze_strategy():
         data = request.get_json() or {}
         
         # Get inputs
-        price = float(data.get('price', 0))
+        price_input = data.get('price', '')
         symbol = data.get('symbol', 'NIFTY').upper()
         
-        if price <= 0:
-            return {'error': 'Invalid price', 'status': 'failed'}
+        # Clean and validate price
+        try:
+            price = float(str(price_input).replace('₹', '').replace(',', '').strip())
+            if price <= 0:
+                raise ValueError("Price must be positive")
+        except:
+            return {'error': 'Invalid price format', 'status': 'failed'}
         
-        # Map to Yahoo Finance symbols
+        # Real symbol mapping
         symbol_map = {
-            'NIFTY': '^NSEI', 'BANKNIFTY': '^NSEBANK', 'SENSEX': '^BSESN',
-            'RELIANCE': 'RELIANCE.NS', 'TCS': 'TCS.NS', 'INFY': 'INFY.NS',
-            'HDFCBANK': 'HDFCBANK.NS', 'ICICIBANK': 'ICICIBANK.NS'
+            'NIFTY': '^NSEI',
+            'BANKNIFTY': '^NSEBANK',
+            'SENSEX': '^BSESN',
+            'RELIANCE': 'RELIANCE.NS',
+            'TCS': 'TCS.NS',
+            'INFY': 'INFY.NS',
+            'HDFCBANK': 'HDFCBANK.NS',
+            'ICICIBANK': 'ICICIBANK.NS',
+            'SBIN': 'SBIN.NS',
+            'ITC': 'ITC.NS'
         }
         
         yf_symbol = symbol_map.get(symbol, f"{symbol}.NS")
         
         # Fetch REAL market data
         ticker = yf.Ticker(yf_symbol)
-        df = ticker.history(period="6mo", interval="1d")
+        hist_data = ticker.history(period="1y")
         
-        if df.empty:
-            return {'error': f'No data found for {symbol}', 'status': 'failed'}
+        if hist_data.empty:
+            return {'error': f'No data available for {symbol}', 'status': 'failed'}
+        
+        # Get current market price for comparison
+        current_market_price = hist_data['Close'].iloc[-1]
         
         # Calculate REAL technical indicators
-        closes = df['Close'].values
-        highs = df['High'].values
-        lows = df['Low'].values
-        volumes = df['Volume'].values
+        df = hist_data.copy()
         
-        # RSI calculation
-        delta = np.diff(closes)
-        gains = np.where(delta > 0, delta, 0)
-        losses = np.where(delta < 0, -delta, 0)
-        
-        avg_gain = np.mean(gains[-14:]) if len(gains) >= 14 else np.mean(gains)
-        avg_loss = np.mean(losses[-14:]) if len(losses) >= 14 else np.mean(losses)
-        
-        if avg_loss == 0:
-            rsi = 100
-        else:
-            rs = avg_gain / avg_loss
+        # RSI Calculation (Wilder's method)
+        def calculate_rsi(prices, period=14):
+            delta = prices.diff()
+            gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+            rs = gain / loss
             rsi = 100 - (100 / (1 + rs))
+            return rsi.iloc[-1]
         
-        # EMA calculation
-        def calculate_ema(data, period):
-            multiplier = 2 / (period + 1)
-            ema = [data[0]]
-            for i in range(1, len(data)):
-                ema.append((data[i] * multiplier) + (ema[-1] * (1 - multiplier)))
-            return ema[-1]
+        # EMA Calculation
+        def calculate_ema(prices, span):
+            return prices.ewm(span=span).mean().iloc[-1]
         
-        ema_9 = calculate_ema(closes, 9)
-        ema_21 = calculate_ema(closes, 21)
+        # MACD Calculation
+        def calculate_macd(prices):
+            ema12 = prices.ewm(span=12).mean()
+            ema26 = prices.ewm(span=26).mean()
+            macd_line = ema12 - ema26
+            signal_line = macd_line.ewm(span=9).mean()
+            histogram = macd_line - signal_line
+            return macd_line.iloc[-1], signal_line.iloc[-1], histogram.iloc[-1]
         
-        # MACD calculation
-        ema_12 = calculate_ema(closes, 12)
-        ema_26 = calculate_ema(closes, 26)
-        macd = ema_12 - ema_26
+        # Bollinger Bands
+        def calculate_bollinger_bands(prices, period=20, std_dev=2):
+            sma = prices.rolling(window=period).mean()
+            std = prices.rolling(window=period).std()
+            upper_band = sma + (std * std_dev)
+            lower_band = sma - (std * std_dev)
+            return upper_band.iloc[-1], sma.iloc[-1], lower_band.iloc[-1]
         
-        # ATR calculation for stop loss
-        true_ranges = []
-        for i in range(1, len(closes)):
-            tr1 = highs[i] - lows[i]
-            tr2 = abs(highs[i] - closes[i-1])
-            tr3 = abs(lows[i] - closes[i-1])
-            true_ranges.append(max(tr1, tr2, tr3))
+        # ATR Calculation
+        def calculate_atr(high, low, close, period=14):
+            tr1 = high - low
+            tr2 = abs(high - close.shift())
+            tr3 = abs(low - close.shift())
+            true_range = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+            return true_range.rolling(window=period).mean().iloc[-1]
         
-        atr = np.mean(true_ranges[-14:]) if len(true_ranges) >= 14 else np.mean(true_ranges)
+        # Calculate all indicators
+        rsi = calculate_rsi(df['Close'])
+        ema_9 = calculate_ema(df['Close'], 9)
+        ema_21 = calculate_ema(df['Close'], 21)
+        ema_50 = calculate_ema(df['Close'], 50)
+        
+        macd, macd_signal, macd_histogram = calculate_macd(df['Close'])
+        bb_upper, bb_middle, bb_lower = calculate_bollinger_bands(df['Close'])
+        atr = calculate_atr(df['High'], df['Low'], df['Close'])
         
         # Volume analysis
-        avg_volume = np.mean(volumes[-20:])
-        current_volume = volumes[-1]
-        volume_ratio = current_volume / avg_volume
+        avg_volume_20 = df['Volume'].rolling(window=20).mean().iloc[-1]
+        current_volume = df['Volume'].iloc[-1]
+        volume_ratio = current_volume / avg_volume_20
         
-        # Support/Resistance
-        recent_high = np.max(highs[-20:])
-        recent_low = np.min(lows[-20:])
+        # Support and Resistance
+        recent_high = df['High'].rolling(window=20).max().iloc[-1]
+        recent_low = df['Low'].rolling(window=20).min().iloc[-1]
         
-        # REAL signal generation
+        # Price momentum
+        price_change_5d = (df['Close'].iloc[-1] / df['Close'].iloc[-6] - 1) * 100
+        price_change_20d = (df['Close'].iloc[-1] / df['Close'].iloc[-21] - 1) * 100
+        
+        # REAL signal analysis
         signals = []
-        confidence = 50
+        score = 0
         
-        # EMA signals
-        if ema_9 > ema_21:
-            signals.append("EMA Bullish Alignment")
-            confidence += 15
-        else:
-            signals.append("EMA Bearish Alignment")
-            confidence -= 15
+        # EMA trend analysis
+        if ema_9 > ema_21 > ema_50:
+            signals.append("Strong Uptrend (EMA 9>21>50)")
+            score += 3
+        elif ema_9 > ema_21:
+            signals.append("Short-term Bullish (EMA 9>21)")
+            score += 2
+        elif ema_9 < ema_21 < ema_50:
+            signals.append("Strong Downtrend (EMA 9<21<50)")
+            score -= 3
+        elif ema_9 < ema_21:
+            signals.append("Short-term Bearish (EMA 9<21)")
+            score -= 2
         
-        # RSI signals
+        # RSI analysis
         if rsi < 30:
-            signals.append("RSI Oversold - Reversal Expected")
-            confidence += 20
+            signals.append(f"Oversold RSI ({rsi:.1f}) - Potential Reversal")
+            score += 2
         elif rsi > 70:
-            signals.append("RSI Overbought - Correction Due")
-            confidence -= 20
-        elif 40 < rsi < 60:
-            signals.append("RSI Neutral Zone")
-            confidence += 5
+            signals.append(f"Overbought RSI ({rsi:.1f}) - Potential Correction")
+            score -= 2
+        elif 45 < rsi < 55:
+            signals.append(f"Neutral RSI ({rsi:.1f}) - Balanced Momentum")
         
-        # MACD signals
-        if macd > 0:
-            signals.append("MACD Above Zero Line")
-            confidence += 10
-        else:
-            signals.append("MACD Below Zero Line")
-            confidence -= 10
+        # MACD analysis
+        if macd > macd_signal and macd_histogram > 0:
+            signals.append("MACD Bullish Crossover")
+            score += 2
+        elif macd < macd_signal and macd_histogram < 0:
+            signals.append("MACD Bearish Crossover")
+            score -= 2
+        
+        # Bollinger Bands analysis
+        if price > bb_upper:
+            signals.append("Price Above Upper Bollinger Band - Overbought")
+            score -= 1
+        elif price < bb_lower:
+            signals.append("Price Below Lower Bollinger Band - Oversold")
+            score += 1
+        elif bb_lower < price < bb_upper:
+            bb_position = (price - bb_lower) / (bb_upper - bb_lower)
+            if bb_position > 0.8:
+                signals.append("Near Upper Bollinger Band")
+            elif bb_position < 0.2:
+                signals.append("Near Lower Bollinger Band")
         
         # Volume confirmation
         if volume_ratio > 1.5:
-            signals.append("High Volume Confirmation")
-            confidence += 15
+            signals.append(f"High Volume ({volume_ratio:.1f}x avg) - Strong Move")
+            score += 1
         elif volume_ratio < 0.7:
-            signals.append("Low Volume - Weak Signal")
-            confidence -= 10
+            signals.append(f"Low Volume ({volume_ratio:.1f}x avg) - Weak Move")
+            score -= 1
         
-        # Price position analysis
-        if price > recent_high * 0.98:
-            signals.append("Near Resistance Level")
-            confidence -= 5
-        elif price < recent_low * 1.02:
-            signals.append("Near Support Level")
-            confidence += 10
+        # Price position relative to range
+        range_position = (price - recent_low) / (recent_high - recent_low)
+        if range_position > 0.9:
+            signals.append("Near 20-day High - Resistance Zone")
+        elif range_position < 0.1:
+            signals.append("Near 20-day Low - Support Zone")
+            score += 1
         
-        # Ensure confidence is within bounds
-        confidence = max(30, min(95, confidence))
+        # Momentum analysis
+        if price_change_5d > 3:
+            signals.append(f"Strong 5-day Rally (+{price_change_5d:.1f}%)")
+            score += 1
+        elif price_change_5d < -3:
+            signals.append(f"Sharp 5-day Decline ({price_change_5d:.1f}%)")
+            score -= 1
         
-        # Calculate REAL stop loss and target
-        stop_loss = price - (atr * 2)  # 2 ATR stop
-        target = price + (atr * 3)     # 3 ATR target (1:1.5 risk-reward)
+        # Calculate confidence (0-100)
+        confidence = max(20, min(95, 50 + (score * 8)))
         
-        # Adjust based on support/resistance
-        if stop_loss > recent_low:
-            stop_loss = recent_low * 0.995
-        
-        if target < recent_high:
-            target = recent_high * 1.005
-        
-        # Determine strategy
-        if confidence > 70:
-            strategy = "High Probability Momentum Trade"
+        # Determine strategy based on score
+        if score >= 4:
+            strategy = "Strong Buy Signal"
             direction = "BUY"
-        elif confidence < 40:
-            strategy = "High Risk Contrarian Setup"
+        elif score >= 2:
+            strategy = "Moderate Buy Signal"
+            direction = "BUY"
+        elif score <= -4:
+            strategy = "Strong Sell Signal"
+            direction = "SELL"
+        elif score <= -2:
+            strategy = "Moderate Sell Signal"
             direction = "SELL"
         else:
-            strategy = "Range-Bound Scalping Setup"
-            direction = "NEUTRAL"
+            strategy = "Neutral/Hold Signal"
+            direction = "HOLD"
         
-        # Calculate position size (2% risk)
-        risk_per_trade = 0.02
-        account_balance = 100000  # Default
-        risk_amount = account_balance * risk_per_trade
-        stop_distance = price - stop_loss
-        position_size = int(risk_amount / stop_distance) if stop_distance > 0 else 0
+        # Calculate stop loss and target using ATR
+        if direction == "BUY":
+            stop_loss = price - (atr * 2)
+            target = price + (atr * 3)
+        elif direction == "SELL":
+            stop_loss = price + (atr * 2)
+            target = price - (atr * 3)
+        else:
+            stop_loss = price - (atr * 1.5)
+            target = price + (atr * 1.5)
         
-        # Return REAL analysis
+        # Adjust levels based on support/resistance
+        if direction == "BUY":
+            stop_loss = max(stop_loss, recent_low * 0.995)
+            target = min(target, recent_high * 0.995)
+        
+        # Risk-reward calculation
+        risk = abs(price - stop_loss)
+        reward = abs(target - price)
+        risk_reward = reward / risk if risk > 0 else 0
+        
+        # Position sizing (2% risk rule)
+        account_size = 100000  # Default account size
+        risk_per_trade = account_size * 0.02
+        position_size = int(risk_per_trade / risk) if risk > 0 else 0
+        
         return {
             'status': 'success',
             'symbol': symbol,
-            'current_price': f"₹{price:,.2f}",
+            'analysis_price': f"₹{price:,.2f}",
+            'market_price': f"₹{current_market_price:,.2f}",
+            'price_difference': f"{((price/current_market_price - 1) * 100):+.2f}%",
             'strategy': strategy,
             'direction': direction,
-            'confidence': f"{confidence}%",
+            'confidence': f"{confidence:.0f}%",
+            'signal_score': f"{score:+d}/10",
             'entry': f"₹{price:,.2f}",
             'stop_loss': f"₹{stop_loss:,.2f}",
             'target': f"₹{target:,.2f}",
+            'risk_reward': f"1:{risk_reward:.1f}",
             'position_size': f"{position_size:,} shares",
-            'risk_reward': f"1:{((target - price) / (price - stop_loss)):.1f}",
-            'technical_data': {
-                'rsi': f"{rsi:.1f}",
-                'ema_9': f"₹{ema_9:.2f}",
-                'ema_21': f"₹{ema_21:.2f}",
+            'technical_indicators': {
+                'rsi_14': f"{rsi:.1f}",
+                'ema_9': f"₹{ema_9:,.2f}",
+                'ema_21': f"₹{ema_21:,.2f}",
+                'ema_50': f"₹{ema_50:,.2f}",
                 'macd': f"{macd:.2f}",
                 'atr': f"₹{atr:.2f}",
+                'bb_upper': f"₹{bb_upper:,.2f}",
+                'bb_lower': f"₹{bb_lower:,.2f}",
+                'support': f"₹{recent_low:,.2f}",
+                'resistance': f"₹{recent_high:,.2f}"
+            },
+            'market_metrics': {
                 'volume_ratio': f"{volume_ratio:.1f}x",
-                'support': f"₹{recent_low:.2f}",
-                'resistance': f"₹{recent_high:.2f}"
+                '5d_change': f"{price_change_5d:+.1f}%",
+                '20d_change': f"{price_change_20d:+.1f}%",
+                'volatility': f"{(atr/price*100):.1f}%"
             },
             'active_signals': signals,
+            'data_quality': {
+                'data_points': len(hist_data),
+                'last_update': hist_data.index[-1].strftime('%Y-%m-%d'),
+                'data_source': 'Yahoo Finance'
+            },
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S IST')
         }
         
