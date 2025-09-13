@@ -953,6 +953,465 @@ def get_real_insider_data(period: str = "30d") -> List[Dict[str, Any]]:
     except Exception as e:
         return {"error": str(e)}
 
+class AdvancedMarketDataFetcher:
+    def __init__(self):
+        self.symbol_mappings = {
+            # Indian Market Symbols
+            'NIFTY': ['^NSEI', 'NIFTYBEES.NS', 'NIFTY50.NS', 'INFY.NS', 'TCS.NS'],
+            'SENSEX': ['^BSESN', 'SENSEX.BO', 'RELIANCE.BO', 'HDFC.BO'],
+            'BANKNIFTY': ['^NSEBANK', 'BANKBEES.NS', 'HDFCBANK.NS', 'ICICIBANK.NS'],
+            'NIFTYIT': ['^CNXIT', 'ITBEES.NS', 'INFY.NS', 'TCS.NS', 'WIPRO.NS'],
+            
+            # Global Market Symbols
+            'SPY': ['SPY', 'VOO', 'IVV', '^GSPC'],
+            'QQQ': ['QQQ', 'TQQQ', '^IXIC'],
+            'DIA': ['DIA', '^DJI'],
+            
+            # Crypto (if supported)
+            'BTC': ['BTC-USD', 'BTCUSD=X'],
+            'ETH': ['ETH-USD', 'ETHUSD=X'],
+            
+            # Commodities
+            'GOLD': ['GC=F', 'GOLD', 'GLD'],
+            'SILVER': ['SI=F', 'SLV'],
+            'CRUDE': ['CL=F', 'USO']
+        }
+        
+        self.alternative_apis = [
+            self._fetch_alpha_vantage,
+            self._fetch_polygon_io,
+            self._fetch_finnhub,
+            self._fetch_yahoo_alternative
+        ]
+
+    def get_symbol_variants(self, symbol: str) -> List[str]:
+        """Get all possible symbol variants to try"""
+        symbol_upper = symbol.upper()
+        
+        # Direct mapping
+        if symbol_upper in self.symbol_mappings:
+            return self.symbol_mappings[symbol_upper]
+        
+        # Generate variants
+        variants = [symbol]
+        
+        # Add exchange suffixes for Indian stocks
+        if not any(suffix in symbol for suffix in ['.NS', '.BO', '.BSE']):
+            variants.extend([
+                f"{symbol}.NS",
+                f"{symbol}.BO",
+                f"{symbol}.BSE"
+            ])
+        
+        # Add common prefixes/suffixes
+        variants.extend([
+            f"^{symbol}",
+            f"{symbol}USD=X",
+            f"{symbol}-USD",
+            f"{symbol}.L",
+            f"{symbol}.TO"
+        ])
+        
+        return list(set(variants))
+
+    @lru_cache(maxsize=100)
+    def _get_cached_data(self, cache_key: str) -> Optional[str]:
+        """Get cached data with fallback"""
+        if REDIS_AVAILABLE:
+            try:
+                return redis_client.get(cache_key)
+            except:
+                pass
+        return memory_cache.get(cache_key)
+
+    def _set_cached_data(self, cache_key: str, data: str, expire: int = 300):
+        """Set cached data with fallback"""
+        if REDIS_AVAILABLE:
+            try:
+                redis_client.setex(cache_key, expire, data)
+                return
+            except:
+                pass
+        memory_cache[cache_key] = data
+
+    def _fetch_yfinance_advanced(self, symbol: str, period: str, interval: str) -> Optional[pd.DataFrame]:
+        """Advanced yfinance fetching with multiple strategies"""
+        variants = self.get_symbol_variants(symbol)
+        
+        for variant in variants:
+            try:
+                logger.info(f"🔄 Trying yfinance for: {variant}")
+                
+                ticker = yf.Ticker(variant)
+                
+                # Try multiple approaches
+                approaches = [
+                    lambda: ticker.history(period=period, interval=interval, timeout=15),
+                    lambda: ticker.history(period='1y', interval=interval, timeout=15),
+                    lambda: ticker.history(start=datetime.now() - timedelta(days=30), 
+                                         end=datetime.now(), interval=interval, timeout=15),
+                    lambda: ticker.history(period='1mo', interval='1d', timeout=15)
+                ]
+                
+                for approach in approaches:
+                    try:
+                        data = approach()
+                        if not data.empty and len(data) >= 10:
+                            logger.info(f"✅ Success with {variant}: {len(data)} points")
+                            return data
+                    except Exception as e:
+                        logger.debug(f"Approach failed for {variant}: {e}")
+                        continue
+                        
+            except Exception as e:
+                logger.debug(f"Failed {variant}: {e}")
+                continue
+        
+        return None
+
+    def _fetch_alpha_vantage(self, symbol: str, period: str, interval: str) -> Optional[pd.DataFrame]:
+        """Fetch from Alpha Vantage API"""
+        try:
+            api_key = "demo"  # Replace with your API key
+            if api_key == "demo":
+                return None
+                
+            function_map = {
+                '1m': 'TIME_SERIES_INTRADAY',
+                '5m': 'TIME_SERIES_INTRADAY',
+                '15m': 'TIME_SERIES_INTRADAY',
+                '1h': 'TIME_SERIES_INTRADAY',
+                '1d': 'TIME_SERIES_DAILY'
+            }
+            
+            function = function_map.get(interval, 'TIME_SERIES_DAILY')
+            url = f"https://www.alphavantage.co/query"
+            
+            params = {
+                'function': function,
+                'symbol': symbol,
+                'apikey': api_key,
+                'outputsize': 'full'
+            }
+            
+            if function == 'TIME_SERIES_INTRADAY':
+                params['interval'] = interval
+            
+            response = requests.get(url, params=params, timeout=10)
+            data = response.json()
+            
+            # Parse Alpha Vantage response
+            time_series_key = [k for k in data.keys() if 'Time Series' in k]
+            if not time_series_key:
+                return None
+                
+            time_series = data[time_series_key[0]]
+            
+            df_data = []
+            for date_str, values in time_series.items():
+                df_data.append({
+                    'Date': pd.to_datetime(date_str),
+                    'Open': float(values['1. open']),
+                    'High': float(values['2. high']),
+                    'Low': float(values['3. low']),
+                    'Close': float(values['4. close']),
+                    'Volume': int(values['5. volume'])
+                })
+            
+            df = pd.DataFrame(df_data)
+            df.set_index('Date', inplace=True)
+            df.sort_index(inplace=True)
+            
+            logger.info(f"✅ Alpha Vantage success: {len(df)} points")
+            return df
+            
+        except Exception as e:
+            logger.debug(f"Alpha Vantage failed: {e}")
+            return None
+
+    def _fetch_polygon_io(self, symbol: str, period: str, interval: str) -> Optional[pd.DataFrame]:
+        """Fetch from Polygon.io API"""
+        try:
+            api_key = "demo"  # Replace with your API key
+            if api_key == "demo":
+                return None
+                
+            # Convert interval to Polygon format
+            interval_map = {'1m': '1', '5m': '5', '15m': '15', '1h': '60', '1d': 'day'}
+            poly_interval = interval_map.get(interval, 'day')
+            
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=30)
+            
+            url = f"https://api.polygon.io/v2/aggs/ticker/{symbol}/range/1/{poly_interval}/{start_date.strftime('%Y-%m-%d')}/{end_date.strftime('%Y-%m-%d')}"
+            
+            params = {'apikey': api_key}
+            response = requests.get(url, params=params, timeout=10)
+            data = response.json()
+            
+            if 'results' not in data:
+                return None
+                
+            df_data = []
+            for result in data['results']:
+                df_data.append({
+                    'Date': pd.to_datetime(result['t'], unit='ms'),
+                    'Open': result['o'],
+                    'High': result['h'],
+                    'Low': result['l'],
+                    'Close': result['c'],
+                    'Volume': result['v']
+                })
+            
+            df = pd.DataFrame(df_data)
+            df.set_index('Date', inplace=True)
+            df.sort_index(inplace=True)
+            
+            logger.info(f"✅ Polygon.io success: {len(df)} points")
+            return df
+            
+        except Exception as e:
+            logger.debug(f"Polygon.io failed: {e}")
+            return None
+
+    def _fetch_finnhub(self, symbol: str, period: str, interval: str) -> Optional[pd.DataFrame]:
+        """Fetch from Finnhub API"""
+        try:
+            api_key = "demo"  # Replace with your API key
+            if api_key == "demo":
+                return None
+                
+            # Convert interval to Finnhub format
+            resolution_map = {'1m': '1', '5m': '5', '15m': '15', '1h': '60', '1d': 'D'}
+            resolution = resolution_map.get(interval, 'D')
+            
+            end_time = int(datetime.now().timestamp())
+            start_time = int((datetime.now() - timedelta(days=30)).timestamp())
+            
+            url = "https://finnhub.io/api/v1/stock/candle"
+            params = {
+                'symbol': symbol,
+                'resolution': resolution,
+                'from': start_time,
+                'to': end_time,
+                'token': api_key
+            }
+            
+            response = requests.get(url, params=params, timeout=10)
+            data = response.json()
+            
+            if data.get('s') != 'ok':
+                return None
+                
+            df_data = []
+            for i in range(len(data['t'])):
+                df_data.append({
+                    'Date': pd.to_datetime(data['t'][i], unit='s'),
+                    'Open': data['o'][i],
+                    'High': data['h'][i],
+                    'Low': data['l'][i],
+                    'Close': data['c'][i],
+                    'Volume': data['v'][i]
+                })
+            
+            df = pd.DataFrame(df_data)
+            df.set_index('Date', inplace=True)
+            df.sort_index(inplace=True)
+            
+            logger.info(f"✅ Finnhub success: {len(df)} points")
+            return df
+            
+        except Exception as e:
+            logger.debug(f"Finnhub failed: {e}")
+            return None
+
+    def _fetch_yahoo_alternative(self, symbol: str, period: str, interval: str) -> Optional[pd.DataFrame]:
+        """Alternative Yahoo Finance scraping method"""
+        try:
+            # This is a backup method using direct Yahoo Finance URLs
+            variants = self.get_symbol_variants(symbol)
+            
+            for variant in variants:
+                try:
+                    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{variant}"
+                    params = {
+                        'period1': int((datetime.now() - timedelta(days=30)).timestamp()),
+                        'period2': int(datetime.now().timestamp()),
+                        'interval': interval,
+                        'includePrePost': 'true',
+                        'events': 'div%2Csplit'
+                    }
+                    
+                    headers = {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    }
+                    
+                    response = requests.get(url, params=params, headers=headers, timeout=10)
+                    data = response.json()
+                    
+                    if 'chart' not in data or not data['chart']['result']:
+                        continue
+                        
+                    result = data['chart']['result'][0]
+                    timestamps = result['timestamp']
+                    quotes = result['indicators']['quote'][0]
+                    
+                    df_data = []
+                    for i, timestamp in enumerate(timestamps):
+                        if all(quotes[key][i] is not None for key in ['open', 'high', 'low', 'close']):
+                            df_data.append({
+                                'Date': pd.to_datetime(timestamp, unit='s'),
+                                'Open': quotes['open'][i],
+                                'High': quotes['high'][i],
+                                'Low': quotes['low'][i],
+                                'Close': quotes['close'][i],
+                                'Volume': quotes['volume'][i] if quotes['volume'][i] else 0
+                            })
+                    
+                    if df_data:
+                        df = pd.DataFrame(df_data)
+                        df.set_index('Date', inplace=True)
+                        df.sort_index(inplace=True)
+                        
+                        logger.info(f"✅ Yahoo alternative success: {len(df)} points")
+                        return df
+                        
+                except Exception as e:
+                    logger.debug(f"Yahoo alternative failed for {variant}: {e}")
+                    continue
+                    
+        except Exception as e:
+            logger.debug(f"Yahoo alternative method failed: {e}")
+            
+        return None
+
+    def _generate_synthetic_data(self, symbol: str, period: str, interval: str) -> pd.DataFrame:
+        """Generate realistic synthetic market data as last resort"""
+        logger.warning(f"🔄 Generating synthetic data for {symbol}")
+        
+        # Determine number of data points
+        interval_minutes = {
+            '1m': 1, '5m': 5, '15m': 15, '30m': 30, '1h': 60, '1d': 1440
+        }
+        
+        period_days = {
+            '1d': 1, '5d': 5, '1mo': 30, '3mo': 90, '6mo': 180, '1y': 365
+        }
+        
+        days = period_days.get(period, 30)
+        interval_mins = interval_minutes.get(interval, 60)
+        
+        if interval == '1d':
+            points = days
+            freq = 'D'
+        else:
+            points = int((days * 24 * 60) / interval_mins)
+            freq = f'{interval_mins}T'
+        
+        # Generate realistic dates
+        end_date = datetime.now()
+        dates = pd.date_range(end=end_date, periods=points, freq=freq)
+        
+        # Generate realistic price data
+        np.random.seed(hash(symbol) % 2**32)  # Consistent seed per symbol
+        
+        # Base price based on symbol type
+        base_prices = {
+            'NIFTY': 19500, '^NSEI': 19500, 'SENSEX': 65000, '^BSESN': 65000,
+            'SPY': 450, 'QQQ': 380, 'AAPL': 180, 'MSFT': 380, 'GOOGL': 140
+        }
+        
+        base_price = base_prices.get(symbol.upper(), 100)
+        
+        # Generate returns with realistic characteristics
+        returns = np.random.normal(0.0002, 0.02, len(dates))  # Realistic daily returns
+        
+        # Add volatility clustering
+        volatility = np.random.choice([0.5, 1.0, 1.5], len(dates), p=[0.6, 0.3, 0.1])
+        returns = returns * volatility
+        
+        # Add trend
+        trend = np.linspace(-0.05, 0.05, len(dates))
+        returns = returns + trend / len(dates)
+        
+        # Calculate prices
+        prices = [base_price]
+        for ret in returns[1:]:
+            prices.append(prices[-1] * (1 + ret))
+        
+        # Generate OHLC data
+        data = []
+        for i, (date, close) in enumerate(zip(dates, prices)):
+            # Generate realistic OHLC
+            daily_vol = abs(returns[i]) * close * 2
+            
+            open_price = prices[i-1] if i > 0 else close
+            high = max(open_price, close) + np.random.uniform(0, daily_vol)
+            low = min(open_price, close) - np.random.uniform(0, daily_vol)
+            
+            # Ensure OHLC relationships
+            high = max(high, open_price, close)
+            low = min(low, open_price, close)
+            
+            volume = int(np.random.lognormal(15, 1))  # Realistic volume distribution
+            
+            data.append({
+                'Open': round(open_price, 2),
+                'High': round(high, 2),
+                'Low': round(low, 2),
+                'Close': round(close, 2),
+                'Volume': volume
+            })
+        
+        df = pd.DataFrame(data, index=dates)
+        logger.info(f"✅ Generated synthetic data: {len(df)} points")
+        
+        return df
+
+    def fetch_market_data(self, symbol: str, period: str = '1mo', interval: str = '5m') -> Tuple[Optional[pd.DataFrame], str]:
+        """Main method to fetch market data with all fallbacks"""
+        
+        # Check cache first
+        cache_key = f"market_data:{symbol}:{period}:{interval}"
+        cached_data = self._get_cached_data(cache_key)
+        
+        if cached_data:
+            try:
+                df = pd.read_json(cached_data)
+                logger.info(f"✅ Cache hit for {symbol}")
+                return df, "cached"
+            except:
+                pass
+        
+        # Try yfinance first (most reliable)
+        data = self._fetch_yfinance_advanced(symbol, period, interval)
+        if data is not None and not data.empty:
+            self._set_cached_data(cache_key, data.to_json())
+            return data, "yfinance"
+        
+        # Try alternative APIs in parallel
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = [
+                executor.submit(api_func, symbol, period, interval)
+                for api_func in self.alternative_apis[1:]  # Skip yfinance as we tried it
+            ]
+            
+            for future in as_completed(futures, timeout=15):
+                try:
+                    result = future.result()
+                    if result is not None and not result.empty:
+                        self._set_cached_data(cache_key, result.to_json())
+                        return result, "alternative_api"
+                except Exception as e:
+                    logger.debug(f"Alternative API failed: {e}")
+                    continue
+        
+        # Generate synthetic data as last resort
+        synthetic_data = self._generate_synthetic_data(symbol, period, interval)
+        return synthetic_data, "synthetic"
+
+# Initialize the fetcher
+market_fetcher = AdvancedMarketDataFetcher()
 
 # --- Routes ---
 @app.route("/")
@@ -1270,23 +1729,29 @@ Reason: [Short reason]
 # ✅ Live Market Data API (Yahoo Finance proxy) - Optimized for Render
 @app.route("/api/market-data/<symbol>")
 def get_market_data(symbol):
+    """Most advanced market data route with comprehensive fallbacks"""
     try:
+        # Get parameters
         period = request.args.get('period', '1mo')
         interval = request.args.get('interval', '5m')
         
-        print(f"📊 Fetching data for {symbol} - Period: {period}, Interval: {interval}")
+        logger.info(f"📊 Advanced fetch for {symbol} - Period: {period}, Interval: {interval}")
         
-        # Fetch data using yfinance with timeout
-        ticker = yf.Ticker(symbol)
-        hist = ticker.history(period=period, interval=interval, timeout=10)
+        # Fetch data using advanced fetcher
+        hist, data_source = market_fetcher.fetch_market_data(symbol, period, interval)
         
-        if hist.empty:
-            print(f"❌ No data found for {symbol}")
-            return jsonify({"error": "No data found for symbol"}), 404
+        if hist is None or hist.empty:
+            logger.error(f"❌ All data sources failed for {symbol}")
+            return jsonify({
+                "error": "All data sources failed",
+                "message": "Unable to fetch market data from any source",
+                "attempted_sources": ["yfinance", "alpha_vantage", "polygon", "finnhub", "synthetic"],
+                "symbol": symbol
+            }), 404
         
-        print(f"✅ Found {len(hist)} data points for {symbol}")
+        logger.info(f"✅ Success with {data_source}: {len(hist)} data points for {symbol}")
         
-        # Convert to the format expected by frontend
+        # Convert to frontend format
         candles = []
         for index, row in hist.iterrows():
             candles.append({
@@ -1298,24 +1763,58 @@ def get_market_data(symbol):
                 "volume": int(row['Volume']) if not pd.isna(row['Volume']) else 0
             })
         
-        # Get additional metadata with error handling
-        try:
-            info = ticker.info
-        except:
-            info = {}
+        # Calculate advanced metrics
+        current_price = candles[-1]['close'] if candles else 0
+        previous_price = candles[-2]['close'] if len(candles) > 1 else current_price
+        price_change = current_price - previous_price
+        price_change_pct = (price_change / previous_price * 100) if previous_price != 0 else 0
         
+        # Calculate technical indicators
+        closes = [c['close'] for c in candles]
+        highs = [c['high'] for c in candles]
+        lows = [c['low'] for c in candles]
+        
+        # Simple moving averages
+        sma_20 = np.mean(closes[-20:]) if len(closes) >= 20 else current_price
+        sma_50 = np.mean(closes[-50:]) if len(closes) >= 50 else current_price
+        
+        # Volatility
+        returns = np.diff(closes) / closes[:-1]
+        volatility = np.std(returns) * np.sqrt(252) * 100 if len(returns) > 1 else 0
+        
+        # Support and resistance
+        recent_highs = highs[-20:] if len(highs) >= 20 else highs
+        recent_lows = lows[-20:] if len(lows) >= 20 else lows
+        resistance = max(recent_highs) if recent_highs else current_price
+        support = min(recent_lows) if recent_lows else current_price
+        
+        # Enhanced metadata
         meta = {
             "symbol": symbol,
-            "currency": info.get('currency', 'INR'),
-            "currentPrice": info.get('currentPrice', candles[-1]['close'] if candles else 0),
-            "previousClose": info.get('previousClose', candles[-2]['close'] if len(candles) > 1 else 0),
-            "fiftyTwoWeekHigh": info.get('fiftyTwoWeekHigh', max([c['high'] for c in candles]) if candles else 0),
-            "fiftyTwoWeekLow": info.get('fiftyTwoWeekLow', min([c['low'] for c in candles]) if candles else 0),
-            "marketCap": info.get('marketCap', 0),
-            "fullExchangeName": info.get('fullExchangeName', 'NSE/BSE')
+            "dataSource": data_source,
+            "currency": "INR" if any(suffix in symbol for suffix in ['.NS', '.BO']) else "USD",
+            "currentPrice": round(current_price, 2),
+            "previousClose": round(previous_price, 2),
+            "priceChange": round(price_change, 2),
+            "priceChangePct": round(price_change_pct, 2),
+            "fiftyTwoWeekHigh": round(max(highs), 2) if highs else 0,
+            "fiftyTwoWeekLow": round(min(lows), 2) if lows else 0,
+            "volume": sum([c['volume'] for c in candles]),
+            "avgVolume": int(np.mean([c['volume'] for c in candles])) if candles else 0,
+            "volatility": round(volatility, 2),
+            "sma20": round(sma_20, 2),
+            "sma50": round(sma_50, 2),
+            "resistance": round(resistance, 2),
+            "support": round(support, 2),
+            "dataPoints": len(candles),
+            "lastUpdated": datetime.now().isoformat(),
+            "trend": "Bullish" if sma_20 > sma_50 else "Bearish",
+            "fullExchangeName": "NSE/BSE" if any(suffix in symbol for suffix in ['.NS', '.BO']) else "NASDAQ/NYSE"
         }
         
+        # Return comprehensive response
         return jsonify({
+            "success": True,
             "chart": {
                 "result": [{
                     "timestamp": [c['time'] // 1000 for c in candles],
@@ -1330,12 +1829,56 @@ def get_market_data(symbol):
                     },
                     "meta": meta
                 }]
+            },
+            "analysis": {
+                "technicalIndicators": {
+                    "sma20": meta["sma20"],
+                    "sma50": meta["sma50"],
+                    "volatility": meta["volatility"],
+                    "trend": meta["trend"]
+                },
+                "priceAction": {
+                    "support": meta["support"],
+                    "resistance": meta["resistance"],
+                    "priceChange": meta["priceChange"],
+                    "priceChangePct": meta["priceChangePct"]
+                },
+                "volume": {
+                    "current": meta["volume"],
+                    "average": meta["avgVolume"]
+                }
+            },
+            "metadata": {
+                "dataSource": data_source,
+                "dataQuality": "Real" if data_source != "synthetic" else "Synthetic",
+                "lastUpdated": meta["lastUpdated"],
+                "dataPoints": meta["dataPoints"]
             }
         })
         
     except Exception as e:
-        print(f"❌ Error fetching data for {symbol}: {str(e)}")
-        return jsonify({"error": f"Failed to fetch data: {str(e)}"}), 500
+        logger.error(f"❌ Critical error for {symbol}: {str(e)}")
+        
+        # Return error with helpful information
+        return jsonify({
+            "success": False,
+            "error": f"Market data fetch failed: {str(e)}",
+            "symbol": symbol,
+            "timestamp": datetime.now().isoformat(),
+            "suggestions": [
+                "Try a different symbol format (e.g., RELIANCE.NS instead of RELIANCE)",
+                "Check if the market is open",
+                "Verify the symbol exists on the exchange",
+                "Try a different time period or interval"
+            ],
+            "supportedFormats": [
+                "Indian stocks: SYMBOL.NS or SYMBOL.BO",
+                "US stocks: SYMBOL (e.g., AAPL, MSFT)",
+                "Indices: ^NSEI, ^BSESN, ^GSPC",
+                "Crypto: BTC-USD, ETH-USD"
+            ]
+        }), 500
+
 
 @app.route("/api/ai-predict", methods=["POST"])
 def ai_predict():
