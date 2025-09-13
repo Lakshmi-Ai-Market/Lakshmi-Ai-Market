@@ -1394,38 +1394,48 @@ Response should be detailed but under 300 words.
         # Action: Run Real Data Mining (L2)
         # -----------------------
         if data.get("action") == "runRealDataMining":
-            symbol = data.get("symbol", "NIFTY")  # default if none passed
-            yf_symbols = {
-                "BANKNIFTY": "^NSEBANK",
-                "NIFTY": "^NSEI",
-                "SENSEX": "^BSESN"
-            }
-            yf_symbol = yf_symbols.get(symbol.upper(), symbol)
+    symbol = data.get("symbol", "NIFTY")  # default if none passed
+    yf_symbols = {
+        "BANKNIFTY": "^NSEBANK",
+        "NIFTY": "^NSEI",
+        "SENSEX": "^BSESN",
+        "NIFTYETF": "NIFTYBEES.NS",
+        "BANKETF": "BANKBEES.NS"
+    }
+    yf_symbol = yf_symbols.get(symbol.upper(), symbol)
 
-            # Fetch last 6 months data
-            df = get_stock_df(yf_symbol, period="6mo", interval="1d")
-            if df is None or df.empty:
-                return jsonify({"error": f"No real market data found for {yf_symbol}"}), 400
+    # Try fetching data
+    df = get_stock_df(yf_symbol, period="6mo", interval="1d")
 
-            closes = df["Close"].tail(100).tolist()
-            volumes = df["Volume"].tail(100).tolist()
-            current_price = closes[-1]
+    # If fails, retry with ETF equivalents
+    if (df is None or df.empty) and symbol.upper() == "NIFTY":
+        df = get_stock_df("NIFTYBEES.NS", period="6mo", interval="1d")
+        yf_symbol = "NIFTYBEES.NS"
+    if (df is None or df.empty) and symbol.upper() == "BANKNIFTY":
+        df = get_stock_df("BANKBEES.NS", period="6mo", interval="1d")
+        yf_symbol = "BANKBEES.NS"
 
-            # Simple mining insights
-            sma_20 = sum(closes[-20:]) / 20
-            sma_50 = sum(closes[-50:]) / 50
-            trend = "Bullish" if current_price > sma_20 > sma_50 else "Bearish" if current_price < sma_20 < sma_50 else "Neutral"
+    if df is None or df.empty:
+        return jsonify({"error": f"No real market data found for {yf_symbol}"}), 400
 
-            return jsonify({
-                "success": True,
-                "action": "runRealDataMining",
-                "symbol": symbol,
-                "currentPrice": f"₹{current_price:.2f}",
-                "sma20": f"₹{sma_20:.2f}",
-                "sma50": f"₹{sma_50:.2f}",
-                "trend": trend,
-                "recordsAnalyzed": len(closes)
-            })
+    closes = df["Close"].tail(100).tolist()
+    current_price = closes[-1]
+
+    sma_20 = sum(closes[-20:]) / 20
+    sma_50 = sum(closes[-50:]) / 50
+    trend = "Bullish" if current_price > sma_20 > sma_50 else "Bearish" if current_price < sma_20 < sma_50 else "Neutral"
+
+    return jsonify({
+        "success": True,
+        "action": "runRealDataMining",
+        "symbol": symbol,
+        "yf_symbol": yf_symbol,  # show actual fetched symbol
+        "currentPrice": f"₹{current_price:.2f}",
+        "sma20": f"₹{sma_20:.2f}",
+        "sma50": f"₹{sma_50:.2f}",
+        "trend": trend,
+        "recordsAnalyzed": len(closes)
+    })
 
         # -----------------------
         # Action: Stock Prediction (Default)
