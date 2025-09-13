@@ -3156,230 +3156,395 @@ def strategy_engine():
 @app.route("/analyze-strategy", methods=["POST"])
 def analyze_strategy():
     try:
-        data = request.get_json() or {}
+        # Handle both JSON and form data
+        if request.content_type == 'application/json':
+            data = request.get_json() or {}
+        else:
+            data = request.form.to_dict()
         
-        # Get inputs
-        price_input = data.get('price', '')
-        symbol = data.get('symbol', 'NIFTY').upper()
+        print(f"Received request data: {data}")
+        print(f"Content-Type: {request.content_type}")
         
-        # Clean and validate price
+        # Get inputs with multiple fallback methods
+        price_input = data.get('price') or data.get('current_price') or data.get('entry_price')
+        symbol = (data.get('symbol') or 'NIFTY').upper().strip()
+        
+        print(f"Extracted - Price: {repr(price_input)}, Symbol: {symbol}")
+        
+        # Robust price validation
+        if not price_input:
+            return {
+                'error': 'Price is required. Please enter a valid price.',
+                'status': 'failed',
+                'received_data': str(data)
+            }
+        
+        # Convert price to float with comprehensive cleaning
         try:
-            price = float(str(price_input).replace('₹', '').replace(',', '').strip())
+            if isinstance(price_input, (int, float)):
+                price = float(price_input)
+            else:
+                # Convert to string and clean thoroughly
+                price_str = str(price_input).strip()
+                
+                # Remove various currency symbols and formatting
+                price_clean = (price_str
+                              .replace('₹', '')
+                              .replace('Rs.', '')
+                              .replace('Rs', '')
+                              .replace('INR', '')
+                              .replace('$', '')
+                              .replace(',', '')
+                              .replace(' ', '')
+                              .replace('(', '')
+                              .replace(')', ''))
+                
+                print(f"Cleaned price: '{price_clean}'")
+                
+                if not price_clean or price_clean == '':
+                    return {
+                        'error': f'Invalid price format: "{price_input}". Please enter numbers only.',
+                        'status': 'failed'
+                    }
+                
+                # Handle decimal points
+                if price_clean.count('.') > 1:
+                    return {
+                        'error': f'Invalid decimal format: "{price_input}"',
+                        'status': 'failed'
+                    }
+                
+                price = float(price_clean)
+            
             if price <= 0:
-                raise ValueError("Price must be positive")
-        except:
-            return {'error': 'Invalid price format', 'status': 'failed'}
+                return {
+                    'error': f'Price must be greater than 0. You entered: {price}',
+                    'status': 'failed'
+                }
+            
+            if price > 1000000:  # Sanity check
+                return {
+                    'error': f'Price seems too high: ₹{price:,.2f}. Please check.',
+                    'status': 'failed'
+                }
+                
+            print(f"Successfully parsed price: ₹{price}")
+            
+        except ValueError as e:
+            return {
+                'error': f'Cannot convert "{price_input}" to a valid price. Please enter numbers only.',
+                'status': 'failed',
+                'details': str(e)
+            }
+        except Exception as e:
+            return {
+                'error': f'Price processing error: {str(e)}',
+                'status': 'failed'
+            }
         
-        # Real symbol mapping
+        # Validate symbol
+        if not symbol or len(symbol) < 2:
+            return {
+                'error': 'Invalid symbol. Please enter a valid stock symbol.',
+                'status': 'failed'
+            }
+        
+        # Real symbol mapping for Indian markets
         symbol_map = {
             'NIFTY': '^NSEI',
-            'BANKNIFTY': '^NSEBANK',
+            'BANKNIFTY': '^NSEBANK', 
             'SENSEX': '^BSESN',
             'RELIANCE': 'RELIANCE.NS',
             'TCS': 'TCS.NS',
             'INFY': 'INFY.NS',
+            'INFOSYS': 'INFY.NS',
             'HDFCBANK': 'HDFCBANK.NS',
+            'HDFC': 'HDFCBANK.NS',
             'ICICIBANK': 'ICICIBANK.NS',
+            'ICICI': 'ICICIBANK.NS',
             'SBIN': 'SBIN.NS',
-            'ITC': 'ITC.NS'
+            'SBI': 'SBIN.NS',
+            'ITC': 'ITC.NS',
+            'LT': 'LT.NS',
+            'WIPRO': 'WIPRO.NS',
+            'MARUTI': 'MARUTI.NS',
+            'BAJFINANCE': 'BAJFINANCE.NS',
+            'HCLTECH': 'HCLTECH.NS',
+            'TECHM': 'TECHM.NS',
+            'TITAN': 'TITAN.NS',
+            'ASIANPAINT': 'ASIANPAINT.NS',
+            'NESTLEIND': 'NESTLEIND.NS',
+            'KOTAKBANK': 'KOTAKBANK.NS',
+            'BHARTIARTL': 'BHARTIARTL.NS',
+            'HINDUNILVR': 'HINDUNILVR.NS'
         }
         
         yf_symbol = symbol_map.get(symbol, f"{symbol}.NS")
+        print(f"Using Yahoo Finance symbol: {yf_symbol}")
         
-        # Fetch REAL market data
-        ticker = yf.Ticker(yf_symbol)
-        hist_data = ticker.history(period="1y")
+        # Fetch REAL market data with error handling
+        try:
+            import yfinance as yf
+            ticker = yf.Ticker(yf_symbol)
+            
+            # Get historical data
+            hist_data = ticker.history(period="1y", interval="1d")
+            
+            if hist_data.empty:
+                # Try alternative symbol formats
+                alternative_symbols = [f"{symbol}.BO", symbol, f"{symbol}.NSE"]
+                for alt_symbol in alternative_symbols:
+                    try:
+                        alt_ticker = yf.Ticker(alt_symbol)
+                        hist_data = alt_ticker.history(period="6mo", interval="1d")
+                        if not hist_data.empty:
+                            yf_symbol = alt_symbol
+                            ticker = alt_ticker
+                            break
+                    except:
+                        continue
+                
+                if hist_data.empty:
+                    return {
+                        'error': f'No market data found for {symbol}. Please check the symbol.',
+                        'status': 'failed',
+                        'tried_symbols': [yf_symbol] + alternative_symbols
+                    }
+            
+            print(f"Successfully fetched {len(hist_data)} days of data for {yf_symbol}")
+            
+        except Exception as e:
+            return {
+                'error': f'Failed to fetch market data for {symbol}: {str(e)}',
+                'status': 'failed'
+            }
         
-        if hist_data.empty:
-            return {'error': f'No data available for {symbol}', 'status': 'failed'}
-        
-        # Get current market price for comparison
-        current_market_price = hist_data['Close'].iloc[-1]
+        # Get current market price
+        try:
+            current_market_price = float(hist_data['Close'].iloc[-1])
+            latest_volume = float(hist_data['Volume'].iloc[-1])
+            print(f"Current market price: ₹{current_market_price:.2f}")
+        except Exception as e:
+            return {
+                'error': f'Error processing market data: {str(e)}',
+                'status': 'failed'
+            }
         
         # Calculate REAL technical indicators
-        df = hist_data.copy()
+        try:
+            df = hist_data.copy()
+            closes = df['Close']
+            highs = df['High']
+            lows = df['Low']
+            volumes = df['Volume']
+            
+            # RSI Calculation (Wilder's smoothing method)
+            def calculate_rsi(prices, period=14):
+                delta = prices.diff()
+                gain = delta.where(delta > 0, 0)
+                loss = -delta.where(delta < 0, 0)
+                
+                avg_gain = gain.rolling(window=period, min_periods=period).mean()
+                avg_loss = loss.rolling(window=period, min_periods=period).mean()
+                
+                # Wilder's smoothing
+                for i in range(period, len(gain)):
+                    avg_gain.iloc[i] = (avg_gain.iloc[i-1] * (period-1) + gain.iloc[i]) / period
+                    avg_loss.iloc[i] = (avg_loss.iloc[i-1] * (period-1) + loss.iloc[i]) / period
+                
+                rs = avg_gain / avg_loss
+                rsi = 100 - (100 / (1 + rs))
+                return rsi.iloc[-1] if not rsi.empty else 50
+            
+            # EMA Calculation
+            def calculate_ema(prices, span):
+                return prices.ewm(span=span, adjust=False).mean().iloc[-1]
+            
+            # MACD Calculation
+            def calculate_macd(prices):
+                ema12 = prices.ewm(span=12).mean()
+                ema26 = prices.ewm(span=26).mean()
+                macd_line = ema12 - ema26
+                signal_line = macd_line.ewm(span=9).mean()
+                histogram = macd_line - signal_line
+                return macd_line.iloc[-1], signal_line.iloc[-1], histogram.iloc[-1]
+            
+            # Bollinger Bands
+            def calculate_bollinger_bands(prices, period=20, std_dev=2):
+                sma = prices.rolling(window=period).mean()
+                std = prices.rolling(window=period).std()
+                upper_band = sma + (std * std_dev)
+                lower_band = sma - (std * std_dev)
+                return upper_band.iloc[-1], sma.iloc[-1], lower_band.iloc[-1]
+            
+            # ATR Calculation
+            def calculate_atr(high, low, close, period=14):
+                tr1 = high - low
+                tr2 = abs(high - close.shift(1))
+                tr3 = abs(low - close.shift(1))
+                true_range = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+                return true_range.rolling(window=period).mean().iloc[-1]
+            
+            # Calculate all indicators
+            rsi = calculate_rsi(closes)
+            ema_9 = calculate_ema(closes, 9)
+            ema_21 = calculate_ema(closes, 21)
+            ema_50 = calculate_ema(closes, 50)
+            
+            macd, macd_signal, macd_histogram = calculate_macd(closes)
+            bb_upper, bb_middle, bb_lower = calculate_bollinger_bands(closes)
+            atr = calculate_atr(highs, lows, closes)
+            
+            # Volume analysis
+            avg_volume_20 = volumes.rolling(window=20).mean().iloc[-1]
+            volume_ratio = latest_volume / avg_volume_20 if avg_volume_20 > 0 else 1
+            
+            # Support and Resistance levels
+            recent_high = highs.rolling(window=20).max().iloc[-1]
+            recent_low = lows.rolling(window=20).min().iloc[-1]
+            
+            # Price momentum
+            if len(closes) >= 6:
+                price_change_5d = (closes.iloc[-1] / closes.iloc[-6] - 1) * 100
+            else:
+                price_change_5d = 0
+                
+            if len(closes) >= 21:
+                price_change_20d = (closes.iloc[-1] / closes.iloc[-21] - 1) * 100
+            else:
+                price_change_20d = 0
+            
+            print(f"Technical indicators calculated successfully")
+            
+        except Exception as e:
+            return {
+                'error': f'Error calculating technical indicators: {str(e)}',
+                'status': 'failed'
+            }
         
-        # RSI Calculation (Wilder's method)
-        def calculate_rsi(prices, period=14):
-            delta = prices.diff()
-            gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-            rs = gain / loss
-            rsi = 100 - (100 / (1 + rs))
-            return rsi.iloc[-1]
+        # REAL signal analysis based on technical indicators
+        try:
+            signals = []
+            score = 0
+            
+            # EMA trend analysis
+            if ema_9 > ema_21 > ema_50:
+                signals.append("Strong Bullish Trend (EMA 9>21>50)")
+                score += 3
+            elif ema_9 > ema_21:
+                signals.append("Short-term Bullish (EMA 9>21)")
+                score += 2
+            elif ema_9 < ema_21 < ema_50:
+                signals.append("Strong Bearish Trend (EMA 9<21<50)")
+                score -= 3
+            elif ema_9 < ema_21:
+                signals.append("Short-term Bearish (EMA 9<21)")
+                score -= 2
+            
+            # RSI analysis
+            if rsi < 30:
+                signals.append(f"Oversold Condition (RSI: {rsi:.1f})")
+                score += 2
+            elif rsi > 70:
+                signals.append(f"Overbought Condition (RSI: {rsi:.1f})")
+                score -= 2
+            elif 45 <= rsi <= 55:
+                signals.append(f"Neutral Momentum (RSI: {rsi:.1f})")
+            
+            # MACD analysis
+            if macd > macd_signal and macd_histogram > 0:
+                signals.append("MACD Bullish Momentum")
+                score += 2
+            elif macd < macd_signal and macd_histogram < 0:
+                signals.append("MACD Bearish Momentum")
+                score -= 2
+            
+            # Bollinger Bands analysis
+            if current_market_price > bb_upper:
+                signals.append("Above Upper Bollinger Band")
+                score -= 1
+            elif current_market_price < bb_lower:
+                signals.append("Below Lower Bollinger Band")
+                score += 1
+            
+            # Volume confirmation
+            if volume_ratio > 1.5:
+                signals.append(f"High Volume Activity ({volume_ratio:.1f}x)")
+                score += 1
+            elif volume_ratio < 0.7:
+                signals.append(f"Low Volume Activity ({volume_ratio:.1f}x)")
+                score -= 1
+            
+            # Price position analysis
+            range_position = (current_market_price - recent_low) / (recent_high - recent_low)
+            if range_position > 0.9:
+                signals.append("Near 20-Day High")
+            elif range_position < 0.1:
+                signals.append("Near 20-Day Low")
+                score += 1
+            
+            # Momentum analysis
+            if price_change_5d > 3:
+                signals.append(f"Strong 5-Day Rally (+{price_change_5d:.1f}%)")
+                score += 1
+            elif price_change_5d < -3:
+                signals.append(f"Sharp 5-Day Decline ({price_change_5d:.1f}%)")
+                score -= 1
+            
+            # Calculate confidence (20-95 range)
+            confidence = max(20, min(95, 50 + (score * 7)))
+            
+            # Determine strategy
+            if score >= 4:
+                strategy = "Strong Buy Signal"
+                direction = "BUY"
+            elif score >= 2:
+                strategy = "Moderate Buy Signal"
+                direction = "BUY"
+            elif score <= -4:
+                strategy = "Strong Sell Signal"
+                direction = "SELL"
+            elif score <= -2:
+                strategy = "Moderate Sell Signal"
+                direction = "SELL"
+            else:
+                strategy = "Neutral/Hold Signal"
+                direction = "HOLD"
+            
+            # Calculate stop loss and target using ATR
+            if direction == "BUY":
+                stop_loss = price - (atr * 2)
+                target = price + (atr * 3)
+                # Adjust based on support/resistance
+                stop_loss = max(stop_loss, recent_low * 0.995)
+            elif direction == "SELL":
+                stop_loss = price + (atr * 2)
+                target = price - (atr * 3)
+                # Adjust based on support/resistance
+                stop_loss = min(stop_loss, recent_high * 1.005)
+            else:
+                stop_loss = price - (atr * 1.5)
+                target = price + (atr * 2)
+            
+            # Risk-reward calculation
+            risk = abs(price - stop_loss)
+            reward = abs(target - price)
+            risk_reward = reward / risk if risk > 0 else 0
+            
+            # Position sizing (2% risk rule)
+            account_size = 100000
+            risk_per_trade = account_size * 0.02
+            position_size = int(risk_per_trade / risk) if risk > 0 else 0
+            
+            print(f"Analysis complete: {strategy} with {confidence}% confidence")
+            
+        except Exception as e:
+            return {
+                'error': f'Error in signal analysis: {str(e)}',
+                'status': 'failed'
+            }
         
-        # EMA Calculation
-        def calculate_ema(prices, span):
-            return prices.ewm(span=span).mean().iloc[-1]
-        
-        # MACD Calculation
-        def calculate_macd(prices):
-            ema12 = prices.ewm(span=12).mean()
-            ema26 = prices.ewm(span=26).mean()
-            macd_line = ema12 - ema26
-            signal_line = macd_line.ewm(span=9).mean()
-            histogram = macd_line - signal_line
-            return macd_line.iloc[-1], signal_line.iloc[-1], histogram.iloc[-1]
-        
-        # Bollinger Bands
-        def calculate_bollinger_bands(prices, period=20, std_dev=2):
-            sma = prices.rolling(window=period).mean()
-            std = prices.rolling(window=period).std()
-            upper_band = sma + (std * std_dev)
-            lower_band = sma - (std * std_dev)
-            return upper_band.iloc[-1], sma.iloc[-1], lower_band.iloc[-1]
-        
-        # ATR Calculation
-        def calculate_atr(high, low, close, period=14):
-            tr1 = high - low
-            tr2 = abs(high - close.shift())
-            tr3 = abs(low - close.shift())
-            true_range = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
-            return true_range.rolling(window=period).mean().iloc[-1]
-        
-        # Calculate all indicators
-        rsi = calculate_rsi(df['Close'])
-        ema_9 = calculate_ema(df['Close'], 9)
-        ema_21 = calculate_ema(df['Close'], 21)
-        ema_50 = calculate_ema(df['Close'], 50)
-        
-        macd, macd_signal, macd_histogram = calculate_macd(df['Close'])
-        bb_upper, bb_middle, bb_lower = calculate_bollinger_bands(df['Close'])
-        atr = calculate_atr(df['High'], df['Low'], df['Close'])
-        
-        # Volume analysis
-        avg_volume_20 = df['Volume'].rolling(window=20).mean().iloc[-1]
-        current_volume = df['Volume'].iloc[-1]
-        volume_ratio = current_volume / avg_volume_20
-        
-        # Support and Resistance
-        recent_high = df['High'].rolling(window=20).max().iloc[-1]
-        recent_low = df['Low'].rolling(window=20).min().iloc[-1]
-        
-        # Price momentum
-        price_change_5d = (df['Close'].iloc[-1] / df['Close'].iloc[-6] - 1) * 100
-        price_change_20d = (df['Close'].iloc[-1] / df['Close'].iloc[-21] - 1) * 100
-        
-        # REAL signal analysis
-        signals = []
-        score = 0
-        
-        # EMA trend analysis
-        if ema_9 > ema_21 > ema_50:
-            signals.append("Strong Uptrend (EMA 9>21>50)")
-            score += 3
-        elif ema_9 > ema_21:
-            signals.append("Short-term Bullish (EMA 9>21)")
-            score += 2
-        elif ema_9 < ema_21 < ema_50:
-            signals.append("Strong Downtrend (EMA 9<21<50)")
-            score -= 3
-        elif ema_9 < ema_21:
-            signals.append("Short-term Bearish (EMA 9<21)")
-            score -= 2
-        
-        # RSI analysis
-        if rsi < 30:
-            signals.append(f"Oversold RSI ({rsi:.1f}) - Potential Reversal")
-            score += 2
-        elif rsi > 70:
-            signals.append(f"Overbought RSI ({rsi:.1f}) - Potential Correction")
-            score -= 2
-        elif 45 < rsi < 55:
-            signals.append(f"Neutral RSI ({rsi:.1f}) - Balanced Momentum")
-        
-        # MACD analysis
-        if macd > macd_signal and macd_histogram > 0:
-            signals.append("MACD Bullish Crossover")
-            score += 2
-        elif macd < macd_signal and macd_histogram < 0:
-            signals.append("MACD Bearish Crossover")
-            score -= 2
-        
-        # Bollinger Bands analysis
-        if price > bb_upper:
-            signals.append("Price Above Upper Bollinger Band - Overbought")
-            score -= 1
-        elif price < bb_lower:
-            signals.append("Price Below Lower Bollinger Band - Oversold")
-            score += 1
-        elif bb_lower < price < bb_upper:
-            bb_position = (price - bb_lower) / (bb_upper - bb_lower)
-            if bb_position > 0.8:
-                signals.append("Near Upper Bollinger Band")
-            elif bb_position < 0.2:
-                signals.append("Near Lower Bollinger Band")
-        
-        # Volume confirmation
-        if volume_ratio > 1.5:
-            signals.append(f"High Volume ({volume_ratio:.1f}x avg) - Strong Move")
-            score += 1
-        elif volume_ratio < 0.7:
-            signals.append(f"Low Volume ({volume_ratio:.1f}x avg) - Weak Move")
-            score -= 1
-        
-        # Price position relative to range
-        range_position = (price - recent_low) / (recent_high - recent_low)
-        if range_position > 0.9:
-            signals.append("Near 20-day High - Resistance Zone")
-        elif range_position < 0.1:
-            signals.append("Near 20-day Low - Support Zone")
-            score += 1
-        
-        # Momentum analysis
-        if price_change_5d > 3:
-            signals.append(f"Strong 5-day Rally (+{price_change_5d:.1f}%)")
-            score += 1
-        elif price_change_5d < -3:
-            signals.append(f"Sharp 5-day Decline ({price_change_5d:.1f}%)")
-            score -= 1
-        
-        # Calculate confidence (0-100)
-        confidence = max(20, min(95, 50 + (score * 8)))
-        
-        # Determine strategy based on score
-        if score >= 4:
-            strategy = "Strong Buy Signal"
-            direction = "BUY"
-        elif score >= 2:
-            strategy = "Moderate Buy Signal"
-            direction = "BUY"
-        elif score <= -4:
-            strategy = "Strong Sell Signal"
-            direction = "SELL"
-        elif score <= -2:
-            strategy = "Moderate Sell Signal"
-            direction = "SELL"
-        else:
-            strategy = "Neutral/Hold Signal"
-            direction = "HOLD"
-        
-        # Calculate stop loss and target using ATR
-        if direction == "BUY":
-            stop_loss = price - (atr * 2)
-            target = price + (atr * 3)
-        elif direction == "SELL":
-            stop_loss = price + (atr * 2)
-            target = price - (atr * 3)
-        else:
-            stop_loss = price - (atr * 1.5)
-            target = price + (atr * 1.5)
-        
-        # Adjust levels based on support/resistance
-        if direction == "BUY":
-            stop_loss = max(stop_loss, recent_low * 0.995)
-            target = min(target, recent_high * 0.995)
-        
-        # Risk-reward calculation
-        risk = abs(price - stop_loss)
-        reward = abs(target - price)
-        risk_reward = reward / risk if risk > 0 else 0
-        
-        # Position sizing (2% risk rule)
-        account_size = 100000  # Default account size
-        risk_per_trade = account_size * 0.02
-        position_size = int(risk_per_trade / risk) if risk > 0 else 0
-        
+        # Return comprehensive analysis
         return {
             'status': 'success',
             'symbol': symbol,
@@ -3390,42 +3555,57 @@ def analyze_strategy():
             'direction': direction,
             'confidence': f"{confidence:.0f}%",
             'signal_score': f"{score:+d}/10",
-            'entry': f"₹{price:,.2f}",
-            'stop_loss': f"₹{stop_loss:,.2f}",
-            'target': f"₹{target:,.2f}",
-            'risk_reward': f"1:{risk_reward:.1f}",
-            'position_size': f"{position_size:,} shares",
+            'trade_setup': {
+                'entry': f"₹{price:,.2f}",
+                'stop_loss': f"₹{stop_loss:,.2f}",
+                'target': f"₹{target:,.2f}",
+                'risk_reward': f"1:{risk_reward:.1f}",
+                'position_size': f"{position_size:,} shares",
+                'risk_amount': f"₹{(risk * position_size):,.0f}"
+            },
             'technical_indicators': {
                 'rsi_14': f"{rsi:.1f}",
                 'ema_9': f"₹{ema_9:,.2f}",
                 'ema_21': f"₹{ema_21:,.2f}",
                 'ema_50': f"₹{ema_50:,.2f}",
                 'macd': f"{macd:.2f}",
+                'macd_signal': f"{macd_signal:.2f}",
                 'atr': f"₹{atr:.2f}",
                 'bb_upper': f"₹{bb_upper:,.2f}",
-                'bb_lower': f"₹{bb_lower:,.2f}",
-                'support': f"₹{recent_low:,.2f}",
-                'resistance': f"₹{recent_high:,.2f}"
+                'bb_middle': f"₹{bb_middle:,.2f}",
+                'bb_lower': f"₹{bb_lower:,.2f}"
+            },
+            'market_levels': {
+                'support_20d': f"₹{recent_low:,.2f}",
+                'resistance_20d': f"₹{recent_high:,.2f}",
+                'range_position': f"{(range_position*100):.1f}%"
             },
             'market_metrics': {
                 'volume_ratio': f"{volume_ratio:.1f}x",
+                'avg_volume_20d': f"{avg_volume_20:,.0f}",
+                'current_volume': f"{latest_volume:,.0f}",
                 '5d_change': f"{price_change_5d:+.1f}%",
                 '20d_change': f"{price_change_20d:+.1f}%",
-                'volatility': f"{(atr/price*100):.1f}%"
+                'volatility_atr': f"{(atr/current_market_price*100):.1f}%"
             },
             'active_signals': signals,
-            'data_quality': {
+            'data_info': {
                 'data_points': len(hist_data),
-                'last_update': hist_data.index[-1].strftime('%Y-%m-%d'),
-                'data_source': 'Yahoo Finance'
+                'data_range': f"{hist_data.index[0].strftime('%Y-%m-%d')} to {hist_data.index[-1].strftime('%Y-%m-%d')}",
+                'last_trading_day': hist_data.index[-1].strftime('%Y-%m-%d'),
+                'yf_symbol': yf_symbol
             },
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S IST')
         }
         
     except Exception as e:
+        print(f"Unexpected error in analyze_strategy: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
         return {
             'status': 'failed',
-            'error': str(e),
+            'error': f'System error: {str(e)}',
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S IST')
         }
 
