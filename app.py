@@ -1331,10 +1331,11 @@ def ai_predict():
     try:
         data = request.get_json(force=True) or {}
         print("DEBUG /api/ai-predict received:", data)
-        
-        # Handle strategy generation request
+
+        # -----------------------
+        # Action: Generate Real Strategy (L1)
+        # -----------------------
         if data.get("action") == "generateRealStrategy":
-            # Generate AI trading strategy
             prompt = f"""
 You are an expert Indian stock market strategist with 15+ years of experience in NSE/BSE trading.
 
@@ -1360,31 +1361,24 @@ Please provide:
 Keep it actionable and specific to Indian markets. Include actual NSE stock symbols where relevant.
 Response should be detailed but under 300 words.
 """
-
-            # Make AI API call
             headers = {
                 "Authorization": f"Bearer {OPENROUTER_KEY}",
                 "Content-Type": "application/json",
             }
-
             payload = {
                 "model": "deepseek/deepseek-chat",
                 "messages": [
-                    {
-                        "role": "system",
-                        "content": "You are a professional Indian stock market strategist specializing in NSE/BSE trading strategies and risk management."
-                    },
+                    {"role": "system",
+                     "content": "You are a professional Indian stock market strategist specializing in NSE/BSE trading strategies and risk management."},
                     {"role": "user", "content": prompt}
                 ],
                 "temperature": 0.7,
                 "max_tokens": 600
             }
-
             response = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=30)
 
             if response.status_code == 200:
                 ai_response = response.json()["choices"][0]["message"]["content"].strip()
-                
                 return jsonify({
                     "success": True,
                     "strategy": ai_response,
@@ -1396,15 +1390,53 @@ Response should be detailed but under 300 words.
                 print(f"❌ AI API Error: {response.status_code} - {response.text}")
                 return jsonify({"error": f"AI service error: {response.status_code}"}), 500
 
-        # Handle stock prediction request (original functionality)
+        # -----------------------
+        # Action: Run Real Data Mining (L2)
+        # -----------------------
+        if data.get("action") == "runRealDataMining":
+            symbol = data.get("symbol", "NIFTY")  # default if none passed
+            yf_symbols = {
+                "BANKNIFTY": "^NSEBANK",
+                "NIFTY": "^NSEI",
+                "SENSEX": "^BSESN"
+            }
+            yf_symbol = yf_symbols.get(symbol.upper(), symbol)
+
+            # Fetch last 6 months data
+            df = get_stock_df(yf_symbol, period="6mo", interval="1d")
+            if df is None or df.empty:
+                return jsonify({"error": f"No real market data found for {yf_symbol}"}), 400
+
+            closes = df["Close"].tail(100).tolist()
+            volumes = df["Volume"].tail(100).tolist()
+            current_price = closes[-1]
+
+            # Simple mining insights
+            sma_20 = sum(closes[-20:]) / 20
+            sma_50 = sum(closes[-50:]) / 50
+            trend = "Bullish" if current_price > sma_20 > sma_50 else "Bearish" if current_price < sma_20 < sma_50 else "Neutral"
+
+            return jsonify({
+                "success": True,
+                "action": "runRealDataMining",
+                "symbol": symbol,
+                "currentPrice": f"₹{current_price:.2f}",
+                "sma20": f"₹{sma_20:.2f}",
+                "sma50": f"₹{sma_50:.2f}",
+                "trend": trend,
+                "recordsAnalyzed": len(closes)
+            })
+
+        # -----------------------
+        # Action: Stock Prediction (Default)
+        # -----------------------
         raw_symbol = data.get("symbol")
         market_data = data.get("marketData")
 
-        # If no market data provided, fetch from yfinance
         if not market_data and raw_symbol:
             yf_symbols = {
                 "BANKNIFTY": "^NSEBANK",
-                "NIFTY": "^NSEI", 
+                "NIFTY": "^NSEI",
                 "SENSEX": "^BSESN",
                 "RELIANCE": "RELIANCE.NS",
                 "TCS": "TCS.NS",
@@ -1413,54 +1445,36 @@ Response should be detailed but under 300 words.
                 "ICICIBANK": "ICICIBANK.NS"
             }
             yf_symbol = yf_symbols.get(raw_symbol.upper(), raw_symbol)
-
             df = get_stock_df(yf_symbol, period="3mo", interval="1d")
             if df is None or df.empty:
                 return jsonify({"error": f"No market data found for {yf_symbol}"}), 400
             market_data = df.tail(60).reset_index().to_dict(orient="records")
 
-        # Validate market data exists
         if not market_data or len(market_data) == 0:
             return jsonify({"error": f"No market data available for {raw_symbol}"}), 400
 
-        # Extract closing prices and volumes from market data
-        closes = []
-        volumes = []
-        
+        closes, volumes = [], []
         for record in market_data:
             if isinstance(record, dict):
                 close_price = record.get("Close") or record.get("close")
                 volume = record.get("Volume") or record.get("volume")
-                
-                if close_price is not None:
-                    closes.append(float(close_price))
-                if volume is not None:
-                    volumes.append(float(volume))
+                if close_price is not None: closes.append(float(close_price))
+                if volume is not None: volumes.append(float(volume))
 
         if not closes:
             return jsonify({"error": "No valid closing prices found in market data"}), 400
 
-        # Take last 50 closes for analysis
         closes = closes[-50:]
         volumes = volumes[-10:] if volumes else [0]
-
-        # Calculate technical indicators
         current_price = closes[-1]
         sma_20 = sum(closes[-20:]) / 20 if len(closes) >= 20 else current_price
         sma_50 = sum(closes[-50:]) / 50 if len(closes) >= 50 else current_price
-        
-        # Calculate price change
         price_change = ((current_price - closes[-2]) / closes[-2] * 100) if len(closes) > 1 else 0
-        
-        # Volume analysis
         avg_volume = sum(volumes) / len(volumes) if volumes and volumes[0] != 0 else 1
         current_volume = volumes[-1] if volumes else avg_volume
         volume_ratio = current_volume / avg_volume if avg_volume > 0 else 1
-
-        # Determine trend
         trend = "Bullish" if current_price > sma_20 > sma_50 else "Bearish" if current_price < sma_20 < sma_50 else "Neutral"
 
-        # Create AI prompt for stock analysis
         prompt = f"""
 You are an expert Indian stock market analyst with deep knowledge of NSE/BSE trading patterns.
 
@@ -1488,39 +1502,30 @@ Based on this technical analysis, provide:
 
 Keep response concise (under 200 words) and focus on actionable insights for Indian traders.
 """
-
-        # Make AI API call
         headers = {
             "Authorization": f"Bearer {OPENROUTER_KEY}",
             "Content-Type": "application/json",
         }
-
         payload = {
             "model": "deepseek/deepseek-chat",
             "messages": [
-                {
-                    "role": "system",
-                    "content": "You are a professional Indian stock market analyst specializing in NSE/BSE technical analysis and market predictions."
-                },
+                {"role": "system",
+                 "content": "You are a professional Indian stock market analyst specializing in NSE/BSE technical analysis and market predictions."},
                 {"role": "user", "content": prompt}
             ],
             "temperature": 0.3,
             "max_tokens": 400
         }
-
         response = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=30)
 
         if response.status_code == 200:
             ai_response = response.json()["choices"][0]["message"]["content"].strip()
-            
-            # Extract confidence from AI response if possible
-            confidence = 75  # default
+            confidence = 75
             if "confidence" in ai_response.lower():
                 import re
                 conf_match = re.search(r'confidence[:\s]*(\d+)', ai_response.lower())
                 if conf_match:
                     confidence = int(conf_match.group(1))
-
             return jsonify({
                 "prediction": trend,
                 "confidence": confidence,
