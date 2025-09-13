@@ -1429,10 +1429,11 @@ market_fetcher = AdvancedMarketDataFetcher()
         # Generate synthetic data as last resort
         synthetic_data = self._generate_synthetic_data(symbol, period, interval)
         return synthetic_data, "synthetic"
-        
+
 def get_symbol_variants(symbol):
     """Get all possible symbol variants to try"""
-    variants = [symbol]
+    variants = [symbol]        
+    
     
     # Indian market variants
     if not any(suffix in symbol for suffix in ['.NS', '.BO', '.BSE']):
