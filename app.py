@@ -3153,71 +3153,201 @@ def strategy_engine():
         return redirect("/login")
     return render_template("strategy_engine.html")
 
-@app.route("/analyze-strategy", methods=["POST"])
+@@app.route("/analyze-strategy", methods=["POST"])
 def analyze_strategy():
-    data = request.get_json()
     try:
+        data = request.get_json() or {}
+        
+        # Get inputs
         price = float(data.get('price', 0))
-    except (ValueError, TypeError):
-        return jsonify({'message': 'Invalid price input.'})
-
-    if price % 2 == 0:
-        strategy = "EMA Bullish Crossover Detected 💞"
-        confidence = random.randint(80, 90)
-        sl = price - 50
-        target = price + 120
-    elif price % 3 == 0:
-        strategy = "RSI Reversal Detected 🔁"
-        confidence = random.randint(70, 85)
-        sl = price - 40
-        target = price + 100
-    else:
-        strategy = "Breakout Zone Approaching 💥"
-        confidence = random.randint(60, 75)
-        sl = price - 60
-        target = price + 90
-
-    entry = price
-    message = f"""
-    💌 <b>{strategy}</b><br>
-    ❤️ Entry: ₹{entry}<br>
-    🔻 Stop Loss: ₹{sl}<br>
-    🎯 Target: ₹{target}<br>
-    📊 Confidence Score: <b>{confidence}%</b><br><br>
-    <i>Take this trade only if you feel my kiss of confidence 😘</i>
-    """
-    return jsonify({'message': message})
-
-# === /neuron endpoint ===
-@app.route("/neuron", methods=["GET", "POST"])
-def neuron():
-    try:
-        if request.method == "GET":
-            return render_template("neuron.html")
-
-        # Handle POST (form or JSON)
-        if request.is_json:
-            user_input = request.json.get("message")
+        symbol = data.get('symbol', 'NIFTY').upper()
+        
+        if price <= 0:
+            return {'error': 'Invalid price', 'status': 'failed'}
+        
+        # Map to Yahoo Finance symbols
+        symbol_map = {
+            'NIFTY': '^NSEI', 'BANKNIFTY': '^NSEBANK', 'SENSEX': '^BSESN',
+            'RELIANCE': 'RELIANCE.NS', 'TCS': 'TCS.NS', 'INFY': 'INFY.NS',
+            'HDFCBANK': 'HDFCBANK.NS', 'ICICIBANK': 'ICICIBANK.NS'
+        }
+        
+        yf_symbol = symbol_map.get(symbol, f"{symbol}.NS")
+        
+        # Fetch REAL market data
+        ticker = yf.Ticker(yf_symbol)
+        df = ticker.history(period="6mo", interval="1d")
+        
+        if df.empty:
+            return {'error': f'No data found for {symbol}', 'status': 'failed'}
+        
+        # Calculate REAL technical indicators
+        closes = df['Close'].values
+        highs = df['High'].values
+        lows = df['Low'].values
+        volumes = df['Volume'].values
+        
+        # RSI calculation
+        delta = np.diff(closes)
+        gains = np.where(delta > 0, delta, 0)
+        losses = np.where(delta < 0, -delta, 0)
+        
+        avg_gain = np.mean(gains[-14:]) if len(gains) >= 14 else np.mean(gains)
+        avg_loss = np.mean(losses[-14:]) if len(losses) >= 14 else np.mean(losses)
+        
+        if avg_loss == 0:
+            rsi = 100
         else:
-            user_input = request.form.get("message")
-
-        if not user_input:
-            return jsonify({"reply": "❌ No input received."})
-
-        symbol = extract_symbol_from_text(user_input)
-        if not symbol:
-            return jsonify({"reply": "❌ Could not detect any valid symbol (like NIFTY, BANKNIFTY, SENSEX)."})
-
-        price = get_yfinance_ltp(symbol)
-        if price == 0:
-            return jsonify({"reply": f"⚠️ Could not fetch real price for {symbol}. Try again later."})
-
-        result = analyze_with_neuron(price, symbol)
-        return jsonify(result)
-
+            rs = avg_gain / avg_loss
+            rsi = 100 - (100 / (1 + rs))
+        
+        # EMA calculation
+        def calculate_ema(data, period):
+            multiplier = 2 / (period + 1)
+            ema = [data[0]]
+            for i in range(1, len(data)):
+                ema.append((data[i] * multiplier) + (ema[-1] * (1 - multiplier)))
+            return ema[-1]
+        
+        ema_9 = calculate_ema(closes, 9)
+        ema_21 = calculate_ema(closes, 21)
+        
+        # MACD calculation
+        ema_12 = calculate_ema(closes, 12)
+        ema_26 = calculate_ema(closes, 26)
+        macd = ema_12 - ema_26
+        
+        # ATR calculation for stop loss
+        true_ranges = []
+        for i in range(1, len(closes)):
+            tr1 = highs[i] - lows[i]
+            tr2 = abs(highs[i] - closes[i-1])
+            tr3 = abs(lows[i] - closes[i-1])
+            true_ranges.append(max(tr1, tr2, tr3))
+        
+        atr = np.mean(true_ranges[-14:]) if len(true_ranges) >= 14 else np.mean(true_ranges)
+        
+        # Volume analysis
+        avg_volume = np.mean(volumes[-20:])
+        current_volume = volumes[-1]
+        volume_ratio = current_volume / avg_volume
+        
+        # Support/Resistance
+        recent_high = np.max(highs[-20:])
+        recent_low = np.min(lows[-20:])
+        
+        # REAL signal generation
+        signals = []
+        confidence = 50
+        
+        # EMA signals
+        if ema_9 > ema_21:
+            signals.append("EMA Bullish Alignment")
+            confidence += 15
+        else:
+            signals.append("EMA Bearish Alignment")
+            confidence -= 15
+        
+        # RSI signals
+        if rsi < 30:
+            signals.append("RSI Oversold - Reversal Expected")
+            confidence += 20
+        elif rsi > 70:
+            signals.append("RSI Overbought - Correction Due")
+            confidence -= 20
+        elif 40 < rsi < 60:
+            signals.append("RSI Neutral Zone")
+            confidence += 5
+        
+        # MACD signals
+        if macd > 0:
+            signals.append("MACD Above Zero Line")
+            confidence += 10
+        else:
+            signals.append("MACD Below Zero Line")
+            confidence -= 10
+        
+        # Volume confirmation
+        if volume_ratio > 1.5:
+            signals.append("High Volume Confirmation")
+            confidence += 15
+        elif volume_ratio < 0.7:
+            signals.append("Low Volume - Weak Signal")
+            confidence -= 10
+        
+        # Price position analysis
+        if price > recent_high * 0.98:
+            signals.append("Near Resistance Level")
+            confidence -= 5
+        elif price < recent_low * 1.02:
+            signals.append("Near Support Level")
+            confidence += 10
+        
+        # Ensure confidence is within bounds
+        confidence = max(30, min(95, confidence))
+        
+        # Calculate REAL stop loss and target
+        stop_loss = price - (atr * 2)  # 2 ATR stop
+        target = price + (atr * 3)     # 3 ATR target (1:1.5 risk-reward)
+        
+        # Adjust based on support/resistance
+        if stop_loss > recent_low:
+            stop_loss = recent_low * 0.995
+        
+        if target < recent_high:
+            target = recent_high * 1.005
+        
+        # Determine strategy
+        if confidence > 70:
+            strategy = "High Probability Momentum Trade"
+            direction = "BUY"
+        elif confidence < 40:
+            strategy = "High Risk Contrarian Setup"
+            direction = "SELL"
+        else:
+            strategy = "Range-Bound Scalping Setup"
+            direction = "NEUTRAL"
+        
+        # Calculate position size (2% risk)
+        risk_per_trade = 0.02
+        account_balance = 100000  # Default
+        risk_amount = account_balance * risk_per_trade
+        stop_distance = price - stop_loss
+        position_size = int(risk_amount / stop_distance) if stop_distance > 0 else 0
+        
+        # Return REAL analysis
+        return {
+            'status': 'success',
+            'symbol': symbol,
+            'current_price': f"₹{price:,.2f}",
+            'strategy': strategy,
+            'direction': direction,
+            'confidence': f"{confidence}%",
+            'entry': f"₹{price:,.2f}",
+            'stop_loss': f"₹{stop_loss:,.2f}",
+            'target': f"₹{target:,.2f}",
+            'position_size': f"{position_size:,} shares",
+            'risk_reward': f"1:{((target - price) / (price - stop_loss)):.1f}",
+            'technical_data': {
+                'rsi': f"{rsi:.1f}",
+                'ema_9': f"₹{ema_9:.2f}",
+                'ema_21': f"₹{ema_21:.2f}",
+                'macd': f"{macd:.2f}",
+                'atr': f"₹{atr:.2f}",
+                'volume_ratio': f"{volume_ratio:.1f}x",
+                'support': f"₹{recent_low:.2f}",
+                'resistance': f"₹{recent_high:.2f}"
+            },
+            'active_signals': signals,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S IST')
+        }
+        
     except Exception as e:
-        print(f"[ERROR /neuron]: {e}")
-        return jsonify({"reply": "❌ Internal error occurred in /neuron."})
+        return {
+            'status': 'failed',
+            'error': str(e),
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S IST')
+        }
 
 # ===== UPDATED V8 API ROUTES - SUPPORTS ALL INDIAN STOCKS & INDICES =====
 
