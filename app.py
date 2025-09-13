@@ -1000,10 +1000,7 @@ class AdvancedMarketDataFetcher:
             self._fetch_finnhub,
             self._fetch_yahoo_alternative
         ]
-    # Initialize the fetcher
-    market_fetcher = AdvancedMarketDataFetcher()
-       
-
+    
     def get_symbol_variants(self, symbol: str) -> List[str]:
         """Get all possible symbol variants to try"""
         symbol_upper = symbol.upper()
@@ -1429,6 +1426,9 @@ class AdvancedMarketDataFetcher:
         # Generate synthetic data as last resort
         synthetic_data = self._generate_synthetic_data(symbol, period, interval)
         return synthetic_data, "synthetic"
+        
+        # Initialize the fetcher
+        market_fetcher = AdvancedMarketDataFetcher()
 
 def get_symbol_variants(symbol):
     """Get all possible symbol variants to try"""
