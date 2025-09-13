@@ -1952,12 +1952,31 @@ Reason: [Short reason]
         return jsonify({"error": f"❌ Exception: {str(e)}"})
 
 # ✅ Live Market Data API (Yahoo Finance proxy) - Optimized for Render
-@app.route("/api/market-data/<symbol>")
-def get_market_data(symbol):
-    """Bulletproof market data route that NEVER fails"""
+@app.route("/api/market-data/<symbol>", methods=['GET', 'POST'])
+@app.route("/api/market-data", methods=['POST'])
+def get_market_data(symbol=None):
+    """Bulletproof market data route that handles both GET and POST requests"""
     try:
+        # Handle POST request (symbol in request body)
+        if request.method == 'POST':
+            data = request.get_json()
+            if data and 'symbol' in data:
+                symbol = data['symbol']
+            elif not symbol:
+                return jsonify({"error": "Symbol is required"}), 400
+        
+        # Handle missing symbol
+        if not symbol:
+            return jsonify({"error": "Symbol parameter is required"}), 400
+            
         period = request.args.get('period', '1mo')
         interval = request.args.get('interval', '5m')
+        
+        # Handle POST request parameters
+        if request.method == 'POST' and request.get_json():
+            post_data = request.get_json()
+            period = post_data.get('period', period)
+            interval = post_data.get('interval', interval)
 
         print(f"📊 Fetching data for {symbol} - Period: {period}, Interval: {interval}")
 
@@ -2031,7 +2050,7 @@ def get_market_data(symbol):
         
         # Emergency fallback - always return something
         try:
-            emergency_data = generate_realistic_market_data(symbol, period, interval)
+            emergency_data = generate_realistic_market_data(symbol or "NIFTY", period, interval)
             candles = []
             for index, row in emergency_data.iterrows():
                 candles.append({
@@ -2058,7 +2077,7 @@ def get_market_data(symbol):
                             }]
                         },
                         "meta": {
-                            "symbol": symbol,
+                            "symbol": symbol or "NIFTY",
                             "currentPrice": candles[-1]['close'],
                             "dataSource": "emergency_synthetic",
                             "currency": "INR",
@@ -2080,16 +2099,16 @@ def get_market_data(symbol):
                         "timestamp": [int(datetime.now().timestamp())],
                         "indicators": {
                             "quote": [{
-                                "open": [100],
-                                "high": [102],
-                                "low": [98],
-                                "close": [101],
+                                "open": [19800],
+                                "high": [19850],
+                                "low": [19750],
+                                "close": [19825],
                                 "volume": [1000000]
                             }]
                         },
                         "meta": {
-                            "symbol": symbol,
-                            "currentPrice": 101,
+                            "symbol": symbol or "NIFTY",
+                            "currentPrice": 19825,
                             "dataSource": "fallback",
                             "currency": "INR"
                         }
