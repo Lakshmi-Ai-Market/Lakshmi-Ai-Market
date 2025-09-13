@@ -583,7 +583,7 @@
         // Data fetching functions
         async function fetchMarketData(symbol, period, interval) {
             try {
-                const response = await fetch(`${BACKEND_URL}/market-data`, {
+                const response = await fetch(`${BACKEND_URL}/api/market-data`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
