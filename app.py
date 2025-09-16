@@ -43,6 +43,8 @@ import redis
 from flask import Flask
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask import Flask
+from flask_caching import Cache
 
 # configure logging once at startup
 logging.basicConfig(
@@ -77,12 +79,10 @@ print("🔑 OPENROUTER_KEY:", os.getenv("OPENROUTER_API_KEY"))
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 app.config.from_object('config.Config')
+app.config["CACHE_TYPE"] = "SimpleCache"   # for testing / small apps
+app.config["CACHE_DEFAULT_TIMEOUT"] = 300  # 5 minutes
+
 cache = Cache(app)
-limiter = Limiter(
-    app,
-    key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"]
-)
 
 # Initialize services
 data_fetcher = DataFetcher()
@@ -1838,6 +1838,11 @@ def index():
 def root():
     # public root -> login page
     return redirect(url_for("login_page"))
+
+@app.route("/cached")
+@cache.cached(timeout=60)
+def cached_view():
+    return "This is cached for 60s"
 
 
 @app.route("/login", methods=["GET"])
