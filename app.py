@@ -44,6 +44,10 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_caching import Cache
 
+limiter = Limiter(
+    key_func=get_remote_address,        # define function
+    app=app                             # attach app explicitly
+)
 # configure logging once at startup
 logging.basicConfig(
     level=logging.INFO,   # or DEBUG for more details
