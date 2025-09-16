@@ -2,7 +2,10 @@ import numpy as np
 import pandas as pd
 from typing import Dict, List, Any
 import logging
-from utils.indicators import TechnicalIndicators
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "utils"))
+
+from indicators import TechnicalIndicators
 
 logger = logging.getLogger(__name__)
 
