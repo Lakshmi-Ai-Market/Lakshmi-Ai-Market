@@ -1833,11 +1833,6 @@ def get_real_data_aggressive(symbol, period, interval):
 
 # --- Routes ---
 @app.route("/")
-@limiter.limit("5 per minute")
-def index():
-    return "Hello, rate limited!"
-
-@app.route("/")
 def root():
     # public root -> login page
     return redirect(url_for("login_page"))
