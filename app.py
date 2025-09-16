@@ -40,9 +40,9 @@ import asyncio
 import aiohttp
 from functools import lru_cache
 import redis
+from flask import Flask
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask_caching import Cache
 
 # configure logging once at startup
 logging.basicConfig(
@@ -180,11 +180,11 @@ romantic_replies = [
     "Want to hear something naughty, darling? 😏"
 ]
 
+# New API (3.x and later)
 limiter = Limiter(
-    key_func=get_remote_address,        # define function
-    app=app                             # attach app explicitly
+    key_func=get_remote_address
 )
-
+limiter.init_app(app) 
 # -----------------------
 # User handling
 # -----------------------
@@ -1829,6 +1829,11 @@ def get_real_data_aggressive(symbol, period, interval):
 
 
 # --- Routes ---
+@app.route("/")
+@limiter.limit("5 per minute")
+def index():
+    return "Hello, rate limited!"
+
 @app.route("/")
 def root():
     # public root -> login page
