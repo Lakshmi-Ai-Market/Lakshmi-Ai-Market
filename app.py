@@ -40,6 +40,9 @@ import asyncio
 import aiohttp
 from functools import lru_cache
 import redis
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_caching import Cache
 
 # configure logging once at startup
 logging.basicConfig(
@@ -73,6 +76,18 @@ print("🔑 OPENROUTER_KEY:", os.getenv("OPENROUTER_API_KEY"))
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
+app.config.from_object('config.Config')
+cache = Cache(app)
+limiter = Limiter(
+    app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"]
+)
+
+# Initialize services
+data_fetcher = DataFetcher()
+strategy_engine = StrategyEngine()
+indicators = TechnicalIndicators()
 
 # Indian Stock symbols for different segments
 INDIAN_SYMBOLS = {
@@ -2122,225 +2137,165 @@ Reason: [Short reason]
         return jsonify({"error": f"❌ Exception: {str(e)}"})
 
 # ✅ Live Market Data API (Yahoo Finance proxy) - Optimized for Render
-@app.route("/api/market-data", methods=['POST', 'OPTIONS'])
-def get_market_data():
-    """BULLETPROOF market data endpoint"""
+@app.route('/api/docs')
+def api_docs():
+    """API documentation page"""
+    return render_template('api_docs.html')
+
+@app.route('/api/market-data/')
+@limiter.limit("30 per minute")
+@cache.cached(timeout=60)  # Cache for 1 minute
+def get_market_data(symbol):
+    """
+    Get real-time market data for a symbol
     
-    # Handle CORS preflight
-    if request.method == 'OPTIONS':
-        return jsonify({"status": "ok"}), 200
+    Args:
+        symbol: Stock symbol (e.g., AAPL, NIFTY, BANKNIFTY)
     
+    Query Parameters:
+        interval: Time interval (1d, 1h, 4h, 15m, 5m, 1m)
+        period: Number of days (7, 30, 60, 90, 180, 365)
+    """
     try:
-        print(f"📊 Market data request received at {datetime.now()}")
+        interval = request.args.get('interval', '1d')
+        period = int(request.args.get('period', 60))
         
-        # Get request data
-        data = request.get_json() or {}
-        symbol = data.get('symbol', '^NSEI')
-        period_days = int(data.get('period', 60))
-        interval = data.get('interval', '1d')
+        logger.info(f"Fetching market data for {symbol}, interval: {interval}, period: {period}")
         
-        # Convert to yfinance period
-        if period_days <= 5:
-            period = f"{period_days}d"
-        elif period_days <= 30:
-            period = "1mo"
-        elif period_days <= 90:
-            period = "3mo"
-        else:
-            period = "6mo"
+        # Fetch data from Yahoo Finance (no API key required)
+        market_data = data_fetcher.fetch_yahoo_data(symbol, interval, period)
         
-        print(f"📈 Fetching {symbol} for {period_days} days ({period})")
-        
-        # Get data with AGGRESSIVE fetching
-        hist, source = get_real_data_aggressive(symbol, period, interval)
-        
-        print(f"✅ Got {len(hist)} data points from {source}")
-        
-        # Process data - ENSURE EVERYTHING IS PYTHON LISTS
-        chart_data = []
-        prices = []
-        volumes = []
-        
-        for idx, row in hist.iterrows():
-            timestamp = int(idx.timestamp() * 1000)
-            
-            chart_data.append({
-                "time": timestamp,
-                "open": float(row['Open']),
-                "high": float(row['High']),
-                "low": float(row['Low']),
-                "close": float(row['Close']),
-                "volume": int(row['Volume'])
-            })
-            
-            # CRITICAL: Ensure prices is a PURE PYTHON LIST
-            prices.append(float(row['Close']))
-            volumes.append(int(row['Volume']))
-        
-        # TRIPLE CHECK: Ensure prices is a pure Python list
-        if not isinstance(prices, list):
-            prices = list(prices)
-        
-        # Convert all to float to be absolutely sure
-        prices = [float(p) for p in prices]
-        
-        print(f"🔢 Processing {len(prices)} prices as pure Python list")
-        print(f"🔍 First 5 prices: {prices[:5]}")
-        print(f"🔍 Price type check: {type(prices)} - {type(prices[0]) if prices else 'empty'}")
-        
-        # Calculate metrics
-        current_price = prices[-1] if prices else 24800.0
-        previous_price = prices[-2] if len(prices) > 1 else current_price
-        price_change = current_price - previous_price
-        price_change_pct = (price_change / previous_price * 100) if previous_price != 0 else 0
-        
-        # Technical indicators with BULLETPROOF error handling
-        print("🔢 Calculating technical indicators...")
-        
-        try:
-            sma_20 = calculate_sma(prices, 20) if len(prices) >= 20 else current_price
-            print(f"✅ SMA_20: {sma_20}")
-        except Exception as e:
-            print(f"❌ SMA_20 failed: {e}")
-            sma_20 = current_price
-        
-        try:
-            sma_50 = calculate_sma(prices, 50) if len(prices) >= 50 else current_price
-            print(f"✅ SMA_50: {sma_50}")
-        except Exception as e:
-            print(f"❌ SMA_50 failed: {e}")
-            sma_50 = current_price
-        
-        try:
-            print(f"🔍 About to calculate RSI with {len(prices)} prices")
-            print(f"🔍 Prices type before RSI: {type(prices)}")
-            rsi = calculate_rsi_pure_python(prices) if len(prices) >= 15 else 50.0
-            print(f"✅ RSI: {rsi}")
-        except Exception as e:
-            print(f"❌ RSI failed: {e}")
-            import traceback
-            traceback.print_exc()
-            rsi = 50.0
-        
-        try:
-            print(f"🔍 About to calculate MACD with {len(prices)} prices")
-            print(f"🔍 Prices type before MACD: {type(prices)}")
-            macd = calculate_macd_pure_python(prices) if len(prices) >= 26 else {"macd": 0.0, "signal": 0.0, "histogram": 0.0}
-            print(f"✅ MACD: {macd}")
-        except Exception as e:
-            print(f"❌ MACD failed: {e}")
-            import traceback
-            traceback.print_exc()
-            macd = {"macd": 0.0, "signal": 0.0, "histogram": 0.0}
-        
-        # Response
-        response = {
-            "success": True,
-            "data": {
-                "symbol": symbol,
-                "chart": chart_data,
-                "current_price": round(current_price, 2),
-                "price_change": round(price_change, 2),
-                "price_change_pct": round(price_change_pct, 2),
-                "volume": sum(volumes) if volumes else 0,
-                "avg_volume": int(sum(volumes) / len(volumes)) if volumes else 0,
-                "high_52w": round(max(prices), 2) if prices else current_price,
-                "low_52w": round(min(prices), 2) if prices else current_price,
-                "data_points": len(chart_data),
-                "period_days": period_days,
-                "interval": interval,
-                "data_source": source,
-                "last_updated": datetime.now().isoformat(),
-                "currency": "INR"
-            },
-            "technical_indicators": {
-                "sma_20": round(sma_20, 2),
-                "sma_50": round(sma_50, 2),
-                "rsi": rsi,
-                "macd": macd
-            }
-        }
-        
-        print(f"📤 Sending response with {len(chart_data)} data points")
-        return jsonify(response), 200
-        
-    except Exception as e:
-        print(f"❌ CRITICAL ERROR: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        
-        # EMERGENCY response - NEVER fails
-        current_ts = int(datetime.now().timestamp() * 1000)
-        emergency_chart = []
-        
-        for i in range(60):
-            ts = current_ts - (59 - i) * 86400000
-            price = 24800 + (i * 2)
-            
-            emergency_chart.append({
-                "time": ts,
-                "open": price,
-                "high": price + 25,
-                "low": price - 25,
-                "close": price + 10,
-                "volume": 1000000
-            })
+        if not market_data:
+            return jsonify({
+                'error': 'Failed to fetch market data',
+                'message': 'All data sources unavailable'
+            }), 404
         
         return jsonify({
-            "success": True,
-            "data": {
-                "symbol": "^NSEI",
-                "chart": emergency_chart,
-                "current_price": 24920.0,
-                "price_change": 25.50,
-                "price_change_pct": 0.10,
-                "volume": 60000000,
-                "avg_volume": 1000000,
-                "high_52w": 25000.0,
-                "low_52w": 24500.0,
-                "data_points": 60,
-                "period_days": 60,
-                "interval": "1d",
-                "data_source": "emergency",
-                "last_updated": datetime.now().isoformat(),
-                "currency": "INR"
-            },
-            "technical_indicators": {
-                "sma_20": 24800.0,
-                "sma_50": 24750.0,
-                "rsi": 55.5,
-                "macd": {"macd": 24.8, "signal": 19.8, "histogram": 5.0}
-            }
-        }), 200
+            'success': True,
+            'data': market_data,
+            'timestamp': datetime.now().isoformat(),
+            'source': 'Yahoo Finance'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching market data: {str(e)}")
+        return jsonify({
+            'error': 'Internal server error',
+            'message': str(e)
+        }), 500
 
-# Additional endpoints
-@app.route("/global-data", methods=['GET'])
-def global_data():
-    """Global market data"""
-    return jsonify({
-        "success": True,
-        "data": {
-            "nifty": {"value": 24825.35, "change": 125.40, "changePercent": 0.51},
-            "sensex": {"value": 81432.10, "change": 234.50, "changePercent": 0.29},
-            "dow": {"value": 41567.89, "change": -45.67, "changePercent": -0.11},
-            "nasdaq": {"value": 17456.78, "change": 67.89, "changePercent": 0.39},
-            "sp500": {"value": 5634.56, "change": 12.34, "changePercent": 0.22}
-        }
-    })
+@app.route('/api/analysis/')
+@limiter.limit("20 per minute")
+@cache.cached(timeout=120)  # Cache for 2 minutes
+def run_analysis(symbol):
+    """
+    Run comprehensive trading strategy analysis
+    
+    Args:
+        symbol: Stock symbol
+    
+    Query Parameters:
+        strategy_type: Type of strategies to run (all, momentum, reversal, trend, etc.)
+        interval: Time interval
+        period: Number of days
+    """
+    try:
+        strategy_type = request.args.get('strategy_type', 'all')
+        interval = request.args.get('interval', '1d')
+        period = int(request.args.get('period', 60))
+        
+        logger.info(f"Running analysis for {symbol}, strategy: {strategy_type}")
+        
+        # Fetch market data
+        market_data = data_fetcher.fetch_yahoo_data(symbol, interval, period)
+        if not market_data:
+            return jsonify({'error': 'Failed to fetch market data'}), 404
+        
+        # Run strategy analysis
+        analysis_results = strategy_engine.run_analysis(market_data, strategy_type)
+        
+        # Calculate technical indicators
+        tech_indicators = indicators.calculate_all(market_data['chart'])
+        
+        return jsonify({
+            'success': True,
+            'symbol': symbol,
+            'analysis': analysis_results,
+            'indicators': tech_indicators,
+            'market_data': market_data,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error running analysis: {str(e)}")
+        return jsonify({
+            'error': 'Analysis failed',
+            'message': str(e)
+        }), 500
 
-@app.route("/options-data", methods=['GET', 'POST'])
-def options_data():
-    """Options data"""
+@app.route('/api/ai-strategy/')
+@limiter.limit("10 per minute")
+def ai_strategy(symbol):
+    """
+    Generate AI-powered trading suggestions
+    
+    Args:
+        symbol: Stock symbol
+    """
+    try:
+        logger.info(f"Generating AI strategy for {symbol}")
+        
+        # Fetch market data
+        market_data = data_fetcher.fetch_yahoo_data(symbol, '1d', 60)
+        if not market_data:
+            return jsonify({'error': 'Failed to fetch market data'}), 404
+        
+        # Generate AI suggestions
+        ai_suggestions = strategy_engine.generate_ai_suggestions(market_data)
+        
+        return jsonify({
+            'success': True,
+            'symbol': symbol,
+            'suggestions': ai_suggestions,
+            'confidence_score': ai_suggestions.get('overall_confidence', 0),
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error generating AI strategy: {str(e)}")
+        return jsonify({
+            'error': 'AI strategy generation failed',
+            'message': str(e)
+        }), 500
+
+@app.route('/api/symbols')
+@cache.cached(timeout=3600)  # Cache for 1 hour
+def get_symbols():
+    """Get list of supported symbols"""
+    symbols = {
+        'indian_indices': [
+            {'symbol': 'NIFTY', 'name': 'NIFTY 50', 'yahoo_symbol': '^NSEI'},
+            {'symbol': 'BANKNIFTY', 'name': 'BANK NIFTY', 'yahoo_symbol': '^NSEBANK'},
+            {'symbol': 'SENSEX', 'name': 'SENSEX', 'yahoo_symbol': '^BSESN'},
+            {'symbol': 'FINNIFTY', 'name': 'FIN NIFTY', 'yahoo_symbol': 'NIFTY_FIN_SERVICE.NS'},
+            {'symbol': 'MIDCPNIFTY', 'name': 'MIDCAP NIFTY', 'yahoo_symbol': 'NIFTY_MID_SELECT.NS'}
+        ],
+        'us_stocks': [
+            {'symbol': 'AAPL', 'name': 'Apple Inc', 'yahoo_symbol': 'AAPL'},
+            {'symbol': 'GOOGL', 'name': 'Google', 'yahoo_symbol': 'GOOGL'},
+            {'symbol': 'MSFT', 'name': 'Microsoft', 'yahoo_symbol': 'MSFT'},
+            {'symbol': 'TSLA', 'name': 'Tesla', 'yahoo_symbol': 'TSLA'},
+            {'symbol': 'AMZN', 'name': 'Amazon', 'yahoo_symbol': 'AMZN'},
+            {'symbol': 'NVDA', 'name': 'NVIDIA', 'yahoo_symbol': 'NVDA'},
+            {'symbol': 'META', 'name': 'Meta', 'yahoo_symbol': 'META'}
+        ]
+    }
+    
     return jsonify({
-        "success": True,
-        "data": {
-            "pcr_ratio": 1.15,
-            "max_pain": 24800,
-            "vix": 13.45,
-            "call_volume": 2800000,
-            "put_volume": 3220000,
-            "total_oi": 48000000
-        }
+        'success': True,
+        'symbols': symbols,
+        'total_count': len(symbols['indian_indices']) + len(symbols['us_stocks'])
     })
 
 
