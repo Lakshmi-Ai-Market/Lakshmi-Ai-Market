@@ -47,7 +47,6 @@ from flask import Flask
 from flask_caching import Cache
 from services.data_fetcher import DataFetcher
 from services.strategy_engine import StrategyEngine
-from utils.indicators import TechnicalIndicators
 
 # configure logging once at startup
 logging.basicConfig(
