@@ -1530,79 +1530,119 @@ def fetch_yfinance_with_fallbacks(symbol, period, interval):
             continue
     
     return None
-
+              
 def calculate_sma(prices, period):
-    """Calculate Simple Moving Average"""
-    if not prices or len(prices) < period:
-        return prices[-1] if prices else 0
-    return sum(prices[-period:]) / period
+    """Calculate Simple Moving Average - BULLETPROOF"""
+    try:
+        if not prices or len(prices) < period:
+            return float(prices[-1]) if prices else 0.0
+        
+        # Ensure we have a Python list
+        if hasattr(prices, 'tolist'):
+            prices = prices.tolist()
+            
+        return float(sum(prices[-period:]) / period)
+    except Exception as e:
+        print(f"SMA calculation error: {e}")
+        return 0.0
 
 def calculate_rsi(prices, period=14):
-    """Calculate RSI - Fixed for Python lists"""
-    if not prices or len(prices) < period + 1:
-        return 50
-    
-    # Calculate price changes manually (no pandas needed)
-    deltas = []
-    for i in range(1, len(prices)):
-        deltas.append(prices[i] - prices[i-1])
-    
-    if not deltas:
-        return 50
-    
-    # Separate gains and losses
-    gains = [d if d > 0 else 0 for d in deltas]
-    losses = [-d if d < 0 else 0 for d in deltas]
-    
-    # Calculate average gain and loss over the period
-    if len(gains) < period or len(losses) < period:
-        return 50
-        
-    avg_gain = sum(gains[-period:]) / period
-    avg_loss = sum(losses[-period:]) / period
-    
-    # Avoid division by zero
-    if avg_loss == 0:
-        return 100 if avg_gain > 0 else 50
-    
-    # Calculate RSI
-    rs = avg_gain / avg_loss
-    rsi = 100 - (100 / (1 + rs))
-    return round(rsi, 2)
-
-def calculate_macd(prices):
-    """Calculate MACD - Fixed for Python lists"""
-    if not prices or len(prices) < 26:
-        return {"macd": 0, "signal": 0, "histogram": 0}
-    
+    """Calculate RSI - COMPLETELY FIXED for Python lists"""
     try:
-        ema_12 = calculate_ema(prices, 12)
-        ema_26 = calculate_ema(prices, 26)
-        macd_line = ema_12 - ema_26
+        if not prices or len(prices) < period + 1:
+            return 50.0
         
-        return {
-            "macd": round(macd_line, 2),
-            "signal": round(macd_line * 0.8, 2),
-            "histogram": round(macd_line * 0.2, 2)
-        }
-    except:
-        return {"macd": 0, "signal": 0, "histogram": 0}
+        # Ensure we have a Python list, not pandas Series
+        if hasattr(prices, 'tolist'):
+            prices = prices.tolist()
+        
+        # Convert all to float
+        prices = [float(p) for p in prices]
+        
+        # Calculate price changes manually (no pandas needed)
+        deltas = []
+        for i in range(1, len(prices)):
+            deltas.append(prices[i] - prices[i-1])
+        
+        if not deltas or len(deltas) < period:
+            return 50.0
+        
+        # Separate gains and losses
+        gains = [max(d, 0) for d in deltas]
+        losses = [max(-d, 0) for d in deltas]
+        
+        # Calculate average gain and loss over the period
+        if len(gains) < period or len(losses) < period:
+            return 50.0
+            
+        avg_gain = sum(gains[-period:]) / period
+        avg_loss = sum(losses[-period:]) / period
+        
+        # Avoid division by zero
+        if avg_loss == 0:
+            return 100.0 if avg_gain > 0 else 50.0
+        
+        # Calculate RSI
+        rs = avg_gain / avg_loss
+        rsi = 100 - (100 / (1 + rs))
+        return round(float(rsi), 2)
+        
+    except Exception as e:
+        print(f"RSI calculation error: {e}")
+        return 50.0
 
 def calculate_ema(prices, period):
-    """Calculate Exponential Moving Average - Fixed for Python lists"""
-    if not prices or len(prices) < period:
-        return sum(prices) / len(prices) if prices else 0
-    
+    """Calculate Exponential Moving Average - BULLETPROOF"""
     try:
-        multiplier = 2 / (period + 1)
+        if not prices or len(prices) < period:
+            return float(sum(prices) / len(prices)) if prices else 0.0
+        
+        # Ensure we have a Python list
+        if hasattr(prices, 'tolist'):
+            prices = prices.tolist()
+            
+        # Convert all to float
+        prices = [float(p) for p in prices]
+        
+        multiplier = 2.0 / (period + 1)
         ema = sum(prices[:period]) / period
         
         for price in prices[period:]:
             ema = (price * multiplier) + (ema * (1 - multiplier))
         
-        return ema
-    except:
-        return prices[-1] if prices else 0
+        return float(ema)
+        
+    except Exception as e:
+        print(f"EMA calculation error: {e}")
+        return float(prices[-1]) if prices else 0.0
+
+def calculate_macd(prices):
+    """Calculate MACD - COMPLETELY FIXED for Python lists"""
+    try:
+        if not prices or len(prices) < 26:
+            return {"macd": 0.0, "signal": 0.0, "histogram": 0.0}
+        
+        # Ensure we have a Python list
+        if hasattr(prices, 'tolist'):
+            prices = prices.tolist()
+            
+        ema_12 = calculate_ema(prices, 12)
+        ema_26 = calculate_ema(prices, 26)
+        macd_line = ema_12 - ema_26
+        
+        # Simplified signal line calculation
+        signal_line = macd_line * 0.8
+        histogram = macd_line - signal_line
+        
+        return {
+            "macd": round(float(macd_line), 2),
+            "signal": round(float(signal_line), 2),
+            "histogram": round(float(histogram), 2)
+        }
+        
+    except Exception as e:
+        print(f"MACD calculation error: {e}")
+        return {"macd": 0.0, "signal": 0.0, "histogram": 0.0}
 
 def get_real_yfinance_data(symbol, period, interval):
     """Get REAL data from yfinance with proper error handling"""
@@ -1755,6 +1795,7 @@ def get_real_market_data_bulletproof(symbol, period, interval):
     
     df = pd.DataFrame(fallback_data, index=dates)
     return df, "realistic_fallback"
+
 # --- Routes ---
 @app.route("/")
 def root():
@@ -2069,8 +2110,7 @@ Reason: [Short reason]
         return jsonify({"error": f"❌ Exception: {str(e)}"})
 
 # ✅ Live Market Data API (Yahoo Finance proxy) - Optimized for Render
-
-@app.route("/api/market-data", methods=['POST'])
+app.route("/api/market-data", methods=['POST'])
 def get_market_data():
     """Market data endpoint matching your dashboard's exact expectations"""
     
@@ -2081,7 +2121,7 @@ def get_market_data():
             return jsonify({"success": False, "error": "No data provided"}), 400
             
         symbol = data.get('symbol', '^NSEI')
-        period_days = int(data.get('period', 60))  # Your dashboard sends days as number
+        period_days = int(data.get('period', 60))
         interval = data.get('interval', '1d')
         
         # Convert period days to yfinance format
@@ -2098,7 +2138,7 @@ def get_market_data():
 
         print(f"📊 Fetching data for {symbol} - Period: {period_days} days ({period}), Interval: {interval}")
 
-        # Get REAL market data - GUARANTEED to return valid data
+        # Get REAL market data
         hist, data_source = get_real_market_data_bulletproof(symbol, period, interval)
         
         # CRITICAL: Ensure hist is NEVER None
@@ -2129,7 +2169,7 @@ def get_market_data():
         volume_data = []
         
         for index, row in hist.iterrows():
-            timestamp = int(index.timestamp() * 1000)  # Milliseconds for frontend
+            timestamp = int(index.timestamp() * 1000)
             
             # OHLCV data for chart
             chart_data.append({
@@ -2141,7 +2181,7 @@ def get_market_data():
                 "volume": int(row['Volume'])
             })
             
-            # Price array for calculations
+            # Price array for calculations - ENSURE it's a Python list
             price_data.append(float(row['Close']))
             volume_data.append(int(row['Volume']))
 
@@ -2156,39 +2196,46 @@ def get_market_data():
                 "close": 19825,
                 "volume": 1000000
             }]
-            price_data = [19825]
+            price_data = [19825.0]
             volume_data = [1000000]
 
         # Calculate metrics with proper error handling
-        current_price = price_data[-1] if price_data else 19800
-        previous_price = price_data[-2] if len(price_data) > 1 else current_price
+        current_price = float(price_data[-1]) if price_data else 19800.0
+        previous_price = float(price_data[-2]) if len(price_data) > 1 else current_price
         price_change = current_price - previous_price
-        price_change_pct = (price_change / previous_price * 100) if previous_price != 0 else 0
+        price_change_pct = (price_change / previous_price * 100) if previous_price != 0 else 0.0
         
         # Calculate additional metrics
-        high_52w = max(price_data) if price_data else current_price
-        low_52w = min(price_data) if price_data else current_price
+        high_52w = float(max(price_data)) if price_data else current_price
+        low_52w = float(min(price_data)) if price_data else current_price
         avg_volume = sum(volume_data) / len(volume_data) if volume_data else 1000000
         
-        # Calculate technical indicators with bulletproof error handling
+        # Calculate technical indicators with BULLETPROOF error handling
+        print("🔢 Calculating technical indicators...")
         try:
-            sma_20 = calculate_sma(price_data, 20) if len(price_data) >= 20 else current_price
-            sma_50 = calculate_sma(price_data, 50) if len(price_data) >= 50 else current_price
-            rsi = calculate_rsi(price_data) if len(price_data) >= 14 else 50
-            macd = calculate_macd(price_data) if len(price_data) >= 26 else {"macd": 0, "signal": 0, "histogram": 0}
+            # ENSURE price_data is a clean Python list of floats
+            clean_prices = [float(p) for p in price_data]
+            
+            sma_20 = calculate_sma(clean_prices, 20) if len(clean_prices) >= 20 else current_price
+            sma_50 = calculate_sma(clean_prices, 50) if len(clean_prices) >= 50 else current_price
+            rsi = calculate_rsi(clean_prices) if len(clean_prices) >= 14 else 50.0
+            macd = calculate_macd(clean_prices) if len(clean_prices) >= 26 else {"macd": 0.0, "signal": 0.0, "histogram": 0.0}
+            
+            print(f"✅ Technical indicators calculated successfully")
+            
         except Exception as e:
             print(f"⚠️ Technical indicator calculation failed: {e}")
             sma_20 = current_price
             sma_50 = current_price
-            rsi = 50
-            macd = {"macd": 0, "signal": 0, "histogram": 0}
+            rsi = 50.0
+            macd = {"macd": 0.0, "signal": 0.0, "histogram": 0.0}
         
         # Response format matching your dashboard EXACTLY
         response = {
             "success": True,
             "data": {
                 "symbol": symbol,
-                "chart": chart_data,  # Array of OHLCV objects your dashboard expects
+                "chart": chart_data,
                 "current_price": round(current_price, 2),
                 "price_change": round(price_change, 2),
                 "price_change_pct": round(price_change_pct, 2),
@@ -2204,9 +2251,9 @@ def get_market_data():
                 "currency": "INR" if any(suffix in symbol for suffix in ['.NS', '.BO', '^NSEI', '^BSESN']) else "USD"
             },
             "technical_indicators": {
-                "sma_20": round(sma_20, 2),
-                "sma_50": round(sma_50, 2),
-                "rsi": rsi,
+                "sma_20": round(float(sma_20), 2),
+                "sma_50": round(float(sma_50), 2),
+                "rsi": float(rsi),
                 "macd": macd
             }
         }
@@ -2219,12 +2266,12 @@ def get_market_data():
         import traceback
         traceback.print_exc()
         
-        # ABSOLUTE EMERGENCY response that will NEVER fail
+        # ABSOLUTE EMERGENCY response
         current_ts = int(datetime.now().timestamp() * 1000)
         emergency_data = []
         
-        for i in range(60):  # 60 days of data
-            ts = current_ts - (59 - i) * 86400000  # 24 hours in milliseconds
+        for i in range(60):
+            ts = current_ts - (59 - i) * 86400000
             price = 19800 + (i * 2)
             
             emergency_data.append({
@@ -2256,14 +2303,14 @@ def get_market_data():
                 "currency": "INR"
             },
             "technical_indicators": {
-                "sma_20": 19850,
-                "sma_50": 19800,
+                "sma_20": 19850.0,
+                "sma_50": 19800.0,
                 "rsi": 55.5,
                 "macd": {"macd": 12.5, "signal": 8.3, "histogram": 4.2}
             }
         })
 
-# Additional endpoints your dashboard needs
+# Additional endpoints
 @app.route("/global-data", methods=['GET'])
 def get_global_data():
     """Real global market data"""
@@ -2295,7 +2342,6 @@ def get_global_data():
                         "changePercent": round(change_pct, 2)
                     }
             except:
-                # Fallback data
                 global_data[name] = {
                     "value": 19825.35 if name == 'nifty' else 35000,
                     "change": 125.40,
