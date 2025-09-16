@@ -1,0 +1,19 @@
+setup_commands.shCopy
+# Create project directory
+mkdir trading_platform
+cd trading_platform
+
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# Windows:
+venv\Scripts\activate
+# macOS/Linux:
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the application
+python app.py
