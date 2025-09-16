@@ -1532,7 +1532,7 @@ def fetch_yfinance_with_fallbacks(symbol, period, interval):
     return None
                  
 def calculate_sma(prices, period):
-    """Calculate Simple Moving Average - PURE PYTHON"""
+    """Calculate Simple Moving Average - PURE PYTHON ONLY"""
     try:
         if not prices or len(prices) < period:
             return float(prices[-1]) if prices else 0.0
@@ -1548,13 +1548,13 @@ def calculate_sma(prices, period):
         print(f"SMA error: {e}")
         return 0.0
 
-def calculate_rsi(prices, period=14):
-    """Calculate RSI - COMPLETELY PURE PYTHON - NO PANDAS"""
+def calculate_rsi_pure_python(prices, period=14):
+    """Calculate RSI - ABSOLUTELY NO PANDAS - PURE PYTHON ONLY"""
     try:
         if not prices or len(prices) < period + 1:
             return 50.0
         
-        # Convert to pure Python list
+        # Convert to pure Python list - NO PANDAS
         if hasattr(prices, 'tolist'):
             prices = prices.tolist()
         
@@ -1564,7 +1564,7 @@ def calculate_rsi(prices, period=14):
         if len(price_list) < period + 1:
             return 50.0
         
-        # Calculate price differences MANUALLY (NO .diff())
+        # Calculate price differences MANUALLY - NO .diff() NO PANDAS
         price_changes = []
         for i in range(1, len(price_list)):
             change = price_list[i] - price_list[i-1]
@@ -1576,19 +1576,27 @@ def calculate_rsi(prices, period=14):
         # Take last 'period' changes
         recent_changes = price_changes[-period:]
         
-        # Separate gains and losses
-        gains = [change if change > 0 else 0 for change in recent_changes]
-        losses = [-change if change < 0 else 0 for change in recent_changes]
+        # Separate gains and losses - PURE PYTHON
+        gains = []
+        losses = []
         
-        # Calculate averages
-        avg_gain = sum(gains) / period
-        avg_loss = sum(losses) / period
+        for change in recent_changes:
+            if change > 0:
+                gains.append(change)
+                losses.append(0)
+            else:
+                gains.append(0)
+                losses.append(-change)
+        
+        # Calculate averages - PURE PYTHON
+        avg_gain = sum(gains) / len(gains)
+        avg_loss = sum(losses) / len(losses)
         
         # Avoid division by zero
         if avg_loss == 0:
             return 100.0 if avg_gain > 0 else 50.0
         
-        # Calculate RSI
+        # Calculate RSI - PURE PYTHON
         rs = avg_gain / avg_loss
         rsi = 100 - (100 / (1 + rs))
         
@@ -1596,49 +1604,62 @@ def calculate_rsi(prices, period=14):
         
     except Exception as e:
         print(f"RSI calculation error: {e}")
+        import traceback
+        traceback.print_exc()
         return 50.0
 
-def calculate_ema(prices, period):
-    """Calculate EMA - PURE PYTHON"""
+def calculate_ema_pure_python(prices, period):
+    """Calculate EMA - ABSOLUTELY NO PANDAS - PURE PYTHON ONLY"""
     try:
         if not prices or len(prices) < period:
             return float(sum(prices) / len(prices)) if prices else 0.0
         
-        # Convert to list
+        # Convert to list - NO PANDAS
         if hasattr(prices, 'tolist'):
             prices = prices.tolist()
         
         price_list = [float(p) for p in prices]
         
-        # EMA calculation
+        # EMA calculation - PURE PYTHON ONLY
         multiplier = 2.0 / (period + 1)
+        
+        # Start with SMA for first value
         ema = sum(price_list[:period]) / period
         
-        for price in price_list[period:]:
+        # Calculate EMA for remaining values - PURE PYTHON
+        for i in range(period, len(price_list)):
+            price = price_list[i]
             ema = (price * multiplier) + (ema * (1 - multiplier))
         
         return float(ema)
         
     except Exception as e:
         print(f"EMA error: {e}")
+        import traceback
+        traceback.print_exc()
         return float(prices[-1]) if prices else 0.0
 
-def calculate_macd(prices):
-    """Calculate MACD - PURE PYTHON"""
+def calculate_macd_pure_python(prices):
+    """Calculate MACD - ABSOLUTELY NO PANDAS - PURE PYTHON ONLY"""
     try:
         if not prices or len(prices) < 26:
             return {"macd": 0.0, "signal": 0.0, "histogram": 0.0}
         
-        # Convert to list
+        # Convert to list - NO PANDAS
         if hasattr(prices, 'tolist'):
             prices = prices.tolist()
         
-        ema_12 = calculate_ema(prices, 12)
-        ema_26 = calculate_ema(prices, 26)
+        # Calculate EMAs using pure Python function
+        ema_12 = calculate_ema_pure_python(prices, 12)
+        ema_26 = calculate_ema_pure_python(prices, 26)
+        
+        # MACD line
         macd_line = ema_12 - ema_26
         
-        # Simple signal line
+        # Signal line (simplified - no .ewm() NO PANDAS)
         signal_line = macd_line * 0.8
+        
+        # Histogram
         histogram = macd_line - signal_line
         
         return {
@@ -1649,6 +1670,8 @@ def calculate_macd(prices):
         
     except Exception as e:
         print(f"MACD error: {e}")
+        import traceback
+        traceback.print_exc()
         return {"macd": 0.0, "signal": 0.0, "histogram": 0.0}
 
 def get_real_data_aggressive(symbol, period, interval):
@@ -1762,7 +1785,7 @@ def get_real_data_aggressive(symbol, period, interval):
     dates = [current_time - timedelta(days=i) for i in range(89, -1, -1)]
     
     # Base on real NIFTY patterns
-    base_price = 19800
+    base_price = 24800
     data = []
     
     for i, date in enumerate(dates):
@@ -1783,6 +1806,7 @@ def get_real_data_aggressive(symbol, period, interval):
     
     df = pd.DataFrame(data, index=dates)
     return df, "realistic_market_data"
+
 
 # --- Routes ---
 @app.route("/")
@@ -2153,7 +2177,7 @@ def get_market_data():
             prices.append(float(row['Close']))
             volumes.append(int(row['Volume']))
         
-        # DOUBLE CHECK: Ensure prices is a list
+        # TRIPLE CHECK: Ensure prices is a pure Python list
         if not isinstance(prices, list):
             prices = list(prices)
         
@@ -2161,9 +2185,11 @@ def get_market_data():
         prices = [float(p) for p in prices]
         
         print(f"🔢 Processing {len(prices)} prices as pure Python list")
+        print(f"🔍 First 5 prices: {prices[:5]}")
+        print(f"🔍 Price type check: {type(prices)} - {type(prices[0]) if prices else 'empty'}")
         
         # Calculate metrics
-        current_price = prices[-1] if prices else 19800.0
+        current_price = prices[-1] if prices else 24800.0
         previous_price = prices[-2] if len(prices) > 1 else current_price
         price_change = current_price - previous_price
         price_change_pct = (price_change / previous_price * 100) if previous_price != 0 else 0
@@ -2186,17 +2212,25 @@ def get_market_data():
             sma_50 = current_price
         
         try:
-            rsi = calculate_rsi(prices) if len(prices) >= 15 else 50.0
+            print(f"🔍 About to calculate RSI with {len(prices)} prices")
+            print(f"🔍 Prices type before RSI: {type(prices)}")
+            rsi = calculate_rsi_pure_python(prices) if len(prices) >= 15 else 50.0
             print(f"✅ RSI: {rsi}")
         except Exception as e:
             print(f"❌ RSI failed: {e}")
+            import traceback
+            traceback.print_exc()
             rsi = 50.0
         
         try:
-            macd = calculate_macd(prices) if len(prices) >= 26 else {"macd": 0.0, "signal": 0.0, "histogram": 0.0}
+            print(f"🔍 About to calculate MACD with {len(prices)} prices")
+            print(f"🔍 Prices type before MACD: {type(prices)}")
+            macd = calculate_macd_pure_python(prices) if len(prices) >= 26 else {"macd": 0.0, "signal": 0.0, "histogram": 0.0}
             print(f"✅ MACD: {macd}")
         except Exception as e:
             print(f"❌ MACD failed: {e}")
+            import traceback
+            traceback.print_exc()
             macd = {"macd": 0.0, "signal": 0.0, "histogram": 0.0}
         
         # Response
@@ -2241,7 +2275,7 @@ def get_market_data():
         
         for i in range(60):
             ts = current_ts - (59 - i) * 86400000
-            price = 19800 + (i * 2)
+            price = 24800 + (i * 2)
             
             emergency_chart.append({
                 "time": ts,
@@ -2257,13 +2291,13 @@ def get_market_data():
             "data": {
                 "symbol": "^NSEI",
                 "chart": emergency_chart,
-                "current_price": 19920.0,
+                "current_price": 24920.0,
                 "price_change": 25.50,
-                "price_change_pct": 0.13,
+                "price_change_pct": 0.10,
                 "volume": 60000000,
                 "avg_volume": 1000000,
-                "high_52w": 20000.0,
-                "low_52w": 19500.0,
+                "high_52w": 25000.0,
+                "low_52w": 24500.0,
                 "data_points": 60,
                 "period_days": 60,
                 "interval": "1d",
@@ -2272,10 +2306,10 @@ def get_market_data():
                 "currency": "INR"
             },
             "technical_indicators": {
-                "sma_20": 19800.0,
-                "sma_50": 19750.0,
+                "sma_20": 24800.0,
+                "sma_50": 24750.0,
                 "rsi": 55.5,
-                "macd": {"macd": 19.8, "signal": 15.8, "histogram": 4.0}
+                "macd": {"macd": 24.8, "signal": 19.8, "histogram": 5.0}
             }
         }), 200
 
@@ -2286,11 +2320,11 @@ def global_data():
     return jsonify({
         "success": True,
         "data": {
-            "nifty": {"value": 19825.35, "change": 125.40, "changePercent": 0.64},
-            "sensex": {"value": 65432.10, "change": 234.50, "changePercent": 0.36},
-            "dow": {"value": 34567.89, "change": -45.67, "changePercent": -0.13},
-            "nasdaq": {"value": 13456.78, "change": 67.89, "changePercent": 0.51},
-            "sp500": {"value": 4234.56, "change": 12.34, "changePercent": 0.29}
+            "nifty": {"value": 24825.35, "change": 125.40, "changePercent": 0.51},
+            "sensex": {"value": 81432.10, "change": 234.50, "changePercent": 0.29},
+            "dow": {"value": 41567.89, "change": -45.67, "changePercent": -0.11},
+            "nasdaq": {"value": 17456.78, "change": 67.89, "changePercent": 0.39},
+            "sp500": {"value": 5634.56, "change": 12.34, "changePercent": 0.22}
         }
     })
 
@@ -2300,12 +2334,12 @@ def options_data():
     return jsonify({
         "success": True,
         "data": {
-            "pcr_ratio": 1.25,
-            "max_pain": 19800,
-            "vix": 14.25,
-            "call_volume": 2500000,
-            "put_volume": 3125000,
-            "total_oi": 45000000
+            "pcr_ratio": 1.15,
+            "max_pain": 24800,
+            "vix": 13.45,
+            "call_volume": 2800000,
+            "put_volume": 3220000,
+            "total_oi": 48000000
         }
     })
 
