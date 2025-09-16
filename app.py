@@ -1385,51 +1385,7 @@ class AdvancedMarketDataFetcher:
         
         return df
 
-    def fetch_market_data(self, symbol: str, period: str = '1mo', interval: str = '5m') -> Tuple[Optional[pd.DataFrame], str]:
-        """Main method to fetch market data with all fallbacks"""
-        
-        # Check cache first
-        cache_key = f"market_data:{symbol}:{period}:{interval}"
-        cached_data = self._get_cached_data(cache_key)
-        
-        if cached_data:
-            try:
-                df = pd.read_json(cached_data)
-                logger.info(f"✅ Cache hit for {symbol}")
-                return df, "cached"
-            except:
-                pass
-        
-        # Try yfinance first (most reliable)
-        data = self._fetch_yfinance_advanced(symbol, period, interval)
-        if data is not None and not data.empty:
-            self._set_cached_data(cache_key, data.to_json())
-            return data, "yfinance"
-        
-        # Try alternative APIs in parallel
-        with ThreadPoolExecutor(max_workers=3) as executor:
-            futures = [
-                executor.submit(api_func, symbol, period, interval)
-                for api_func in self.alternative_apis[1:]  # Skip yfinance as we tried it
-            ]
-            
-            for future in as_completed(futures, timeout=15):
-                try:
-                    result = future.result()
-                    if result is not None and not result.empty:
-                        self._set_cached_data(cache_key, result.to_json())
-                        return result, "alternative_api"
-                except Exception as e:
-                    logger.debug(f"Alternative API failed: {e}")
-                    continue
-        
-        # Generate synthetic data as last resort
-        synthetic_data = self._generate_synthetic_data(symbol, period, interval)
-        return synthetic_data, "synthetic"
-        
-        # Initialize the fetcher
-        market_fetcher = AdvancedMarketDataFetcher()
-
+    
 def get_symbol_variants(symbol):
     """Get all possible symbol variants to try"""
     variants = [symbol] 
@@ -1477,136 +1433,176 @@ def fetch_real_alpha_vantage(symbol, period, interval):
     except Exception as e:
         print(f"Alpha Vantage failed: {e}")
         return None    
-    
-def fetch_real_yahoo_finance(symbol, period, interval):
-    """Fetch REAL Yahoo Finance data using their actual API"""
+          
+def fetch_real_polygon_data(symbol, period, interval):
+    """Fetch REAL data from Polygon.io (FREE tier available)"""
     try:
-        # Real Yahoo Finance API endpoints
-        base_url = "https://query1.finance.yahoo.com/v8/finance/chart/"
+        # Get FREE API key from: https://polygon.io/
+        API_KEY = "YOUR_FREE_POLYGON_KEY"  # Replace with your free key
         
-        # Calculate real timestamps
-        end_time = int(datetime.now().timestamp())
-        period_map = {'1d': 1, '5d': 5, '1mo': 30, '3mo': 90, '6mo': 180, '1y': 365}
-        days = period_map.get(period, 30)
-        start_time = int((datetime.now() - timedelta(days=days)).timestamp())
+        # Real Polygon API
+        end_date = datetime.now().strftime('%Y-%m-%d')
+        start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
         
-        # Real symbol mapping for Indian markets
-        symbol_variants = {
-            '^NSEI': '^NSEI',
-            'NIFTY': '^NSEI',
-            '^BSESN': '^BSESN', 
-            'SENSEX': '^BSESN',
-            'RELIANCE': 'RELIANCE.NS',
-            'TCS': 'TCS.NS',
-            'INFY': 'INFY.NS'
-        }
+        # Real API endpoint
+        url = f"https://api.polygon.io/v2/aggs/ticker/{symbol}/range/1/day/{start_date}/{end_date}"
         
-        real_symbol = symbol_variants.get(symbol, symbol)
-        
-        # Real API call
-        url = f"{base_url}{real_symbol}"
         params = {
-            'period1': start_time,
-            'period2': end_time,
-            'interval': interval,
-            'includePrePost': 'false',
-            'events': 'div,split'
+            'adjusted': 'true',
+            'sort': 'asc',
+            'apikey': API_KEY
         }
         
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
-        
-        response = requests.get(url, params=params, headers=headers, timeout=15)
-        
-        if response.status_code != 200:
-            return None
-            
+        response = requests.get(url, params=params, timeout=10)
         data = response.json()
         
-        if not data.get('chart', {}).get('result'):
-            return None
-            
-        result = data['chart']['result'][0]
-        timestamps = result['timestamp']
-        quotes = result['indicators']['quote'][0]
-        
-        # Build real DataFrame
-        df_data = []
-        for i, timestamp in enumerate(timestamps):
-            if all(quotes[key][i] is not None for key in ['open', 'high', 'low', 'close']):
+        if data.get('status') == 'OK' and 'results' in data:
+            df_data = []
+            for result in data['results']:
                 df_data.append({
-                    'Open': quotes['open'][i],
-                    'High': quotes['high'][i],
-                    'Low': quotes['low'][i],
-                    'Close': quotes['close'][i],
-                    'Volume': quotes['volume'][i] if quotes['volume'][i] else 0
+                    'Open': result['o'],
+                    'High': result['h'],
+                    'Low': result['l'],
+                    'Close': result['c'],
+                    'Volume': result['v']
                 })
-        
-        if not df_data:
-            return None
             
-        dates = [datetime.fromtimestamp(ts) for ts in timestamps[:len(df_data)]]
-        df = pd.DataFrame(df_data, index=dates)
+            dates = [datetime.fromtimestamp(r['t']/1000) for r in data['results']]
+            df = pd.DataFrame(df_data, index=dates)
+            
+            return df
         
-        return df
+        return None
         
     except Exception as e:
-        print(f"Real Yahoo Finance failed: {e}")
+        print(f"Real Polygon failed: {e}")
         return None
+    
+    # Indian market variants
+    if not any(suffix in symbol for suffix in ['.NS', '.BO', '.BSE']):
+        variants.extend([f"{symbol}.NS", f"{symbol}.BO"])
+    
+    # Index variants
+    index_mappings = {
+        'NIFTY': ['^NSEI', 'NIFTYBEES.NS', 'INFY.NS', 'TCS.NS'],
+        'SENSEX': ['^BSESN', 'RELIANCE.BO', 'HDFC.BO'],
+        'BANKNIFTY': ['^NSEBANK', 'HDFCBANK.NS', 'ICICIBANK.NS'],
+        '^NSEI': ['NIFTYBEES.NS', 'INFY.NS', 'TCS.NS'],
+        '^BSESN': ['RELIANCE.BO', 'HDFC.BO']
+    }
+    
+    if symbol.upper() in index_mappings:
+        variants.extend(index_mappings[symbol.upper()])
+    
+    # Global variants
+    variants.extend([f"^{symbol}", f"{symbol}-USD"])
+    
+    return list(set(variants))
+
+def fetch_yfinance_with_fallbacks(symbol, period, interval):
+    """Try yfinance with multiple symbol variants and approaches"""
+    variants = get_symbol_variants(symbol)
+    
+    for variant in variants:
+        try:
+            print(f"🔄 Trying yfinance: {variant}")
+            ticker = yf.Ticker(variant)
+            
+            # Multiple approaches
+            approaches = [
+                lambda: ticker.history(period=period, interval=interval, timeout=15),
+                lambda: ticker.history(period='1y', interval=interval, timeout=15),
+                lambda: ticker.history(period='1mo', interval='1d', timeout=15),
+                lambda: ticker.history(start=datetime.now() - timedelta(days=30), end=datetime.now(), timeout=15)
+            ]
+            
+            for approach in approaches:
+                try:
+                    data = approach()
+                    if not data.empty and len(data) >= 5:
+                        print(f"✅ yfinance success: {variant}")
+                        return data
+                except:
+                    continue
+                    
+        except Exception as e:
+            print(f"Failed {variant}: {e}")
+            continue
+    
+    return None
 
 def calculate_sma(prices, period):
     """Calculate Simple Moving Average"""
-    if len(prices) < period:
+    if not prices or len(prices) < period:
         return prices[-1] if prices else 0
     return sum(prices[-period:]) / period
 
 def calculate_rsi(prices, period=14):
-    """Calculate RSI"""
-    if len(prices) < period + 1:
+    """Calculate RSI - Fixed for Python lists"""
+    if not prices or len(prices) < period + 1:
         return 50
     
-    deltas = [prices[i] - prices[i-1] for i in range(1, len(prices))]
+    # Calculate price changes manually (no pandas needed)
+    deltas = []
+    for i in range(1, len(prices)):
+        deltas.append(prices[i] - prices[i-1])
+    
+    if not deltas:
+        return 50
+    
+    # Separate gains and losses
     gains = [d if d > 0 else 0 for d in deltas]
     losses = [-d if d < 0 else 0 for d in deltas]
     
+    # Calculate average gain and loss over the period
+    if len(gains) < period or len(losses) < period:
+        return 50
+        
     avg_gain = sum(gains[-period:]) / period
     avg_loss = sum(losses[-period:]) / period
     
+    # Avoid division by zero
     if avg_loss == 0:
-        return 100
+        return 100 if avg_gain > 0 else 50
     
+    # Calculate RSI
     rs = avg_gain / avg_loss
     rsi = 100 - (100 / (1 + rs))
     return round(rsi, 2)
 
 def calculate_macd(prices):
-    """Calculate MACD"""
-    if len(prices) < 26:
+    """Calculate MACD - Fixed for Python lists"""
+    if not prices or len(prices) < 26:
         return {"macd": 0, "signal": 0, "histogram": 0}
     
-    ema_12 = calculate_ema(prices, 12)
-    ema_26 = calculate_ema(prices, 26)
-    macd_line = ema_12 - ema_26
-    
-    return {
-        "macd": round(macd_line, 2),
-        "signal": round(macd_line * 0.8, 2),
-        "histogram": round(macd_line * 0.2, 2)
-    }
+    try:
+        ema_12 = calculate_ema(prices, 12)
+        ema_26 = calculate_ema(prices, 26)
+        macd_line = ema_12 - ema_26
+        
+        return {
+            "macd": round(macd_line, 2),
+            "signal": round(macd_line * 0.8, 2),
+            "histogram": round(macd_line * 0.2, 2)
+        }
+    except:
+        return {"macd": 0, "signal": 0, "histogram": 0}
 
 def calculate_ema(prices, period):
-    """Calculate Exponential Moving Average"""
-    if len(prices) < period:
+    """Calculate Exponential Moving Average - Fixed for Python lists"""
+    if not prices or len(prices) < period:
         return sum(prices) / len(prices) if prices else 0
     
-    multiplier = 2 / (period + 1)
-    ema = sum(prices[:period]) / period
-    
-    for price in prices[period:]:
-        ema = (price * multiplier) + (ema * (1 - multiplier))
-    
-    return ema
+    try:
+        multiplier = 2 / (period + 1)
+        ema = sum(prices[:period]) / period
+        
+        for price in prices[period:]:
+            ema = (price * multiplier) + (ema * (1 - multiplier))
+        
+        return ema
+    except:
+        return prices[-1] if prices else 0
 
 def get_real_yfinance_data(symbol, period, interval):
     """Get REAL data from yfinance with proper error handling"""
@@ -1759,416 +1755,6 @@ def get_real_market_data_bulletproof(symbol, period, interval):
     
     df = pd.DataFrame(fallback_data, index=dates)
     return df, "realistic_fallback"
-
-    
-def fetch_real_polygon_data(symbol, period, interval):
-    """Fetch REAL data from Polygon.io (FREE tier available)"""
-    try:
-        # Get FREE API key from: https://polygon.io/
-        API_KEY = "YOUR_FREE_POLYGON_KEY"  # Replace with your free key
-        
-        # Real Polygon API
-        end_date = datetime.now().strftime('%Y-%m-%d')
-        start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
-        
-        # Real API endpoint
-        url = f"https://api.polygon.io/v2/aggs/ticker/{symbol}/range/1/day/{start_date}/{end_date}"
-        
-        params = {
-            'adjusted': 'true',
-            'sort': 'asc',
-            'apikey': API_KEY
-        }
-        
-        response = requests.get(url, params=params, timeout=10)
-        data = response.json()
-        
-        if data.get('status') == 'OK' and 'results' in data:
-            df_data = []
-            for result in data['results']:
-                df_data.append({
-                    'Open': result['o'],
-                    'High': result['h'],
-                    'Low': result['l'],
-                    'Close': result['c'],
-                    'Volume': result['v']
-                })
-            
-            dates = [datetime.fromtimestamp(r['t']/1000) for r in data['results']]
-            df = pd.DataFrame(df_data, index=dates)
-            
-            return df
-        
-        return None
-        
-    except Exception as e:
-        print(f"Real Polygon failed: {e}")
-        return None
-    
-    # Indian market variants
-    if not any(suffix in symbol for suffix in ['.NS', '.BO', '.BSE']):
-        variants.extend([f"{symbol}.NS", f"{symbol}.BO"])
-    
-    # Index variants
-    index_mappings = {
-        'NIFTY': ['^NSEI', 'NIFTYBEES.NS', 'INFY.NS', 'TCS.NS'],
-        'SENSEX': ['^BSESN', 'RELIANCE.BO', 'HDFC.BO'],
-        'BANKNIFTY': ['^NSEBANK', 'HDFCBANK.NS', 'ICICIBANK.NS'],
-        '^NSEI': ['NIFTYBEES.NS', 'INFY.NS', 'TCS.NS'],
-        '^BSESN': ['RELIANCE.BO', 'HDFC.BO']
-    }
-    
-    if symbol.upper() in index_mappings:
-        variants.extend(index_mappings[symbol.upper()])
-    
-    # Global variants
-    variants.extend([f"^{symbol}", f"{symbol}-USD"])
-    
-    return list(set(variants))
-
-def fetch_yfinance_with_fallbacks(symbol, period, interval):
-    """Try yfinance with multiple symbol variants and approaches"""
-    variants = get_symbol_variants(symbol)
-    
-    for variant in variants:
-        try:
-            print(f"🔄 Trying yfinance: {variant}")
-            ticker = yf.Ticker(variant)
-            
-            # Multiple approaches
-            approaches = [
-                lambda: ticker.history(period=period, interval=interval, timeout=15),
-                lambda: ticker.history(period='1y', interval=interval, timeout=15),
-                lambda: ticker.history(period='1mo', interval='1d', timeout=15),
-                lambda: ticker.history(start=datetime.now() - timedelta(days=30), end=datetime.now(), timeout=15)
-            ]
-            
-            for approach in approaches:
-                try:
-                    data = approach()
-                    if not data.empty and len(data) >= 5:
-                        print(f"✅ yfinance success: {variant}")
-                        return data
-                except:
-                    continue
-                    
-        except Exception as e:
-            print(f"Failed {variant}: {e}")
-            continue
-    
-    return None
-
-def fetch_yahoo_direct_api(symbol, period, interval):
-    """Direct Yahoo Finance API call"""
-    try:
-        variants = get_symbol_variants(symbol)
-        
-        for variant in variants:
-            try:
-                # Calculate timestamps
-                end_time = int(datetime.now().timestamp())
-                
-                period_days = {'1d': 1, '5d': 5, '1mo': 30, '3mo': 90, '6mo': 180, '1y': 365}
-                days = period_days.get(period, 30)
-                start_time = int((datetime.now() - timedelta(days=days)).timestamp())
-                
-                url = f"https://query1.finance.yahoo.com/v8/finance/chart/{variant}"
-                params = {
-                    'period1': start_time,
-                    'period2': end_time,
-                    'interval': interval,
-                    'includePrePost': 'false',
-                    'events': 'div,split'
-                }
-                
-                headers = {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                }
-                
-                response = requests.get(url, params=params, headers=headers, timeout=10)
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    
-                    if 'chart' in data and data['chart']['result']:
-                        result = data['chart']['result'][0]
-                        timestamps = result['timestamp']
-                        quotes = result['indicators']['quote'][0]
-                        
-                        df_data = []
-                        for i, timestamp in enumerate(timestamps):
-                            if all(quotes[key][i] is not None for key in ['open', 'high', 'low', 'close']):
-                                df_data.append({
-                                    'Open': quotes['open'][i],
-                                    'High': quotes['high'][i],
-                                    'Low': quotes['low'][i],
-                                    'Close': quotes['close'][i],
-                                    'Volume': quotes['volume'][i] if quotes['volume'][i] else 0
-                                })
-                        
-                        if df_data:
-                            dates = [datetime.fromtimestamp(ts) for ts in timestamps[:len(df_data)]]
-                            df = pd.DataFrame(df_data, index=dates)
-                            print(f"✅ Yahoo direct API success: {variant}")
-                            return df
-                            
-            except Exception as e:
-                print(f"Yahoo direct failed for {variant}: {e}")
-                continue
-                
-    except Exception as e:
-        print(f"Yahoo direct API failed: {e}")
-    
-    return None
-
-def generate_realistic_market_data(symbol, period, interval):
-    """Generate highly realistic synthetic market data"""
-    print(f"🔄 Generating realistic data for {symbol}")
-    
-    # Determine data points
-    period_days = {'1d': 1, '5d': 5, '1mo': 30, '3mo': 90, '6mo': 180, '1y': 365}
-    days = period_days.get(period, 30)
-    
-    interval_minutes = {'1m': 1, '5m': 5, '15m': 15, '30m': 30, '1h': 60, '1d': 1440}
-    
-    if interval == '1d':
-        points = days
-        freq = 'D'
-    else:
-        interval_mins = interval_minutes.get(interval, 5)
-        points = min(int((days * 24 * 60) / interval_mins), 1000)
-        freq = f'{interval_mins}T'
-    
-    # Generate realistic dates
-    end_date = datetime.now()
-    dates = pd.date_range(end=end_date, periods=points, freq=freq)
-    
-    # Realistic base prices
-    base_prices = {
-        'NIFTY': 19800, '^NSEI': 19800, 'NIFTYBEES.NS': 198,
-        'SENSEX': 66000, '^BSESN': 66000,
-        'BANKNIFTY': 45000, '^NSEBANK': 45000,
-        'RELIANCE': 2500, 'TCS': 3600, 'INFY': 1450,
-        'SPY': 450, 'QQQ': 380, 'AAPL': 180
-    }
-    
-    base_price = base_prices.get(symbol.upper(), 100)
-    
-    # Generate realistic returns
-    np.random.seed(hash(symbol) % 2**32)
-    returns = np.random.normal(0.0005, 0.015, len(dates))
-    
-    # Calculate prices
-    prices = [base_price]
-    for ret in returns[1:]:
-        new_price = prices[-1] * (1 + ret)
-        prices.append(max(new_price, 0.01))
-    
-    # Generate OHLC data
-    data = []
-    for i, (date, close) in enumerate(zip(dates, prices)):
-        daily_range = abs(returns[i]) * close * 3
-        open_price = prices[i-1] if i > 0 else close
-        
-        high = max(open_price, close) + np.random.exponential(daily_range * 0.3)
-        low = min(open_price, close) - np.random.exponential(daily_range * 0.3)
-        
-        high = max(high, open_price, close)
-        low = min(low, open_price, close)
-        
-        volume = int(np.random.lognormal(13, 1))
-        
-        data.append({
-            'Open': round(open_price, 2),
-            'High': round(high, 2),
-            'Low': round(low, 2),
-            'Close': round(close, 2),
-            'Volume': volume
-        })
-    
-    df = pd.DataFrame(data, index=dates)
-    print(f"✅ Generated realistic data: {len(df)} points")
-    return df
-
-def get_market_data_bulletproof(symbol, period, interval):
-    """Bulletproof data fetching that never fails"""
-    
-    # Strategy 1: Try yfinance with multiple variants
-    data = fetch_yfinance_with_fallbacks(symbol, period, interval)
-    if data is not None and not data.empty:
-        return data, "yfinance"
-    
-    # Strategy 2: Try direct Yahoo API
-    data = fetch_yahoo_direct_api(symbol, period, interval)
-    if data is not None and not data.empty:
-        return data, "yahoo_direct"
-    
-    # Strategy 3: Generate realistic synthetic data
-    data = generate_realistic_market_data(symbol, period, interval)
-    return data, "synthetic"
-
-def get_real_yfinance_data(symbol, period, interval):
-    """Get REAL data from yfinance with proper error handling"""
-    try:
-        print(f"🔄 Trying yfinance for {symbol}")
-        
-        # Real symbol mappings for Indian markets
-        symbol_map = {
-            '^NSEI': '^NSEI',
-            'NIFTY': '^NSEI', 
-            'NIFTY50': '^NSEI',
-            '^BSESN': '^BSESN',
-            'SENSEX': '^BSESN',
-            'BANKNIFTY': '^NSEBANK'
-        }
-        
-        real_symbol = symbol_map.get(symbol, symbol)
-        
-        # Try yfinance with timeout
-        ticker = yf.Ticker(real_symbol)
-        hist = ticker.history(period=period, interval=interval, timeout=30)
-        
-        if hist is not None and not hist.empty and len(hist) > 0:
-            print(f"✅ yfinance success: {len(hist)} records for {real_symbol}")
-            return hist
-        else:
-            print(f"❌ yfinance returned empty data for {real_symbol}")
-            return None
-            
-    except Exception as e:
-        print(f"❌ yfinance failed for {symbol}: {str(e)}")
-        return None
-
-def get_real_yahoo_api_data(symbol, period, interval):
-    """Get REAL data from Yahoo Finance API directly"""
-    try:
-        print(f"🔄 Trying Yahoo API for {symbol}")
-        
-        # Real Yahoo Finance API
-        end_time = int(datetime.now().timestamp())
-        
-        # Calculate start time based on period
-        period_days = {'1d': 1, '5d': 5, '1mo': 30, '3mo': 90, '6mo': 180, '1y': 365}
-        days = period_days.get(period, 30)
-        start_time = int((datetime.now() - timedelta(days=days)).timestamp())
-        
-        # Real symbol mapping
-        symbol_map = {
-            '^NSEI': '^NSEI',
-            'NIFTY': '^NSEI',
-            'NIFTY50': '^NSEI',
-            '^BSESN': '^BSESN', 
-            'SENSEX': '^BSESN',
-            'BANKNIFTY': '^NSEBANK'
-        }
-        
-        real_symbol = symbol_map.get(symbol, symbol)
-        
-        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{real_symbol}"
-        params = {
-            'period1': start_time,
-            'period2': end_time,
-            'interval': interval,
-            'includePrePost': 'false'
-        }
-        
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
-        
-        response = requests.get(url, params=params, headers=headers, timeout=30)
-        
-        if response.status_code == 200:
-            data = response.json()
-            
-            if 'chart' in data and data['chart']['result'] and len(data['chart']['result']) > 0:
-                result = data['chart']['result'][0]
-                
-                if 'timestamp' in result and 'indicators' in result:
-                    timestamps = result['timestamp']
-                    quotes = result['indicators']['quote'][0]
-                    
-                    # Build DataFrame
-                    df_data = []
-                    for i, timestamp in enumerate(timestamps):
-                        try:
-                            if (i < len(quotes['open']) and 
-                                quotes['open'][i] is not None and
-                                quotes['high'][i] is not None and
-                                quotes['low'][i] is not None and
-                                quotes['close'][i] is not None):
-                                
-                                df_data.append({
-                                    'Open': float(quotes['open'][i]),
-                                    'High': float(quotes['high'][i]),
-                                    'Low': float(quotes['low'][i]),
-                                    'Close': float(quotes['close'][i]),
-                                    'Volume': int(quotes['volume'][i]) if quotes['volume'][i] else 0
-                                })
-                        except (IndexError, TypeError, ValueError):
-                            continue
-                    
-                    if df_data and len(df_data) > 0:
-                        dates = [datetime.fromtimestamp(ts) for ts in timestamps[:len(df_data)]]
-                        df = pd.DataFrame(df_data, index=dates)
-                        print(f"✅ Yahoo API success: {len(df)} records for {real_symbol}")
-                        return df
-        
-        print(f"❌ Yahoo API failed for {symbol}")
-        return None
-        
-    except Exception as e:
-        print(f"❌ Yahoo API error for {symbol}: {str(e)}")
-        return None
-
-def get_real_market_data_bulletproof(symbol, period, interval):
-    """BULLETPROOF real data fetching - NEVER returns None"""
-    
-    print(f"📊 Starting REAL data fetch for {symbol}")
-    
-    # Strategy 1: Try yfinance
-    data = get_real_yfinance_data(symbol, period, interval)
-    if data is not None and not data.empty:
-        return data, "yfinance_real"
-    
-    # Strategy 2: Try Yahoo API directly  
-    data = get_real_yahoo_api_data(symbol, period, interval)
-    if data is not None and not data.empty:
-        return data, "yahoo_api_real"
-    
-    # Strategy 3: Try alternative symbols
-    alternative_symbols = ['^NSEI', 'NIFTYBEES.NS', 'INFY.NS', 'TCS.NS', 'RELIANCE.NS']
-    
-    for alt_symbol in alternative_symbols:
-        print(f"🔄 Trying alternative symbol: {alt_symbol}")
-        
-        data = get_real_yfinance_data(alt_symbol, period, interval)
-        if data is not None and not data.empty:
-            return data, f"alternative_real_{alt_symbol}"
-    
-    # Strategy 4: LAST RESORT - Create minimal valid data structure
-    print("⚠️ ALL REAL SOURCES FAILED - Creating minimal fallback")
-    
-    # Create a minimal but valid DataFrame
-    current_time = datetime.now()
-    dates = [current_time - timedelta(days=i) for i in range(19, -1, -1)]
-    
-    fallback_data = []
-    base_price = 19800  # Realistic NIFTY base
-    
-    for i, date in enumerate(dates):
-        price = base_price + (i * 2)  # Slight upward trend
-        fallback_data.append({
-            'Open': price,
-            'High': price + 15,
-            'Low': price - 15, 
-            'Close': price + 5,
-            'Volume': 1000000
-        })
-    
-    df = pd.DataFrame(fallback_data, index=dates)
-    return df, "minimal_fallback"
-
 # --- Routes ---
 @app.route("/")
 def root():
@@ -2483,6 +2069,7 @@ Reason: [Short reason]
         return jsonify({"error": f"❌ Exception: {str(e)}"})
 
 # ✅ Live Market Data API (Yahoo Finance proxy) - Optimized for Render
+
 @app.route("/api/market-data", methods=['POST'])
 def get_market_data():
     """Market data endpoint matching your dashboard's exact expectations"""
@@ -2572,7 +2159,7 @@ def get_market_data():
             price_data = [19825]
             volume_data = [1000000]
 
-        # Calculate metrics
+        # Calculate metrics with proper error handling
         current_price = price_data[-1] if price_data else 19800
         previous_price = price_data[-2] if len(price_data) > 1 else current_price
         price_change = current_price - previous_price
@@ -2582,6 +2169,19 @@ def get_market_data():
         high_52w = max(price_data) if price_data else current_price
         low_52w = min(price_data) if price_data else current_price
         avg_volume = sum(volume_data) / len(volume_data) if volume_data else 1000000
+        
+        # Calculate technical indicators with bulletproof error handling
+        try:
+            sma_20 = calculate_sma(price_data, 20) if len(price_data) >= 20 else current_price
+            sma_50 = calculate_sma(price_data, 50) if len(price_data) >= 50 else current_price
+            rsi = calculate_rsi(price_data) if len(price_data) >= 14 else 50
+            macd = calculate_macd(price_data) if len(price_data) >= 26 else {"macd": 0, "signal": 0, "histogram": 0}
+        except Exception as e:
+            print(f"⚠️ Technical indicator calculation failed: {e}")
+            sma_20 = current_price
+            sma_50 = current_price
+            rsi = 50
+            macd = {"macd": 0, "signal": 0, "histogram": 0}
         
         # Response format matching your dashboard EXACTLY
         response = {
@@ -2604,10 +2204,10 @@ def get_market_data():
                 "currency": "INR" if any(suffix in symbol for suffix in ['.NS', '.BO', '^NSEI', '^BSESN']) else "USD"
             },
             "technical_indicators": {
-                "sma_20": round(calculate_sma(price_data, 20), 2) if len(price_data) >= 20 else round(current_price, 2),
-                "sma_50": round(calculate_sma(price_data, 50), 2) if len(price_data) >= 50 else round(current_price, 2),
-                "rsi": calculate_rsi(price_data) if len(price_data) >= 14 else 50,
-                "macd": calculate_macd(price_data) if len(price_data) >= 26 else {"macd": 0, "signal": 0, "histogram": 0}
+                "sma_20": round(sma_20, 2),
+                "sma_50": round(sma_50, 2),
+                "rsi": rsi,
+                "macd": macd
             }
         }
 
@@ -2724,6 +2324,7 @@ def get_options_data():
         
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
 
 @app.route("/api/ai-predict", methods=["POST"])
 def ai_predict():
