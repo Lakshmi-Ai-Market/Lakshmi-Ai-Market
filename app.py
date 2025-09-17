@@ -2164,18 +2164,6 @@ def get_symbols():
         "AAPL", "TSLA", "MSFT", "AMZN"
     ])
 
- import logging
-import time
-from datetime import datetime, timedelta
-import requests
-import json
-import random
-import pandas as pd
-
-# Configure logger
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 @app.route('/api/ai-strategy/<symbol>')
 @limiter.limit("10 per minute")
 def ai_strategy(symbol):
