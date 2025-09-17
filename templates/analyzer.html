@@ -118,17 +118,6 @@
         <button id="exportBtn" class="btn" title="Export CSV">Export CSV</button>
         <button id="rawBtn" class="btn btn-ghost" title="View raw JSON">Raw JSON</button>
       </div>
-
-      <hr style="border:none;border-top:1px solid rgba(255,255,255,0.03);margin:12px 0">
-
-      <div style="font-size:0.9rem;color:var(--muted)">
-        <strong>Quick tips</strong>
-        <ul style="padding-left:18px">
-          <li>Choose symbol → interval → Run Analysis.</li>
-          <li>AI uses your OpenRouter key on server; front-end only requests the AI endpoint.</li>
-          <li>If symbols fail, use the static list below or contact backend routes.</li>
-        </ul>
-      </div>
     </aside>
 
     <!-- main -->
@@ -175,50 +164,14 @@
         <h3 style="margin-top:0;color:var(--accent)">Raw strategy JSON</h3>
         <pre id="rawJson">No data yet</pre>
       </div>
-
-      <div class="card">
-        <h3 style="margin-top:0;color:var(--accent)">All strategies (hard list for UI reference)</h3>
-        <!-- This list is for reference; the actual displayed strategies come from the backend 'strategies' dict -->
-        <div style="font-size:0.9rem;color:var(--muted);line-height:1.5">
-          <strong>Total strategies: 46</strong>
-          <ul>
-            <li>rsi_momentum, macd_crossover, stochastic_oscillator, williams_r, cci, connors_rsi, coppock_curve, trix_indicator, ultimate_oscillator</li>
-            <li>ma_crossover, ema_crossover, adx_trend, ichimoku_cloud, aroon_indicator, supertrend, keltner_channels, atr_trailing_stop, hull_ma</li>
-            <li>vwap, anchored_vwap, on_balance_volume, chaikin_money_flow, chaikin_oscillator, volume_spike, vroc</li>
-            <li>bollinger_bands, keltner_breakout, atr_breakout, mass_index, bollinger_squeeze</li>
-            <li>bullish_engulfing, bearish_engulfing, hammer, shooting_star, doji, morning_star, evening_star, piercing, dark_cloud_cover, bullish_harami, bearish_harami</li>
-            <li>pivot_points, fibonacci_retracement, elder_ray, pivot_breakout</li>
-            <li>deepseek_interpretation</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="card" id="debugCard">
-        <h3 style="margin-top:0;color:var(--accent)">Debug / Info</h3>
-        <div id="debugInfo" class="small">Ready</div>
-      </div>
     </aside>
   </div>
 
   <script>
-    // ========= Configuration & fallbacks =========
-    const API = ''; // relative root (assumes Flask serves these routes on same origin)
-    const fallbackSymbols = [
-      {symbol:'NIFTY', name:'NIFTY 50'}, {symbol:'BANKNIFTY', name:'BANK NIFTY'},
-      {symbol:'SENSEX', name:'SENSEX'}, {symbol:'FINNIFTY', name:'FIN NIFTY'}, {symbol:'MIDCPNIFTY', name:'MIDCAP NIFTY'},
-      {symbol:'AAPL', name:'Apple Inc'}, {symbol:'GOOGL', name:'Google'}, {symbol:'MSFT', name:'Microsoft'},
-      {symbol:'TSLA', name:'Tesla'}, {symbol:'AMZN', name:'Amazon'}, {symbol:'NVDA', name:'NVIDIA'}, {symbol:'META', name:'Meta'}
-    ];
-
-    // UI elements
+    const API = '';
     const symbolSelect = document.getElementById('symbolSelect');
-    const intervalEl = document.getElementById('interval');
-    const periodEl = document.getElementById('period');
     const runBtn = document.getElementById('runBtn');
     const aiBtn = document.getElementById('aiBtn');
-    const exportBtn = document.getElementById('exportBtn');
-    const rawBtn = document.getElementById('rawBtn');
-
     const statusText = document.getElementById('statusText');
     const currentPriceEl = document.getElementById('currentPrice');
     const priceChangeEl = document.getElementById('priceChange');
@@ -230,336 +183,58 @@
     const summaryBox = document.getElementById('summaryBox');
     const aiBox = document.getElementById('aiBox');
     const rawJson = document.getElementById('rawJson');
-    const debugInfo = document.getElementById('debugInfo');
+    let lastAnalysis = null, chart = null;
 
-    let lastAnalysis = null;
-    let lastMarketData = null;
-    let chart = null;
+    function setStatus(txt){ statusText.textContent = txt; }
 
-    // ========= Helpers =========
-    function setStatus(txt, color){
-      statusText.textContent = txt;
-      debugInfo.textContent = `${txt} • ${new Date().toLocaleTimeString()}`;
-    }
-
-    async function tryFetchCandidates(candidates, params = {}) {
-      // candidates: array of strings with placeholders {symbol} etc OR fully formed URLs
-      for (const c of candidates) {
-        try {
-          let url = c;
-          // replace placeholders
-          if (params.symbol) url = url.replace('{symbol}', encodeURIComponent(params.symbol));
-          // append query string if provided and not already present
-          if (params.q) {
-            const q = new URLSearchParams(params.q).toString();
-            url += (url.includes('?') ? '&' : '?') + q;
-          }
-          const res = await fetch(url, { method: 'GET' });
-          if (res.ok){
-            const json = await res.json();
-            return { json, url };
-          }
-        } catch (err) {
-          // try next
-          console.warn('Candidate failed', c, err);
-        }
-      }
-      throw new Error('All fetch candidates failed');
-    }
-
-    // Build chart
     function buildChart(labels, closes){
       const ctx = document.getElementById('tradingChart').getContext('2d');
       if (chart) chart.destroy();
       chart = new Chart(ctx, {
         type: 'line',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: 'Close',
-            data: closes,
-            tension: 0.18,
-            borderWidth: 2,
-            borderColor: 'rgba(0,212,255,0.9)',
-            fill: false,
-            pointRadius: 0
-          }]
-        },
-        options: {
-          responsive:true,
-          maintainAspectRatio:false,
-          plugins:{ legend:{display:false} },
-          scales: {
-            x: { display:true, ticks:{color:'#9fb6cd'}},
-            y: { display:true, ticks:{color:'#9fb6cd'} }
-          }
-        }
+        data: { labels, datasets:[{label:'Close',data:closes,borderColor:'#00d4ff',borderWidth:2,tension:0.18}]},
+        options: { responsive:true, plugins:{legend:{display:false}} }
       });
     }
 
-    function formatNumber(n){
-      if (n === null || n === undefined) return '—';
-      return (Math.round(n*100)/100).toLocaleString();
-    }
-
-    // create strategy DOM
-    function renderStrategies(strategiesObj){
-      strategyListEl.innerHTML = '';
-      const entries = Object.entries(strategiesObj || {});
-      if (!entries.length) {
-        strategyListEl.innerHTML = '<div class="small">No strategies returned from backend.</div>';
-        return;
-      }
-
-      // sort by confidence desc
-      entries.sort((a,b)=> (b[1].confidence||0) - (a[1].confidence||0));
-
-      for (const [name, res] of entries){
-        const sig = (res.signal || res.SIGNAL || res.signal?.toString() || 'neutral').toString().toUpperCase();
-        const conf = Number(res.confidence || res.conf || 0);
-        const item = document.createElement('div');
-        item.className = 'strategy-item';
-
-        const left = document.createElement('div');
-        left.innerHTML = `<div class="strategy-name">${name}</div><div class="small">${res.reason || res.Reason || ''}</div>`;
-
-        const right = document.createElement('div');
-        const badge = document.createElement('div');
-        badge.className = 'signal ' + (sig === 'BUY' ? 'BUY' : sig === 'SELL' ? 'SELL' : 'NEUTRAL');
-        badge.textContent = sig;
-        const confEl = document.createElement('div');
-        confEl.className = 'small';
-        confEl.style.textAlign = 'right';
-        confEl.innerHTML = `<div style="font-weight:700">${conf}%</div>
-          <div style="height:6px;background:rgba(255,255,255,0.04);border-radius:6px;margin-top:6px;width:120px;overflow:hidden">
-            <div style="width:${Math.max(6,conf)}%;height:6px;background:linear-gradient(90deg,#4ecdc4,#00d4ff)"></div>
-          </div>`;
-
-        right.appendChild(badge);
-        right.appendChild(confEl);
-
-        item.appendChild(left);
-        item.appendChild(right);
-        strategyListEl.appendChild(item);
-      }
-    }
-
-    function updateSummary(analysis){
-      if (!analysis) { summaryBox.innerHTML = '<div class="small">No summary</div>'; return; }
-      const c = analysis.consensus || {};
-      const s = analysis.summary || {};
-      summaryBox.innerHTML = `
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <div><strong>Signal:</strong> ${c.signal || '—'}</div>
-          <div><strong>Strength:</strong> ${c.strength || '—'}%</div>
-          <div><strong>Avg confidence:</strong> ${c.confidence || '—'}%</div>
-          <div><strong>Total:</strong> ${s.total || 0} (B:${s.buy||0} S:${s.sell||0} N:${s.neutral||0})</div>
-        </div>
-      `;
-    }
-
-    function showRawJson(obj){
-      rawJson.textContent = JSON.stringify(obj,null,2);
-    }
-
-    // CSV export
-    function downloadCSV(analysis){
-      if (!analysis || !analysis.strategies) { alert('No analysis to export'); return; }
-      const rows = [['strategy','signal','confidence','reason','entry','stop_loss','target']];
-      for (const [name, r] of Object.entries(analysis.strategies)){
-        rows.push([name, r.signal || '', r.confidence || '', (r.reason||'').replace(/[\r\n]+/g,' '), r.entry||'', r.stop_loss||'', r.target||'']);
-      }
-      const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-      const blob = new Blob([csv],{type:'text/csv'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = `analysis_${symbolSelect.value}_${Date.now()}.csv`; document.body.appendChild(a); a.click(); a.remove();
-      URL.revokeObjectURL(url);
-    }
-
-    // ========= Network operations =========
-    async function fetchSymbols(){
-      try {
-        setStatus('Fetching symbols...');
-        const res = await fetch(API + '/api/symbols');
-        if (!res.ok) throw new Error('symbols fetch failed');
-        const data = await res.json();
-        const symbols = [];
-        if (data && data.symbols){
-          (data.symbols.indian_indices||[]).forEach(s=>symbols.push({symbol:s.symbol, name:s.name}));
-          (data.symbols.us_stocks||[]).forEach(s=>symbols.push({symbol:s.symbol, name:s.name}));
-        }
-        if (!symbols.length) throw new Error('No symbols in response');
-        symbolSelect.innerHTML = symbols.map(s=>`<option value="${s.symbol}">${s.symbol} — ${s.name}</option>`).join('');
-        setStatus('Symbols loaded');
-      } catch (err) {
-        // fallback to static
-        symbolSelect.innerHTML = fallbackSymbols.map(s=>`<option value="${s.symbol}">${s.symbol} — ${s.name}</option>`).join('');
-        setStatus('Symbols fallback loaded');
-      }
-    }
-
     async function fetchMarketData(symbol, interval, period){
-      // candidates: try path param and query param variants
-      const cand = [
+      const urls = [
         `/api/market-data/${encodeURIComponent(symbol)}?interval=${interval}&period=${period}`,
-        `/api/market-data/?symbol=${encodeURIComponent(symbol)}&interval=${interval}&period=${period}`,
-        `/api/market-data?symbol=${encodeURIComponent(symbol)}&interval=${interval}&period=${period}`,
-        `/api/market-data/${encodeURIComponent(symbol)}/?interval=${interval}&period=${period}`
+        `/api/market-data?symbol=${encodeURIComponent(symbol)}&interval=${interval}&period=${period}`
       ];
-      try {
-        setStatus('Fetching market data...');
-        for (const url of cand){
-          try {
-            const res = await fetch(API + url);
-            if (!res.ok) continue;
-            const json = await res.json();
-            return {json, url};
-          } catch(e){ continue; }
-        }
-        throw new Error('Market data fetch failed (all candidates)');
-      } catch (err) {
-        throw err;
-      }
-    }
-
-    async function fetchAnalysis(symbol, interval, period){
-      const cand = [
-        `/api/analysis/${encodeURIComponent(symbol)}?strategy_type=all&interval=${interval}&period=${period}`,
-        `/api/analysis?symbol=${encodeURIComponent(symbol)}&strategy_type=all&interval=${interval}&period=${period}`,
-        `/api/analysis/${encodeURIComponent(symbol)}/?strategy_type=all&interval=${interval}&period=${period}`
-      ];
-      try {
-        setStatus('Requesting analysis from server...');
-        for (const url of cand){
-          try {
-            const res = await fetch(API + url);
-            if (!res.ok) continue;
-            const json = await res.json();
-            return {json, url};
-          } catch(e){ continue; }
-        }
-        throw new Error('Analysis fetch failed (all candidates)');
-      } catch (err) { throw err; }
-    }
-
-    async function fetchAiStrategy(symbol){
-      const cand = [
-        `/api/ai-strategy/${encodeURIComponent(symbol)}`,
-        `/api/ai-strategy?symbol=${encodeURIComponent(symbol)}`
-      ];
-      for (const url of cand){
-        try {
-          const res = await fetch(API + url);
-          if (!res.ok) continue;
-          const json = await res.json();
-          return {json, url};
-        } catch(e){ continue; }
+      for (const url of urls){
+        try { let r = await fetch(API+url); if (r.ok) return await r.json(); } catch(e){}
       }
       return null;
     }
 
-    // ========= Main run =========
-    async function runFullAnalysis({doAi=true} = {doAi:true}){
-      const symbol = symbolSelect.value;
-      const interval = intervalEl.value;
-      const period = Number(periodEl.value) || 120;
-
-      setStatus('Running analysis...');
-      try {
-        runBtn.disabled = true;
-        aiBtn.disabled = true;
-
-        // 1) market data
-        const mres = await fetchMarketData(symbol, interval, period);
-        const market_json = mres.json;
-        lastMarketData = market_json;
-        // extract chart
-        const chart = market_json.chart || market_json.data?.chart || market_json.data || market_json;
-        const chartCandles = Array.isArray(chart) ? chart : (chart?.chart || []);
-        if (!chartCandles || chartCandles.length < 5) {
-          throw new Error('Insufficient market data returned. Need at least 5 candles.');
-        }
-
-        // fill chart
-        const labels = chartCandles.map(c => {
-          if (c.time) return new Date(c.time).toLocaleString();
-          if (c.date) return c.date;
-          return '';
-        });
-        const closes = chartCandles.map(c=>Number(c.close ?? c.c ?? c.price ?? 0));
-
-        buildChart(labels, closes);
-
-        // show current price
-        const currentPrice = closes[closes.length-1];
-        currentPriceEl.textContent = formatNumber(currentPrice);
-        const prevClose = closes[closes.length-2] || currentPrice;
-        const pct = ((currentPrice - prevClose)/Math.max(1, prevClose))*100;
-        priceChangeEl.textContent = `${pct>0?'+':''}${pct.toFixed(2)}%`;
-        priceChangeEl.className = 'small ' + (pct>=0 ? 'positive' : 'negative');
-
-        // 2) analysis
-        const ares = await fetchAnalysis(symbol, interval, period);
-        const analysis = ares.json;
-        lastAnalysis = analysis;
-        showRawJson(analysis);
-        renderStrategies(analysis.strategies || {});
-        updateSummary(analysis);
-
-        // show some metrics
-        atrVal.textContent = formatNumber(analysis?.market_conditions?.atr ?? analysis?.indicators?.atr ?? (analysis?.market_data?.atr ?? '—'));
-        volatilityEl.textContent = (analysis?.market_conditions?.volatility || '—');
-        consensusEl.textContent = (analysis?.consensus?.signal || '—');
-        strengthEl.textContent = (analysis?.consensus?.strength ? `${analysis.consensus.strength}%` : '—');
-
-        // 3) AI (optional)
-        if (doAi) {
-          setStatus('Generating AI overlay...');
-          const ai = await fetchAiStrategy(symbol);
-          if (ai && ai.json){
-            aiBox.textContent = ai.json.ai || ai.json.recommendation || JSON.stringify(ai.json).slice(0,3000);
-          } else {
-            aiBox.textContent = 'AI endpoint not available or returned no content. If you have OpenRouter key on server, AI will run there (server-side).';
-          }
-        }
-
-        setStatus('Analysis complete');
-      } catch (err) {
-        console.error(err);
-        setStatus('Error: ' + (err.message || err));
-        alert('Analysis failed: ' + (err.message || err));
-      } finally {
-        runBtn.disabled = false;
-        aiBtn.disabled = false;
+    async function fetchAnalysis(symbol, interval, period){
+      const urls = [
+        `/api/analysis/${encodeURIComponent(symbol)}?interval=${interval}&period=${period}`,
+        `/api/analysis?symbol=${encodeURIComponent(symbol)}&interval=${interval}&period=${period}`
+      ];
+      for (const url of urls){
+        try { let r = await fetch(API+url); if (r.ok) return await r.json(); } catch(e){}
       }
+      return null;
     }
 
-    // ========= small utilities =========
-    function tryShowRaw(){ if (lastAnalysis) showRawJson(lastAnalysis); else alert('No analysis to show.'); }
+    async function runFullAnalysis(){
+      const symbol = symbolSelect.value || 'NIFTY';
+      setStatus('Loading...');
+      const md = await fetchMarketData(symbol,'1d',120);
+      if (!md || !md.chart || md.chart.length<5){ setStatus('No data'); return; }
+      const closes = md.chart.map(c=>c.close);
+      buildChart(md.chart.map(c=>c.date||c.time), closes);
+      currentPriceEl.textContent = closes.at(-1)||'—';
+      const analysis = await fetchAnalysis(symbol,'1d',120);
+      rawJson.textContent = JSON.stringify(analysis,null,2);
+      setStatus('Done');
+    }
 
-    // ========= keyboard shortcuts =========
-    document.addEventListener('keydown', (e)=>{
-      if (e.ctrlKey && e.key.toLowerCase() === 'r'){ e.preventDefault(); runBtn.click(); }
-      if (e.ctrlKey && e.key.toLowerCase() === 'a'){ e.preventDefault(); aiBtn.click(); }
-      if (e.ctrlKey && e.key.toLowerCase() === 'e'){ e.preventDefault(); exportBtn.click(); }
-    });
-
-    // ========= event bindings =========
-    runBtn.addEventListener('click', ()=> runFullAnalysis({doAi:true}));
-    aiBtn.addEventListener('click', ()=> runFullAnalysis({doAi:true}));
-    rawBtn.addEventListener('click', tryShowRaw);
-    exportBtn.addEventListener('click', ()=> downloadCSV(lastAnalysis));
-
-    // boot
-    (async function init(){
-      await fetchSymbols();
-      setStatus('Ready');
-      // preselect first symbol
-      if (!symbolSelect.value && symbolSelect.options.length) symbolSelect.selectedIndex = 0;
-      // auto-run a quick analysis for first symbol (safe, can be commented out)
-      // await runFullAnalysis({doAi:false});
-    })();
+    runBtn.addEventListener('click', runFullAnalysis);
+    aiBtn.addEventListener('click', runFullAnalysis);
+    symbolSelect.innerHTML = `<option value="NIFTY">NIFTY</option><option value="BANKNIFTY">BANKNIFTY</option><option value="SENSEX">SENSEX</option><option value="AAPL">AAPL</option><option value="TSLA">TSLA</option>`;
   </script>
 </body>
 </html>
