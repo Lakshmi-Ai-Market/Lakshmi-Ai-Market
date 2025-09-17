@@ -2155,48 +2155,31 @@ def api_docs():
     """API documentation page"""
     return render_template('api_docs.html')
 
-@app.route('/api/market-data/')
-@limiter.limit("30 per minute")
-@cache.cached(timeout=60)  # Cache for 1 minute
-def get_market_data(symbol):
+@app.route("/api/market-data", methods=["GET"])
+@app.route("/api/market-data/<symbol>", methods=["GET"])
+def get_market_data(symbol=None):
     """
-    Get real-time market data for a symbol
-    
-    Args:
-        symbol: Stock symbol (e.g., AAPL, NIFTY, BANKNIFTY)
-    
-    Query Parameters:
-        interval: Time interval (1d, 1h, 4h, 15m, 5m, 1m)
-        period: Number of days (7, 30, 60, 90, 180, 365)
+    Unified market data endpoint:
+    - Supports /api/market-data?symbol=NIFTY
+    - Supports /api/market-data/NIFTY
     """
+
+    # Handle both path and query param
+    if symbol is None:
+        symbol = request.args.get("symbol")
+
+    interval = request.args.get("interval", "1d")
+    period = request.args.get("period", "120")
+
+    if not symbol:
+        return jsonify({"success": False, "error": "Missing symbol"}), 400
+
     try:
-        interval = request.args.get('interval', '1d')
-        period = int(request.args.get('period', 60))
-        
-        logger.info(f"Fetching market data for {symbol}, interval: {interval}, period: {period}")
-        
-        # Fetch data from Yahoo Finance (no API key required)
-        market_data = data_fetcher.fetch_yahoo_data(symbol, interval, period)
-        
-        if not market_data:
-            return jsonify({
-                'error': 'Failed to fetch market data',
-                'message': 'All data sources unavailable'
-            }), 404
-        
-        return jsonify({
-            'success': True,
-            'data': market_data,
-            'timestamp': datetime.now().isoformat(),
-            'source': 'Yahoo Finance'
-        })
-        
+        fetcher = DataFetcher()
+        market_data = fetcher.fetch_yahoo_data(symbol, interval, int(period))
+        return jsonify(market_data)
     except Exception as e:
-        logger.error(f"Error fetching market data: {str(e)}")
-        return jsonify({
-            'error': 'Internal server error',
-            'message': str(e)
-        }), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/analysis/')
 @limiter.limit("20 per minute")
