@@ -3,9 +3,9 @@ import random
 import csv
 import os
 import requests
-import time
 import json
 import numpy as np
+import time
 from datetime import datetime, timedelta
 from tools.strategy_switcher import select_strategy
 import pandas as pd
@@ -48,6 +48,11 @@ from flask_caching import Cache
 from services.data_fetcher import DataFetcher
 from services.strategy_engine import StrategyEngine
 from utils.indicators import TechnicalIndicators
+
+# Configure logger
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 # configure logging once at startup
 logging.basicConfig(
@@ -2370,6 +2375,8 @@ Be specific and professional. This is real money analysis.
         model_used = "local_fallback"
         
         try:
+            # Add your OpenRouter API key here if you have one
+            OPENROUTER_KEY = None  # Replace with your actual key
             if OPENROUTER_KEY:
                 ai_analysis, model_used = call_ai_with_fallbacks(ai_prompt)
                 logger.info(f"✅ AI analysis completed using {model_used}")
@@ -2590,6 +2597,12 @@ def calculate_real_support_resistance(chart_data, lookback=50):
 def call_ai_with_fallbacks(prompt):
     """Call AI with multiple model fallbacks"""
     try:
+        OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+        OPENROUTER_KEY = None  # Add your key here if you have one
+        
+        if not OPENROUTER_KEY:
+            raise Exception("No AI API key configured")
+            
         headers = {
             "Authorization": f"Bearer {OPENROUTER_KEY}",
             "Content-Type": "application/json"
@@ -2626,6 +2639,7 @@ def call_ai_with_fallbacks(prompt):
         logger.error(f"AI analysis failed: {e}")
         return "Technical analysis suggests following the quantitative strategy signals.", "local_fallback"
 
+        
 @app.route("/analyzer")
 def analyzer_page():
     return render_template("analyzer.html")
