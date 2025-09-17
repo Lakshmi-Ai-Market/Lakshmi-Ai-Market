@@ -2417,11 +2417,11 @@ def ai_strategy(symbol):
             analysis_result = strategy_engine.run_analysis({'chart': daily_data}, strategy_type='all')
             all_strategies = analysis_result.get('strategies', {})
 
-        if all_strategies:
-            logger.info(f"✅ StrategyEngine returned {len(all_strategies)} strategies successfully")
-        else:
-            logger.warning("⚠️ StrategyEngine returned no strategies, switching to fallback")
-            all_strategies = generate_bulletproof_strategies_from_real_data(daily_data, symbol)
+            if all_strategies:
+                logger.info(f"✅ StrategyEngine returned {len(all_strategies)} strategies successfully")
+            else:
+                logger.warning("⚠️ StrategyEngine returned no strategies, switching to fallback")
+                all_strategies = generate_bulletproof_strategies_from_real_data(daily_data, symbol)
 
         except Exception as e:
             logger.warning(f"⚠️ StrategyEngine failed: {e} → using bulletproof fallback")
