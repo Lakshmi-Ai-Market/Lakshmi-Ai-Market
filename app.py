@@ -2247,41 +2247,161 @@ def run_analysis(symbol):
             'message': str(e)
         }), 500
 
-@app.route('/api/ai-strategy/')
+@app.route('/api/ai-strategy/<symbol>')
 @limiter.limit("10 per minute")
 def ai_strategy(symbol):
     """
-    Generate AI-powered trading suggestions
-    
-    Args:
-        symbol: Stock symbol
+    Generate AI-powered trading suggestions using StrategyEngine + DeepSeek (OpenRouter).
+    Falls back to strategy_engine.generate_ai_suggestions() when OpenRouter fails.
     """
     try:
         logger.info(f"Generating AI strategy for {symbol}")
-        
-        # Fetch market data
+
+        # 1) fetch market data (daily 60 days)
         market_data = data_fetcher.fetch_yahoo_data(symbol, '1d', 60)
         if not market_data:
-            return jsonify({'error': 'Failed to fetch market data'}), 404
-        
-        # Generate AI suggestions
-        ai_suggestions = strategy_engine.generate_ai_suggestions(market_data)
-        
-        return jsonify({
-            'success': True,
-            'symbol': symbol,
-            'suggestions': ai_suggestions,
-            'confidence_score': ai_suggestions.get('overall_confidence', 0),
-            'timestamp': datetime.now().isoformat()
-        })
-        
+            return jsonify({'success': False, 'error': 'Failed to fetch market data'}), 404
+
+        # 2) run your full engine to get the raw strategy outputs
+        analysis_results = strategy_engine.run_analysis(market_data, strategy_type='all')
+
+        # 3) compute technical indicators summary (optional but useful to include)
+        tech_indicators = indicators.calculate_all(market_data['chart'])
+
+        # 4) build a compact summary for the AI prompt (structured but concise)
+        # we'll include top N strategy signals and a short market snapshot
+        def format_top_signals(results, top_n=12):
+            rows = []
+            # sort by confidence desc
+            items = sorted(results.items(), key=lambda kv: kv[1].get('confidence',0), reverse=True)
+            for name, info in items[:top_n]:
+                rows.append(f"- {name}: {info.get('signal','neutral').upper()} ({info.get('confidence',0)}%) — {info.get('reason','')}")
+            return "\n".join(rows)
+
+        signals_text = format_top_signals(analysis_results, top_n=20)
+        last_price = market_data['chart'][-1]['close'] if market_data['chart'] else None
+        avg_vol = market_data.get('avg_volume', None)
+
+        # 5) system + user prompt construction for DeepSeek
+        system_prompt = (
+            "You are an expert institutional quant trader and market analyst. "
+            "Given the market OHLCV series, technical indicator summary and outputs from multiple strategies, "
+            "produce a clear, actionable intelligence summary: directional bias (BUY/SELL/NEUTRAL) with a numeric confidence (0-100), "
+            "primary reasons (2–4 bullet points), suggested entries (price / percent), stops, and 1-2 realistic targets. "
+            "Prefer concise, unambiguous language fit for a trading desk. Use today's date where helpful."
+        )
+
+        user_prompt = (
+            f"Symbol: {symbol}\n"
+            f"Latest price: {last_price}\n"
+            f"Avg volume (period): {avg_vol}\n"
+            f"Top strategy signals (name: signal (conf%) — reason):\n{signals_text}\n\n"
+            f"Technical indicators summary (short): {json.dumps(tech_indicators)[:1200]}\n\n"
+            "Produce:\n"
+            "1) Overall call: BUY/SELL/NEUTRAL and confidence %\n"
+            "2) 2-4 reasons (bullet points)\n"
+            "3) Entry recommendation (exact price or relative percent) and suggested stop-loss\n"
+            "4) 1-2 targets (price or percent) and rough risk-reward\n"
+            "5) Short note on expected time horizon (intraday/swing/weekly) and risk level\n"
+            "Return results as JSON only with keys: overall, reasons, entry, stoploss, targets, horizon, risk_level, raw_explain (short)."
+        )
+
+        # 6) Call OpenRouter / DeepSeek
+        try:
+            deepseek_text = call_openrouter_deepseek(system_prompt, user_prompt, max_tokens=900, temperature=0.18)
+            # Attempt to parse JSON from model output (the model is asked to return JSON only)
+            try:
+                # model may return code fences or whitespace — be resilient
+                cleaned = deepseek_text.strip()
+                # if model wrapped JSON in ```json ``` fences, remove them
+                if cleaned.startswith("```"):
+                    cleaned = cleaned.split("```", 2)[-1].strip()
+                parsed = json.loads(cleaned)
+                # Ensure parsed has required keys
+                if isinstance(parsed, dict) and parsed.get('overall'):
+                    suggestions = parsed
+                else:
+                    # if model returned plain text, wrap into suggestions list
+                    suggestions = {
+                        'overall': 'NEUTRAL',
+                        'confidence': 50,
+                        'reasons': [deepseek_text.strip()],
+                        'entry': None,
+                        'stoploss': None,
+                        'targets': [],
+                        'horizon': 'unknown',
+                        'risk_level': 'unknown',
+                        'raw_explain': deepseek_text.strip()
+                    }
+            except Exception:
+                # Non-JSON output: include model text in "raw_explain" and also include a safe compact AI suggestion fallback
+                suggestions = {
+                    'overall': 'NEUTRAL',
+                    'confidence': 50,
+                    'reasons': [deepseek_text.strip()[:1000]],
+                    'entry': None,
+                    'stoploss': None,
+                    'targets': [],
+                    'horizon': 'unknown',
+                    'risk_level': 'unknown',
+                    'raw_explain': deepseek_text.strip()
+                }
+
+            # 7) Prepare response for frontend (aiArea expects suggestions: array of objects {message:...})
+            # Convert structured suggestions into a list for front-end consumption
+            suggestion_messages = []
+            if suggestions.get('reasons'):
+                suggestion_messages += [{"message": r} for r in suggestions.get('reasons')[:4]]
+            # Add an executive summary line
+            exec_line = f"{suggestions.get('overall','NEUTRAL')} — {suggestions.get('confidence',0)}%"
+            suggestion_messages.insert(0, {"message": f"SUMMARY: {exec_line}"})
+            if suggestions.get('entry'):
+                suggestion_messages.append({"message": f"Entry: {suggestions.get('entry')}"})
+            if suggestions.get('stoploss'):
+                suggestion_messages.append({"message": f"Stoploss: {suggestions.get('stoploss')}"})
+            if suggestions.get('targets'):
+                suggestion_messages.append({"message": f"Targets: {suggestions.get('targets')}"})
+
+            # Compose final return object
+            return jsonify({
+                'success': True,
+                'symbol': symbol,
+                'suggestions': suggestion_messages,
+                'structured': suggestions,
+                'confidence_score': suggestions.get('confidence', suggestions.get('overall_confidence', 0)),
+                'timestamp': datetime.now().isoformat()
+            })
+
+        except Exception as open_err:
+            logger.warning("OpenRouter/DeepSeek failed: %s", str(open_err))
+            # fallback to your local generator in strategy_engine
+            try:
+                fallback = strategy_engine.generate_ai_suggestions(market_data)
+                # normalize fallback to suggestions list
+                messages = []
+                if isinstance(fallback, dict) and fallback.get('suggestions'):
+                    messages = fallback['suggestions']
+                elif isinstance(fallback, list):
+                    messages = [{'message': str(x.get('message', x))} for x in fallback]
+                else:
+                    messages = [{'message': str(fallback)}]
+                return jsonify({
+                    'success': True,
+                    'symbol': symbol,
+                    'suggestions': messages,
+                    'confidence_score': fallback.get('overall_confidence', 0) if isinstance(fallback, dict) else 0,
+                    'fallback': True,
+                    'error': str(open_err),
+                    'timestamp': datetime.now().isoformat()
+                })
+            except Exception as fallback_err:
+                logger.error("Fallback AI also failed: %s", fallback_err)
+                return jsonify({'success': False, 'error': 'AI generation failed', 'details': str(fallback_err)}), 500
+
     except Exception as e:
         logger.error(f"Error generating AI strategy: {str(e)}")
-        return jsonify({
-            'error': 'AI strategy generation failed',
-            'message': str(e)
-        }), 500
-
+        return jsonify({'success': False, 'message': str(e)}), 500
+            
 @app.route('/api/symbols')
 @cache.cached(timeout=3600)  # Cache for 1 hour
 def get_symbols():
