@@ -2155,32 +2155,57 @@ def api_docs():
     """API documentation page"""
     return render_template('api_docs.html')
 
-@app.route("/api/market-data", methods=["GET"])
-@app.route("/api/market-data/<symbol>", methods=["GET"])
-def get_market_data(symbol=None):
+@app.route('/api/market-data/<symbol>')
+@limiter.limit("30 per minute")
+def get_market_data(symbol):
     """
-    Unified market data endpoint:
-    - Supports /api/market-data?symbol=NIFTY
-    - Supports /api/market-data/NIFTY
+    Get real-time market data for a symbol (safe version)
+    
+    Args:
+        symbol: Stock symbol (e.g., AAPL, NIFTY, BANKNIFTY)
+    
+    Query Parameters:
+        interval: Time interval (1d, 1h, 4h, 15m, 5m, 1m)
+        period: Number of days (7, 30, 60, 90, 180, 365)
     """
-
-    # Handle both path and query param
-    if symbol is None:
-        symbol = request.args.get("symbol")
-
-    interval = request.args.get("interval", "1d")
-    period = request.args.get("period", "120")
-
-    if not symbol:
-        return jsonify({"success": False, "error": "Missing symbol"}), 400
-
     try:
-        fetcher = DataFetcher()
-        market_data = fetcher.fetch_yahoo_data(symbol, interval, int(period))
-        return jsonify(market_data)
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        interval = request.args.get('interval', '1d')
+        period = int(request.args.get('period', 60))
 
+        logger.info(f"Fetching market data for {symbol}, interval={interval}, period={period}")
+
+        # Fetch real Yahoo Finance data
+        market_data = data_fetcher.fetch_yahoo_data(symbol, interval, period)
+
+        # ✅ SAFETY: If no data, return empty chart (frontend won’t crash)
+        if not market_data or not market_data.get("chart"):
+            logger.warning(f"No data found for {symbol}")
+            return jsonify({
+                "success": False,
+                "symbol": symbol,
+                "chart": [],
+                "message": f"No market data available for {symbol}"
+            }), 200
+
+        # ✅ Return safe JSON with chart
+        return jsonify({
+            "success": True,
+            "symbol": symbol,
+            "data": market_data,
+            "chart": market_data.get("chart", []),
+            "timestamp": datetime.now().isoformat(),
+            "source": "Yahoo Finance"
+        })
+
+    except Exception as e:
+        logger.error(f"Error fetching market data for {symbol}: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": "Internal server error",
+            "message": str(e),
+            "chart": []
+        }), 500
+        
 @app.route('/api/analysis/')
 @limiter.limit("20 per minute")
 @cache.cached(timeout=120)  # Cache for 2 minutes
