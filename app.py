@@ -2409,24 +2409,23 @@ def ai_strategy(symbol):
         
         logger.info(f"💰 Real price: ₹{current_price:.2f} ({price_change:+.2f}%) from {data_source_used}")
         
-        # RUN BULLETPROOF STRATEGY ANALYSIS WITH REAL DATA
         # RUN STRATEGY ANALYSIS WITH REAL DATA
-logger.info("🧠 Running full StrategyEngine (50 strategies) with REAL data...")
+        logger.info("🧠 Running full StrategyEngine (50 strategies) with REAL data...")
 
-try:
-    strategy_engine = StrategyEngine()
-    analysis_result = strategy_engine.run_analysis({'chart': daily_data}, strategy_type='all')
-    all_strategies = analysis_result.get('strategies', {})
+        try:
+            strategy_engine = StrategyEngine()
+            analysis_result = strategy_engine.run_analysis({'chart': daily_data}, strategy_type='all')
+            all_strategies = analysis_result.get('strategies', {})
 
-    if all_strategies:
-        logger.info(f"✅ StrategyEngine returned {len(all_strategies)} strategies successfully")
-    else:
-        logger.warning("⚠️ StrategyEngine returned no strategies, switching to fallback")
-        all_strategies = generate_bulletproof_strategies_from_real_data(daily_data, symbol)
+        if all_strategies:
+            logger.info(f"✅ StrategyEngine returned {len(all_strategies)} strategies successfully")
+        else:
+            logger.warning("⚠️ StrategyEngine returned no strategies, switching to fallback")
+            all_strategies = generate_bulletproof_strategies_from_real_data(daily_data, symbol)
 
-except Exception as e:
-    logger.warning(f"⚠️ StrategyEngine failed: {e} → using bulletproof fallback")
-    all_strategies = generate_bulletproof_strategies_from_real_data(daily_data, symbol)
+        except Exception as e:
+            logger.warning(f"⚠️ StrategyEngine failed: {e} → using bulletproof fallback")
+            all_strategies = generate_bulletproof_strategies_from_real_data(daily_data, symbol)
 
         # ANALYZE SIGNALS WITH BULLETPROOF LOGIC USING REAL DATA
         logger.info("🔍 Analyzing strategy signals with bulletproof logic using REAL data...")
