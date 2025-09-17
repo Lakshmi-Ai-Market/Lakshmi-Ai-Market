@@ -117,6 +117,13 @@ app = Flask(__name__)
 app.secret_key = "lakshmi_secret_key"
 app.config['UPLOAD_FOLDER'] = 'static/voice_notes'
 
+# Correct for flask-limiter >= 3.x
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"]
+)
+limiter.init_app(app)
+
 # Initialize OAuth
 oauth = OAuth(app)
 
@@ -187,11 +194,7 @@ romantic_replies = [
     "Being your wife is my sweetest blessing. 💋",
     "Want to hear something naughty, darling? 😏"
 ]
-limiter = Limiter(
-    app,
-    key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"]
-)
+
 # -----------------------
 # User handling
 # -----------------------
