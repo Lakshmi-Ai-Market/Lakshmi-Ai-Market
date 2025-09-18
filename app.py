@@ -51,6 +51,7 @@ from services.strategy_engine import StrategyEngine
 from utils.indicators import TechnicalIndicators
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3, os
+import openai
 
 # Add the project root to Python path to import your services
 project_root = os.path.dirname(os.path.abspath(__file__))
