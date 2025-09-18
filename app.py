@@ -177,7 +177,7 @@ instagram = oauth.register(
     client_kwargs={"scope": "user_profile"}
 )
 
-# --- Dummy user for testing ---
+app = Flask(__name__)
 DB_PATH = "users.db"
 
 # --- Setup DB if not exists ---
@@ -195,7 +195,7 @@ def init_db():
         conn.commit()
         conn.close()
 
-        # Create your admin account directly
+        # Create admin user directly
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute("INSERT INTO users (username, email, password, is_admin) VALUES (?, ?, ?, ?)",
@@ -1887,11 +1887,30 @@ def root():
 def cached_view():
     return "This is cached for 60s"
 
+@app.route('/auth/signup', methods=['GET'])
+def signup_page():
+    return render_template('signup.html')
 
-@app.route("/login", methods=["GET"])
-def login_page():
-    # Renders templates/login.html
-    return render_template("login.html")
+@app.route('/auth/signup', methods=['POST'])
+def signup_submit():
+    username = request.form.get('username')
+    email = request.form.get('email')
+    password = request.form.get('password')
+
+    if not username or not password:
+        return jsonify({"success": False, "message": "Missing fields"}), 400
+
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
+                  (username, email, generate_password_hash(password)))
+        conn.commit()
+        conn.close()
+    except sqlite3.IntegrityError:
+        return jsonify({"success": False, "message": "Username already exists"}), 400
+
+    return jsonify({"success": True, "redirect": "/login"})
 
 @app.route('/auth/login', methods=['POST'])
 def login():
@@ -1910,15 +1929,19 @@ def login():
 
     stored_password, is_admin = row
 
-    # ✅ Admin direct login (no password check if it's you)
+    # ✅ Admin bypass
     if is_admin == 1 and username == "monjit":
         return jsonify({"success": True, "redirect": "/admin-dashboard"})
 
-    # ✅ Normal users → check password
+    # ✅ Normal users
     if check_password_hash(stored_password, password):
         return jsonify({"success": True, "redirect": "/dashboard"})
 
     return jsonify({"success": False, "message": "Invalid password"}), 401
+
+@app.route('/login', methods=['GET'])
+def login_page():
+    return render_template('login.html')
 
 @app.route("/auth/biometric", methods=["POST"])
 def biometric_auth():
@@ -2051,30 +2074,6 @@ def dashboard():
     # Render your real dashboard template here
     return render_template("index.html", name=name, mood="happy")
     
-@app.route('/auth/signup', methods=['GET'])
-def signup_page():
-    return render_template('signup.html')
-
-@app.route('/auth/signup', methods=['POST'])
-def signup_submit():
-    username = request.form.get('username')
-    email = request.form.get('email')
-    password = request.form.get('password')
-
-    if not username or not password:
-        return jsonify({"success": False, "message": "Missing fields"}), 400
-
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute("INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
-                  (username, email, generate_password_hash(password)))
-        conn.commit()
-        conn.close()
-    except sqlite3.IntegrityError:
-        return jsonify({"success": False, "message": "Username already exists"}), 400
-
-    return jsonify({"success": True, "redirect": "/login"})
 
 @app.route("/logout")
 def logout():
