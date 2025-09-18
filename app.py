@@ -2219,7 +2219,7 @@ def get_symbols():
     ])
 
 # BULLETPROOF HELPER FUNCTIONS - ALL REAL DATA SOURCE
-  def get_real_ai_analysis_from_deepseek(market_data, symbol):
+def get_real_ai_analysis_from_deepseek(market_data, symbol):
     """Get REAL AI analysis from OpenRouter DeepSeek V3 - NO HARDCODED RESPONSES"""
     try:
         if not OPENROUTER_API_KEY or OPENROUTER_API_KEY == "sk-or-v1-your-actual-key-here":
@@ -2257,21 +2257,36 @@ RISK_LEVEL: [LOW/MEDIUM/HIGH]
         payload = {
             "model": "deepseek/deepseek-chat",
             "messages": [
-                {"role": "system", "content": "You are a professional quantitative analyst. Provide completely unbiased trading recommendations based solely on technical data. If data shows bearish signals, recommend SELL. If bullish, recommend BUY. Be objective, not optimistic."},
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a professional quantitative analyst. "
+                        "Provide completely unbiased trading recommendations based solely on technical data. "
+                        "If data shows bearish signals, recommend SELL. If bullish, recommend BUY. "
+                        "Be objective, not optimistic."
+                    )
+                },
                 {"role": "user", "content": prompt}
             ],
             "max_tokens": 800,
             "temperature": 0.2
         }
 
-        response = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=30)
+        response = requests.post(
+            OPENROUTER_URL, headers=headers, json=payload, timeout=30
+        )
 
         if response.status_code != 200:
-            logger.warning(f"OpenRouter DeepSeek V3 request failed: {response.status_code} - {response.text}")
+            logger.warning(
+                f"OpenRouter DeepSeek V3 request failed: {response.status_code} - {response.text}"
+            )
             return None
 
         result = response.json()
-        ai_response = result['choices'][0]['message']['content'] if 'choices' in result else None
+        ai_response = (
+            result['choices'][0]['message']['content']
+            if 'choices' in result else None
+        )
 
         if not ai_response:
             logger.warning("DeepSeek V3 returned no content")
