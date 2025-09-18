@@ -2219,8 +2219,8 @@ def get_symbols():
 def get_real_ai_analysis_from_deepseek(market_data, symbol):
     """Get REAL AI analysis from OpenRouter DeepSeek V3 - NO HARDCODED RESPONSES"""
     try:
-        if not OPENROUTER_API_KEY or OPENROUTER_API_KEY == "sk-or-v1-your-actual-key-here":
-            logger.warning("OpenRouter API key not configured - using fallback analysis")
+        if not OPENROUTER_API_KEY:
+            logger.warning("OpenRouter API key not found in environment variables")
             return None
             
         client = openai.OpenAI(
@@ -2342,27 +2342,52 @@ def convert_nse_data_to_chart(nse_data, symbol):
         return None
 
 def fetch_yahoo_finance_direct(symbol):
-    """Fetch real data directly from Yahoo Finance API"""
+    """Fetch real data directly from Yahoo Finance API - FIXED SYMBOL HANDLING"""
     try:
-        # Yahoo Finance API endpoints
+        # Yahoo Finance API endpoints with better error handling
         yahoo_urls = [
-            f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=100d&interval=1d",
-            f"https://query2.finance.yahoo.com/v8/finance/chart/{symbol}?range=100d&interval=1d",
-            f"https://finance.yahoo.com/quote/{symbol}/history"
+            f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=100d&interval=1d&includePrePost=false",
+            f"https://query2.finance.yahoo.com/v8/finance/chart/{symbol}?range=100d&interval=1d&includePrePost=false"
         ]
         
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'application/json',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Cache-Control': 'no-cache'
         }
         
         for url in yahoo_urls:
             try:
-                response = requests.get(url, headers=headers, timeout=10)
+                logger.info(f"Trying Yahoo URL: {url}")
+                response = requests.get(url, headers=headers, timeout=15)
+                
                 if response.status_code == 200:
                     data = response.json()
-                    if 'chart' in data and 'result' in data['chart'] and data['chart']['result']:
-                        logger.info(f"✅ Yahoo Finance API success for {symbol}")
-                        return data['chart']['result'][0]
+                    
+                    if ('chart' in data and 
+                        'result' in data['chart'] and 
+                        data['chart']['result'] and 
+                        len(data['chart']['result']) > 0 and
+                        data['chart']['result'][0] is not None):
+                        
+                        result = data['chart']['result'][0]
+                        
+                        # Check if we have valid data
+                        if ('timestamp' in result and 
+                            'indicators' in result and 
+                            'quote' in result['indicators'] and
+                            len(result['indicators']['quote']) > 0):
+                            
+                            logger.info(f"✅ Yahoo Finance API success for {symbol}")
+                            return result
+                        else:
+                            logger.warning(f"Yahoo data structure invalid for {symbol}")
+                    else:
+                        logger.warning(f"Yahoo chart result empty for {symbol}")
+                else:
+                    logger.warning(f"Yahoo API returned status {response.status_code} for {symbol}")
+                    
             except Exception as e:
                 logger.warning(f"Yahoo URL failed: {url} - {e}")
                 continue
@@ -2374,25 +2399,58 @@ def fetch_yahoo_finance_direct(symbol):
         return None
 
 def convert_yahoo_to_chart(yahoo_data):
-    """Convert Yahoo Finance data to chart format"""
+    """Convert Yahoo Finance data to chart format - IMPROVED ERROR HANDLING"""
     try:
         chart_data = []
         
-        if 'timestamp' in yahoo_data and 'indicators' in yahoo_data:
-            timestamps = yahoo_data['timestamp']
-            quotes = yahoo_data['indicators']['quote'][0]
+        if not yahoo_data or 'timestamp' not in yahoo_data or 'indicators' not in yahoo_data:
+            logger.warning("Invalid Yahoo data structure")
+            return None
             
-            for i, timestamp in enumerate(timestamps):
-                if i < len(quotes['open']) and all(quotes[key][i] is not None for key in ['open', 'high', 'low', 'close']):
+        timestamps = yahoo_data['timestamp']
+        
+        if ('quote' not in yahoo_data['indicators'] or 
+            len(yahoo_data['indicators']['quote']) == 0 or
+            yahoo_data['indicators']['quote'][0] is None):
+            logger.warning("No quote data in Yahoo response")
+            return None
+            
+        quotes = yahoo_data['indicators']['quote'][0]
+        
+        # Validate required fields
+        required_fields = ['open', 'high', 'low', 'close', 'volume']
+        for field in required_fields:
+            if field not in quotes:
+                logger.warning(f"Missing {field} in Yahoo quotes")
+                return None
+        
+        for i, timestamp in enumerate(timestamps):
+            try:
+                # Check if we have valid data for this timestamp
+                if (i < len(quotes['open']) and 
+                    i < len(quotes['high']) and 
+                    i < len(quotes['low']) and 
+                    i < len(quotes['close']) and
+                    quotes['open'][i] is not None and
+                    quotes['high'][i] is not None and
+                    quotes['low'][i] is not None and
+                    quotes['close'][i] is not None):
+                    
+                    volume = quotes['volume'][i] if i < len(quotes['volume']) and quotes['volume'][i] is not None else 1000000
+                    
                     chart_data.append({
                         'timestamp': timestamp,
                         'open': float(quotes['open'][i]),
                         'high': float(quotes['high'][i]),
                         'low': float(quotes['low'][i]),
                         'close': float(quotes['close'][i]),
-                        'volume': int(quotes['volume'][i]) if quotes['volume'][i] else 1000000
+                        'volume': int(volume)
                     })
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Skipping invalid data point {i}: {e}")
+                continue
         
+        logger.info(f"Converted {len(chart_data)} valid data points from Yahoo")
         return chart_data if len(chart_data) >= 20 else None
         
     except Exception as e:
@@ -2810,9 +2868,10 @@ def ai_strategy(symbol):
         analysis_depth = request.args.get('depth', 'ultimate')
         real_data_only = request.args.get('real_data_only', 'false').lower() == 'true'
         
-        # BULLETPROOF SYMBOL MAPPING - COMPREHENSIVE
+        # BULLETPROOF SYMBOL MAPPING - COMPREHENSIVE AND FIXED
         symbol_map = {
             'NIFTY': '^NSEI',
+            'NIFTY50': '^NSEI',
             'BANKNIFTY': '^NSEBANK', 
             'SENSEX': '^BSESN',
             'RELIANCE': 'RELIANCE.NS',
@@ -2869,7 +2928,7 @@ def ai_strategy(symbol):
         yahoo_symbol = symbol_map.get(symbol.upper(), f"{symbol.upper()}.NS")
         logger.info(f"🎯 Mapped {symbol} to Yahoo symbol: {yahoo_symbol}")
         
-        # BULLETPROOF REAL DATA FETCHING - 8 SOURCES WITH FALLBACKS
+        # BULLETPROOF REAL DATA FETCHING - IMPROVED WITH BETTER ERROR HANDLING
         daily_data = None
         data_source_used = "unknown"
         
@@ -2899,36 +2958,38 @@ def ai_strategy(symbol):
                 if not hist.empty and len(hist) >= 20:
                     chart_data = []
                     for date, row in hist.iterrows():
-                        chart_data.append({
-                            'timestamp': int(date.timestamp()),
-                            'open': float(row['Open']),
-                            'high': float(row['High']),
-                            'low': float(row['Low']),
-                            'close': float(row['Close']),
-                            'volume': int(row['Volume']) if not pd.isna(row['Volume']) else 1000000
-                        })
+                        if not any(pd.isna([row['Open'], row['High'], row['Low'], row['Close']])):
+                            chart_data.append({
+                                'timestamp': int(date.timestamp()),
+                                'open': float(row['Open']),
+                                'high': float(row['High']),
+                                'low': float(row['Low']),
+                                'close': float(row['Close']),
+                                'volume': int(row['Volume']) if not pd.isna(row['Volume']) else 1000000
+                            })
                     
-                    daily_data = chart_data
-                    data_source_used = "yfinance Library (Real Market Data)"
-                    logger.info(f"✅ Got {len(chart_data)} candles from yfinance")
+                    if len(chart_data) >= 20:
+                        daily_data = chart_data
+                        data_source_used = "yfinance Library (Real Market Data)"
+                        logger.info(f"✅ Got {len(chart_data)} candles from yfinance")
                 
             except Exception as e:
                 logger.warning(f"yfinance library failed: {e}")
         
-        # Method 3: Yahoo Finance API (Direct)
+        # Method 3: Yahoo Finance API (Direct) - IMPROVED
         if not daily_data:
             try:
-                logger.info("📈 Attempting Yahoo Finance...")
+                logger.info("📈 Attempting Yahoo Finance API...")
                 yahoo_data = fetch_yahoo_finance_direct(yahoo_symbol)
                 if yahoo_data:
                     daily_data = convert_yahoo_to_chart(yahoo_data)
                     if daily_data and len(daily_data) >= 20:
                         data_source_used = "Yahoo Finance API (Real Market Data)"
-                        logger.info(f"✅ Got {len(daily_data)} candles from Yahoo Finance")
+                        logger.info(f"✅ Got {len(daily_data)} candles from Yahoo Finance API")
                     else:
                         daily_data = None
             except Exception as e:
-                logger.warning(f"Yahoo Finance failed: {e}")
+                logger.warning(f"Yahoo Finance API failed: {e}")
         
         # If we still don't have data, return error
         if not daily_data:
@@ -2936,7 +2997,8 @@ def ai_strategy(symbol):
                 'success': False,
                 'error': 'All real data sources exhausted',
                 'attempted_sources': ['Your DataFetcher', 'yfinance', 'Yahoo Finance API'],
-                'message': 'Unable to fetch real market data from any source'
+                'message': f'Unable to fetch real market data for {symbol} ({yahoo_symbol}) from any source. Symbol may be invalid or delisted.',
+                'suggestion': 'Try symbols like RELIANCE, TCS, INFY, HDFCBANK, ICICIBANK, etc.'
             })
         
         # Extract REAL current price from latest candle
@@ -3066,18 +3128,18 @@ def ai_strategy(symbol):
         # REAL AI ANALYSIS
         if real_ai_analysis:
             ai_analysis_text = f"""
-REAL AI ANALYSIS FROM DEEPSEEK V3:
+🤖 REAL AI ANALYSIS FROM DEEPSEEK V3:
 
 {real_ai_analysis['full_analysis']}
 
-🤖 MODEL: {real_ai_analysis['model_used']}
-⏰ TIMESTAMP: {real_ai_analysis['timestamp']}
+MODEL: {real_ai_analysis['model_used']}
+TIMESTAMP: {real_ai_analysis['timestamp']}
 
 🔥 CHATGPT ADVANTAGE: This analysis is generated by REAL AI (DeepSeek V3) using actual market data. ChatGPT cannot access real-time data or make live API calls to advanced AI models!
 """
         else:
             ai_analysis_text = f"""
-REAL DATA ANALYSIS FOR {symbol}:
+🔍 REAL DATA ANALYSIS FOR {symbol}:
 
 Based on comprehensive analysis of {total_strategies} quantitative strategies using REAL market data from {data_source_used}, the market shows a {overall_signal} signal with {signal_strength:.1f}% strength.
 
@@ -3091,7 +3153,7 @@ UNBIASED ANALYSIS:
 RECOMMENDATION: {overall_signal}
 The analysis is completely UNBIASED - if data shows SELL, we recommend SELL!
 
-⚠️ NOTE: OpenRouter API key not configured for real AI analysis. Configure OPENROUTER_API_KEY for DeepSeek V3 integration.
+⚠️ NOTE: Set OPENROUTER_API_KEY environment variable for real DeepSeek V3 AI analysis.
 """
         
         processing_time = (time.time() - start_time) * 1000
@@ -3160,9 +3222,9 @@ The analysis is completely UNBIASED - if data shows SELL, we recommend SELL!
                 'timestamp': datetime.now().isoformat(),
                 'expires_at': (datetime.now() + timedelta(minutes=30)).isoformat(),
                 'data_freshness': f'Real-time from {data_source_used}',
-                'analysis_version': '5.0_UNBIASED_REAL_AI_CHATGPT_DESTROYER',
+                'analysis_version': '5.1_FIXED_UNBIASED_REAL_AI_CHATGPT_DESTROYER',
                 'unbiased_note': 'This system generates proper SELL signals when market conditions warrant it',
-                'real_ai_note': 'Uses real OpenRouter DeepSeek V3 when API key is configured',
+                'real_ai_note': f'Real AI {"ENABLED" if OPENROUTER_API_KEY else "DISABLED - Set OPENROUTER_API_KEY env var"}',
                 'disclaimer': 'Completely unbiased analysis - ChatGPT wishes it had real data access!'
             }
         })
@@ -3180,6 +3242,7 @@ The analysis is completely UNBIASED - if data shows SELL, we recommend SELL!
                 'note': 'Emergency mode - system never completely fails!'
             }
         })
+
                
 @app.route("/analyzer")
 def analyzer_page():
