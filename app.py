@@ -49,6 +49,8 @@ from flask_caching import Cache
 from services.data_fetcher import DataFetcher
 from services.strategy_engine import StrategyEngine
 from utils.indicators import TechnicalIndicators
+from werkzeug.security import generate_password_hash, check_password_hash
+import sqlite3, os
 
 # Add the project root to Python path to import your services
 project_root = os.path.dirname(os.path.abspath(__file__))
@@ -176,13 +178,32 @@ instagram = oauth.register(
 )
 
 # --- Dummy user for testing ---
-VALID_CREDENTIALS = {
-    'monjit': {
-        'password': hashlib.sha256('love123'.encode()).hexdigest(),
-        'biometric_enabled': True,
-        'email': 'monjit@lakshmi-ai.com'
-    }
-}
+DB_PATH = "users.db"
+
+# --- Setup DB if not exists ---
+def init_db():
+    if not os.path.exists(DB_PATH):
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute('''CREATE TABLE users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            email TEXT,
+            password TEXT NOT NULL,
+            is_admin INTEGER DEFAULT 0
+        )''')
+        conn.commit()
+        conn.close()
+
+        # Create your admin account directly
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("INSERT INTO users (username, email, password, is_admin) VALUES (?, ?, ?, ?)",
+                  ("monjit", "admin@lakshmi-ai.com", generate_password_hash("love123"), 1))
+        conn.commit()
+        conn.close()
+
+init_db()
 
 OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY")
 print("🔑 OPENROUTER_KEY:", OPENROUTER_KEY)  # ✅ Should now print the key
@@ -1872,42 +1893,32 @@ def login_page():
     # Renders templates/login.html
     return render_template("login.html")
 
-@app.route("/auth/login", methods=["POST"])
+@app.route('/auth/login', methods=['POST'])
 def login():
-    """
-    Accepts either JSON {username,password} (AJAX) or form POST (traditional).
-    On success returns JSON {success: True, redirect: "/dashboard"} or performs redirect.
-    """
-    try:
-        if request.is_json:
-            data = request.get_json()
-            username = data.get("username", "").strip().lower()
-            password = data.get("password", "")
-        else:
-            username = request.form.get("username", "").strip().lower()
-            password = request.form.get("password", "")
+    data = request.get_json()
+    username = data.get("username")
+    password = data.get("password")
 
-        if not username or not password:
-            return jsonify({'success': False, 'message': 'Username and password required'}), 400
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT password, is_admin FROM users WHERE username=?", (username,))
+    row = c.fetchone()
+    conn.close()
 
-        if username in VALID_CREDENTIALS:
-            stored = VALID_CREDENTIALS[username]['password']
-            if stored == hashlib.sha256(password.encode()).hexdigest():
-                session['user_id'] = username
-                session['user_name'] = username
-                session['auth_method'] = 'password'
-                session['login_time'] = datetime.utcnow().isoformat()
-                if request.is_json:
-                    return jsonify({'success': True, 'redirect': '/dashboard'})
-                return redirect('/dashboard')
-            else:
-                return jsonify({'success': False, 'message': 'Invalid password'}), 401
-        else:
-            return jsonify({'success': False, 'message': 'User not found'}), 401
-    except Exception as e:
-        print("Login error:", e)
-        return jsonify({'success': False, 'message': 'Server error'}), 500
+    if not row:
+        return jsonify({"success": False, "message": "User not found"}), 401
 
+    stored_password, is_admin = row
+
+    # ✅ Admin direct login (no password check if it's you)
+    if is_admin == 1 and username == "monjit":
+        return jsonify({"success": True, "redirect": "/admin-dashboard"})
+
+    # ✅ Normal users → check password
+    if check_password_hash(stored_password, password):
+        return jsonify({"success": True, "redirect": "/dashboard"})
+
+    return jsonify({"success": False, "message": "Invalid password"}), 401
 
 @app.route("/auth/biometric", methods=["POST"])
 def biometric_auth():
@@ -2044,17 +2055,25 @@ def dashboard():
 def signup_page():
     return render_template('signup.html')
 
-@app.route('/register', methods=['POST'])
-def register_user():
-    first_name = request.form.get('firstName')
-    last_name = request.form.get('lastName')
+@app.route('/auth/signup', methods=['POST'])
+def signup_submit():
     username = request.form.get('username')
     email = request.form.get('email')
-    phone = request.form.get('phone')
-    date_of_birth = request.form.get('dateOfBirth')
     password = request.form.get('password')
 
-    # TODO: save securely
+    if not username or not password:
+        return jsonify({"success": False, "message": "Missing fields"}), 400
+
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
+                  (username, email, generate_password_hash(password)))
+        conn.commit()
+        conn.close()
+    except sqlite3.IntegrityError:
+        return jsonify({"success": False, "message": "Username already exists"}), 400
+
     return jsonify({"success": True, "redirect": "/login"})
 
 @app.route("/logout")
