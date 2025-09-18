@@ -53,6 +53,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3, os
 import openai
 
+client = openai.OpenAI(
+    base_url=OPENROUTER_URL,
+    api_key=OPENROUTER_KEY,
+)
+
 # Add the project root to Python path to import your services
 project_root = os.path.dirname(os.path.abspath(__file__))
 if project_root not in sys.path:
