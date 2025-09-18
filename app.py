@@ -2566,7 +2566,7 @@ def analyze_real_trend(daily_data, short_period=10, long_period=20):
 
 
 def generate_bulletproof_strategies_from_real_data(daily_data, symbol):
-    """Generate bulletproof strategy analysis from real market data"""
+    """Generate UNBIASED strategy analysis from real market data - PROPER BUY/SELL SIGNALS"""
     try:
         if not daily_data or len(daily_data) < 20:
             return {}
@@ -2579,7 +2579,7 @@ def generate_bulletproof_strategies_from_real_data(daily_data, symbol):
         sma_20 = sum(candle['close'] for candle in daily_data[-20:]) / 20
         sma_50 = sum(candle['close'] for candle in daily_data[-50:]) / 50 if len(daily_data) >= 50 else sma_20
         
-        # RSI calculation
+        # RSI calculation - PROPER IMPLEMENTATION
         gains = []
         losses = []
         for i in range(1, min(15, len(daily_data))):
@@ -2605,6 +2605,29 @@ def generate_bulletproof_strategies_from_real_data(daily_data, symbol):
         std_dev = (sum((candle['close'] - sma_20) ** 2 for candle in daily_data[-20:]) / 20) ** 0.5
         bb_upper = sma_20 + (2 * std_dev)
         bb_lower = sma_20 - (2 * std_dev)
+        
+        # UNBIASED MARKET CONDITION ANALYSIS
+        bearish_signals = 0
+        bullish_signals = 0
+        
+        # Count actual bearish conditions
+        if rsi > 70: bearish_signals += 2  # Strong overbought
+        if rsi > 60: bearish_signals += 1  # Mild overbought
+        if current_price > bb_upper: bearish_signals += 2  # Above upper BB
+        if current_price < sma_20: bearish_signals += 1  # Below short MA
+        if current_price < sma_50: bearish_signals += 1  # Below long MA
+        if price_change < -2: bearish_signals += 2  # Strong negative momentum
+        if macd < -1: bearish_signals += 1  # Bearish MACD
+        
+        # Count actual bullish conditions
+        if rsi < 30: bullish_signals += 2  # Strong oversold
+        if rsi < 40: bullish_signals += 1  # Mild oversold
+        if current_price < bb_lower: bullish_signals += 2  # Below lower BB
+        if current_price > sma_20: bullish_signals += 1  # Above short MA
+        if current_price > sma_50: bullish_signals += 1  # Above long MA
+        if price_change > 2: bullish_signals += 2  # Strong positive momentum
+        if macd > 1: bullish_signals += 1  # Bullish MACD
+
         
         # Generate 46 real strategies
         strategies = {
