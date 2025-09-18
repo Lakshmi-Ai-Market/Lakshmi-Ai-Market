@@ -1920,21 +1920,28 @@ def login():
 
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("SELECT password, is_admin FROM users WHERE username=?", (username,))
+    c.execute("SELECT id, password, is_admin, email FROM users WHERE username=?", (username,))
     row = c.fetchone()
     conn.close()
 
     if not row:
         return jsonify({"success": False, "message": "User not found"}), 401
 
-    stored_password, is_admin = row
+    user_id, stored_password, is_admin, email = row
 
     # ✅ Admin bypass
     if is_admin == 1 and username == "monjit":
+        session['user_id'] = user_id
+        session['user_name'] = username
+        session['is_admin'] = True
         return jsonify({"success": True, "redirect": "/admin-dashboard"})
 
-    # ✅ Normal users
+    # ✅ Normal user password check
     if check_password_hash(stored_password, password):
+        session['user_id'] = user_id
+        session['user_name'] = username
+        session['user_email'] = email
+        session['is_admin'] = False
         return jsonify({"success": True, "redirect": "/dashboard"})
 
     return jsonify({"success": False, "message": "Invalid password"}), 401
