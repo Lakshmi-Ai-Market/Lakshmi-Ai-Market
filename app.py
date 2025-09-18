@@ -1906,17 +1906,16 @@ def register():
     if password != confirm_password:
         return jsonify({"success": False, "message": "Passwords do not match"}), 400
 
-    if username in users:
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
+                  (username, email, generate_password_hash(password)))
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True, "redirect": "/login"}), 200
+    except sqlite3.IntegrityError:
         return jsonify({"success": False, "message": "Username already exists"}), 400
-
-    # hash the password before storing
-    hashed_pw = generate_password_hash(password)
-    users[username] = {
-        "email": email,
-        "password": hashed_pw,
-    }
-
-    return jsonify({"success": True, "redirect": "/login"}), 200
 
 
 # ---------- LOGIN ----------
@@ -1931,17 +1930,25 @@ def login():
     username = data.get("username")
     password = data.get("password")
 
-    if username not in users:
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT id, username, email, password, is_admin FROM users WHERE username=?", (username,))
+    user = c.fetchone()
+    conn.close()
+
+    if not user:
         return jsonify({"success": False, "message": "User not found"}), 400
 
-    user = users[username]
-    if not check_password_hash(user["password"], password):
+    user_id, uname, email, hashed_pw, is_admin = user
+
+    if not check_password_hash(hashed_pw, password):
         return jsonify({"success": False, "message": "Invalid password"}), 400
 
-    # store session
-    session["user_id"] = username
-    session["user_name"] = username
-    session["user_email"] = user["email"]
+    # ✅ Store session info
+    session["user_id"] = user_id
+    session["user_name"] = uname
+    session["user_email"] = email
+    session["is_admin"] = bool(is_admin)
 
     return jsonify({"success": True, "redirect": "/dashboard"}), 200
 
