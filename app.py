@@ -53,11 +53,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3, os
 import openai
 
-client = openai.OpenAI(
-    base_url=OPENROUTER_URL,
-    api_key=OPENROUTER_KEY,
-)
-
 # Add the project root to Python path to import your services
 project_root = os.path.dirname(os.path.abspath(__file__))
 if project_root not in sys.path:
@@ -197,6 +192,11 @@ OPENROUTER_API_KEY = OPENROUTER_KEY  # ✅ Backward compatibility (both names wo
 
 print("🔑 OPENROUTER_KEY:", OPENROUTER_KEY)
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+client = openai.OpenAI(
+    base_url=OPENROUTER_URL,
+    api_key=OPENROUTER_KEY,
+)
 
 # --- Google OAuth Settings ---
 GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
