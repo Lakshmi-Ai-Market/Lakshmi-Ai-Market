@@ -6363,6 +6363,10 @@ def health_check_api():
         }), 500
 
 
+@app.route('/neuron')
+def neuron_page():
+    return render_template('neuron.html')
+
 @app.route("/strategy-switcher", methods=["GET"])
 def strategy_switcher_page():
     return render_template("strategy_switcher.html")
