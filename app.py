@@ -1887,68 +1887,63 @@ def root():
 def cached_view():
     return "This is cached for 60s"
 
-@app.route('/auth/signup', methods=['GET'])
+# ---------- SIGNUP ----------
+@app.route("/auth/signup", methods=["GET"])
 def signup_page():
-    return render_template('signup.html')
+    return render_template("signup.html")
 
-@app.route('/auth/signup', methods=['POST'])
-def signup_submit():
-    username = request.form.get('username')
-    email = request.form.get('email')
-    password = request.form.get('password')
 
-    if not username or not password:
-        return jsonify({"success": False, "message": "Missing fields"}), 400
+@app.route("/register", methods=["POST"])
+def register():
+    username = request.form.get("username")
+    email = request.form.get("email")
+    password = request.form.get("password")
+    confirm_password = request.form.get("confirmPassword")
 
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute("INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
-                  (username, email, generate_password_hash(password)))
-        conn.commit()
-        conn.close()
-    except sqlite3.IntegrityError:
+    if not username or not email or not password:
+        return jsonify({"success": False, "message": "All fields are required"}), 400
+
+    if password != confirm_password:
+        return jsonify({"success": False, "message": "Passwords do not match"}), 400
+
+    if username in users:
         return jsonify({"success": False, "message": "Username already exists"}), 400
 
-    return jsonify({"success": True, "redirect": "/login"})
+    # hash the password before storing
+    hashed_pw = generate_password_hash(password)
+    users[username] = {
+        "email": email,
+        "password": hashed_pw,
+    }
 
-@app.route('/auth/login', methods=['POST'])
+    return jsonify({"success": True, "redirect": "/login"}), 200
+
+
+# ---------- LOGIN ----------
+@app.route("/login", methods=["GET"])
+def login_page():
+    return render_template("login.html")
+
+
+@app.route("/auth/login", methods=["POST"])
 def login():
-    data = request.get_json()
+    data = request.get_json() or request.form
     username = data.get("username")
     password = data.get("password")
 
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT id, password, is_admin, email FROM users WHERE username=?", (username,))
-    row = c.fetchone()
-    conn.close()
+    if username not in users:
+        return jsonify({"success": False, "message": "User not found"}), 400
 
-    if not row:
-        return jsonify({"success": False, "message": "User not found"}), 401
+    user = users[username]
+    if not check_password_hash(user["password"], password):
+        return jsonify({"success": False, "message": "Invalid password"}), 400
 
-    user_id, stored_password, is_admin, email = row
+    # store session
+    session["user_id"] = username
+    session["user_name"] = username
+    session["user_email"] = user["email"]
 
-    # ✅ Admin bypass
-    if is_admin == 1 and username == "monjit":
-        session['user_id'] = user_id
-        session['user_name'] = username
-        session['is_admin'] = True
-        return jsonify({"success": True, "redirect": "/admin-dashboard"})
-
-    # ✅ Normal user password check
-    if check_password_hash(stored_password, password):
-        session['user_id'] = user_id
-        session['user_name'] = username
-        session['user_email'] = email
-        session['is_admin'] = False
-        return jsonify({"success": True, "redirect": "/dashboard"})
-
-    return jsonify({"success": False, "message": "Invalid password"}), 401
-
-@app.route('/login', methods=['GET'])
-def login_page():
-    return render_template('login.html')
+    return jsonify({"success": True, "redirect": "/dashboard"}), 200
 
 @app.route("/auth/biometric", methods=["POST"])
 def biometric_auth():
