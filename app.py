@@ -51,7 +51,7 @@ from services.strategy_engine import StrategyEngine
 from utils.indicators import TechnicalIndicators
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3, os
-import openai
+
 
 # Add the project root to Python path to import your services
 project_root = os.path.dirname(os.path.abspath(__file__))
@@ -192,21 +192,6 @@ OPENROUTER_API_KEY = OPENROUTER_KEY  # ✅ Backward compatibility (both names wo
 
 print("🔑 OPENROUTER_KEY:", OPENROUTER_KEY)
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-
-client = openai.OpenAI(
-    base_url=OPENROUTER_URL,
-    api_key=OPENROUTER_KEY,
-)
-
-resp = client.chat.completions.create(
-    model="deepseek/deepseek-chat",
-    messages=[
-        {"role": "system", "content": "You are a professional trading analyst."},
-        {"role": "user", "content": "Give me a sample unbiased trading signal for NIFTY."}
-    ],
-)
-
-print(resp.choices[0].message.content)
 
 # --- Google OAuth Settings ---
 GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
