@@ -185,9 +185,11 @@ VALID_CREDENTIALS = {
     }
 }
 
-
+# ✅ Load OpenRouter API key from environment
 OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY")
-print("🔑 OPENROUTER_KEY:", OPENROUTER_KEY)  # ✅ Should now print the key
+OPENROUTER_API_KEY = OPENROUTER_KEY  # ✅ Backward compatibility (both names work)
+
+print("🔑 OPENROUTER_KEY:", OPENROUTER_KEY)
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 # --- Google OAuth Settings ---
