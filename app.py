@@ -2039,7 +2039,23 @@ def dashboard():
     name = session.get("user_name") or session.get("user_email") or session.get('user_id')
     # Render your real dashboard template here
     return render_template("index.html", name=name, mood="happy")
+    
+@app.route('/auth/signup', methods=['GET'])
+def signup_page():
+    return render_template('signup.html')
 
+@app.route('/register', methods=['POST'])
+def register_user():
+    first_name = request.form.get('firstName')
+    last_name = request.form.get('lastName')
+    username = request.form.get('username')
+    email = request.form.get('email')
+    phone = request.form.get('phone')
+    date_of_birth = request.form.get('dateOfBirth')
+    password = request.form.get('password')
+
+    # TODO: save securely
+    return jsonify({"success": True, "redirect": "/login"})
 
 @app.route("/logout")
 def logout():
