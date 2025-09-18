@@ -2219,13 +2219,13 @@ def get_symbols():
 def get_real_ai_analysis_from_deepseek(market_data, symbol):
     """Get REAL AI analysis from OpenRouter DeepSeek V3 - NO HARDCODED RESPONSES"""
     try:
-        if not OPENROUTER_API_KEY:
+        if not OPENROUTER_KEY:
             logger.warning("OpenRouter API key not found in environment variables")
             return None
             
         client = openai.OpenAI(
-            base_url=OPENROUTER_BASE_URL,
-            api_key=OPENROUTER_API_KEY,
+            base_url=OPENROUTER_URL,
+            api_key=OPENROUTER_KEY,
         )
         
         # Prepare comprehensive market data for AI
