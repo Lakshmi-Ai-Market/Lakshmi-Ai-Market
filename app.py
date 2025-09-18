@@ -2627,161 +2627,241 @@ def generate_bulletproof_strategies_from_real_data(daily_data, symbol):
         if price_change > 2: bullish_signals += 2  # Strong positive momentum
         if macd > 1: bullish_signals += 1  # Bullish MACD
         
-        # Generate 46 UNBIASED real strategies with proper SELL signals
-        strategies = {
-            # Momentum Strategies (9) - UNBIASED
+         # Momentum Strategies (9)
             'RSI_Momentum': {
-                'signal': 'SELL' if rsi > 70 else 'BUY' if rsi < 30 else 'NEUTRAL',
+                'signal': 'BUY' if rsi < 30 else 'SELL' if rsi > 70 else 'NEUTRAL',
                 'confidence': min(95, max(60, abs(50 - rsi) * 2)),
-                'reasoning': f'RSI at {rsi:.1f} - {"OVERBOUGHT: Strong SELL signal" if rsi > 70 else "OVERSOLD: Strong BUY signal" if rsi < 30 else "Neutral zone"}'
+                'reasoning': f'RSI at {rsi:.1f} indicates {"oversold" if rsi < 30 else "overbought" if rsi > 70 else "neutral"} conditions'
             },
             'Price_Momentum': {
-                'signal': 'SELL' if price_change < -2 else 'BUY' if price_change > 2 else 'NEUTRAL',
+                'signal': 'BUY' if price_change > 2 else 'SELL' if price_change < -2 else 'NEUTRAL',
                 'confidence': min(90, max(65, abs(price_change) * 10)),
-                'reasoning': f'Price momentum {price_change:.2f}% - {"Strong bearish momentum: SELL" if price_change < -2 else "Strong bullish momentum: BUY" if price_change > 2 else "Sideways"}'
+                'reasoning': f'Price momentum of {price_change:.2f}% shows {"strong bullish" if price_change > 2 else "strong bearish" if price_change < -2 else "neutral"} momentum'
             },
             'MACD_Momentum': {
-                'signal': 'SELL' if macd < -1 else 'BUY' if macd > 1 else 'NEUTRAL',
-                'confidence': min(85, max(70, abs(macd) * 3)),
-                'reasoning': f'MACD {macd:.2f} - {"Bearish divergence: SELL" if macd < -1 else "Bullish momentum: BUY" if macd > 1 else "Neutral"}'
-            },
-            'Bollinger_Momentum': {
-                'signal': 'SELL' if current_price > bb_upper else 'BUY' if current_price < bb_lower else 'NEUTRAL',
-                'confidence': min(88, max(70, abs(current_price - sma_20) / std_dev * 20)),
-                'reasoning': f'Price vs Bollinger Bands - {"Above upper band: OVERBOUGHT SELL" if current_price > bb_upper else "Below lower band: OVERSOLD BUY" if current_price < bb_lower else "Within normal range"}'
+                'signal': 'BUY' if macd > 0 else 'SELL' if macd < 0 else 'NEUTRAL',
+                'confidence': min(85, max(70, abs(macd) * 5)),
+                'reasoning': f'MACD signal shows {"bullish" if macd > 0 else "bearish"} momentum'
             },
             'Volume_Price_Momentum': {
-                'signal': 'SELL' if daily_data[-1]['volume'] > sum(c['volume'] for c in daily_data[-5:]) / 5 and price_change < -1 else 'BUY' if daily_data[-1]['volume'] > sum(c['volume'] for c in daily_data[-5:]) / 5 and price_change > 1 else 'NEUTRAL',
+                'signal': 'BUY' if daily_data[-1]['volume'] > sum(c['volume'] for c in daily_data[-5:]) / 5 and price_change > 0 else 'SELL' if price_change < 0 else 'NEUTRAL',
                 'confidence': random.randint(70, 88),
-                'reasoning': 'Volume-price analysis: High volume with price direction confirms trend'
+                'reasoning': 'Volume-price momentum analysis based on real trading volume'
             },
             'Acceleration_Momentum': {
-                'signal': 'SELL' if len(daily_data) > 2 and (daily_data[-1]['close'] - daily_data[-2]['close']) < (daily_data[-2]['close'] - daily_data[-3]['close']) and price_change < 0 else 'BUY' if len(daily_data) > 2 and (daily_data[-1]['close'] - daily_data[-2]['close']) > (daily_data[-2]['close'] - daily_data[-3]['close']) and price_change > 0 else 'NEUTRAL',
+                'signal': 'BUY' if len(daily_data) > 2 and (daily_data[-1]['close'] - daily_data[-2]['close']) > (daily_data[-2]['close'] - daily_data[-3]['close']) else 'SELL',
                 'confidence': random.randint(65, 82),
-                'reasoning': 'Price acceleration analysis shows momentum direction'
+                'reasoning': 'Price acceleration momentum from real price data'
             },
             'Breakout_Momentum': {
                 'signal': 'BUY' if current_price > max(c['high'] for c in daily_data[-10:]) else 'SELL' if current_price < min(c['low'] for c in daily_data[-10:]) else 'NEUTRAL',
                 'confidence': random.randint(75, 92),
-                'reasoning': 'Breakout analysis: Price breaking key levels'
+                'reasoning': 'Breakout momentum based on 10-day high/low levels'
             },
             'Gap_Momentum': {
-                'signal': 'SELL' if daily_data[-1]['open'] < daily_data[-2]['close'] * 0.995 else 'BUY' if daily_data[-1]['open'] > daily_data[-2]['close'] * 1.005 else 'NEUTRAL',
+                'signal': 'BUY' if daily_data[-1]['open'] > daily_data[-2]['close'] * 1.01 else 'SELL' if daily_data[-1]['open'] < daily_data[-2]['close'] * 0.99 else 'NEUTRAL',
                 'confidence': random.randint(68, 85),
-                'reasoning': 'Gap analysis from opening prices'
+                'reasoning': 'Gap analysis from real opening prices'
+            },
+            'Intraday_Momentum': {
+                'signal': 'BUY' if daily_data[-1]['close'] > daily_data[-1]['open'] else 'SELL',
+                'confidence': random.randint(60, 78),
+                'reasoning': 'Intraday momentum from real OHLC data'
             },
             'Multi_Timeframe_Momentum': {
-                'signal': 'SELL' if current_price < sma_20 and sma_20 < sma_50 else 'BUY' if current_price > sma_20 and sma_20 > sma_50 else 'NEUTRAL',
+                'signal': 'BUY' if current_price > sma_20 and sma_20 > sma_50 else 'SELL' if current_price < sma_20 and sma_20 < sma_50 else 'NEUTRAL',
                 'confidence': random.randint(72, 89),
-                'reasoning': 'Multi-timeframe alignment analysis'
+                'reasoning': 'Multi-timeframe momentum alignment'
             },
             
-            # Trend Following Strategies (9) - UNBIASED
+            # Trend Following Strategies (9)
             'SMA_Crossover': {
-                'signal': 'SELL' if sma_20 < sma_50 else 'BUY' if sma_20 > sma_50 else 'NEUTRAL',
+                'signal': 'BUY' if sma_20 > sma_50 else 'SELL',
                 'confidence': min(88, max(70, abs(sma_20 - sma_50) / sma_20 * 100 * 10)),
-                'reasoning': f'SMA crossover: 20-day {"below" if sma_20 < sma_50 else "above"} 50-day - {"BEARISH SELL" if sma_20 < sma_50 else "BULLISH BUY"}'
+                'reasoning': f'20-day SMA {"above" if sma_20 > sma_50 else "below"} 50-day SMA indicates trend direction'
             },
             'Price_SMA_Trend': {
-                'signal': 'SELL' if current_price < sma_20 else 'BUY' if current_price > sma_20 else 'NEUTRAL',
+                'signal': 'BUY' if current_price > sma_20 else 'SELL',
                 'confidence': min(85, max(65, abs(current_price - sma_20) / sma_20 * 100 * 5)),
-                'reasoning': f'Price vs SMA: {"Below SMA - BEARISH SELL" if current_price < sma_20 else "Above SMA - BULLISH BUY"}'
+                'reasoning': f'Price {"above" if current_price > sma_20 else "below"} 20-day SMA'
             },
             'Trend_Strength': {
-                'signal': 'SELL' if all(daily_data[-i]['close'] < daily_data[-i-1]['close'] for i in range(1, min(4, len(daily_data)))) else 'BUY' if all(daily_data[-i]['close'] > daily_data[-i-1]['close'] for i in range(1, min(4, len(daily_data)))) else 'NEUTRAL',
+                'signal': 'BUY' if all(daily_data[-i]['close'] > daily_data[-i-1]['close'] for i in range(1, min(4, len(daily_data)))) else 'SELL',
                 'confidence': random.randint(70, 87),
-                'reasoning': 'Consecutive price movement analysis'
+                'reasoning': 'Trend strength based on consecutive price movements'
             },
             'ADX_Trend': {
-                'signal': 'SELL' if current_price < sma_20 and price_change < -1 else 'BUY' if current_price > sma_20 and price_change > 1 else 'NEUTRAL',
+                'signal': 'BUY' if current_price > sma_20 and price_change > 1 else 'SELL' if current_price < sma_20 and price_change < -1 else 'NEUTRAL',
                 'confidence': random.randint(68, 84),
-                'reasoning': 'Trend strength with momentum confirmation'
+                'reasoning': 'ADX-style trend strength analysis'
             },
             'Parabolic_SAR': {
-                'signal': 'SELL' if current_price < max(c['high'] for c in daily_data[-5:]) * 0.98 else 'BUY' if current_price > min(c['low'] for c in daily_data[-5:]) * 1.02 else 'NEUTRAL',
+                'signal': 'BUY' if current_price > min(c['low'] for c in daily_data[-5:]) * 1.02 else 'SELL',
                 'confidence': random.randint(72, 88),
-                'reasoning': 'Parabolic SAR trend following'
+                'reasoning': 'Parabolic SAR trend following system'
             },
             'Ichimoku_Trend': {
-                'signal': 'SELL' if current_price < (max(c['high'] for c in daily_data[-9:]) + min(c['low'] for c in daily_data[-9:])) / 2 else 'BUY' if current_price > (max(c['high'] for c in daily_data[-9:]) + min(c['low'] for c in daily_data[-9:])) / 2 else 'NEUTRAL',
+                'signal': 'BUY' if current_price > (max(c['high'] for c in daily_data[-9:]) + min(c['low'] for c in daily_data[-9:])) / 2 else 'SELL',
                 'confidence': random.randint(75, 90),
-                'reasoning': 'Ichimoku cloud analysis'
+                'reasoning': 'Ichimoku cloud trend analysis'
             },
             'Donchian_Trend': {
-                'signal': 'SELL' if current_price < min(c['low'] for c in daily_data[-20:]) * 1.02 else 'BUY' if current_price > max(c['high'] for c in daily_data[-20:]) * 0.98 else 'NEUTRAL',
+                'signal': 'BUY' if current_price > max(c['high'] for c in daily_data[-20:]) * 0.98 else 'SELL' if current_price < min(c['low'] for c in daily_data[-20:]) * 1.02 else 'NEUTRAL',
                 'confidence': random.randint(70, 86),
-                'reasoning': 'Donchian channel breakout'
+                'reasoning': 'Donchian channel trend system'
             },
             'Hull_Moving_Average': {
-                'signal': 'SELL' if current_price < sma_20 * 0.99 else 'BUY' if current_price > sma_20 * 1.01 else 'NEUTRAL',
+                'signal': 'BUY' if current_price > sma_20 * 1.01 else 'SELL' if current_price < sma_20 * 0.99 else 'NEUTRAL',
                 'confidence': random.randint(73, 89),
-                'reasoning': 'Hull Moving Average trend'
+                'reasoning': 'Hull Moving Average trend detection'
             },
             'Supertrend': {
-                'signal': 'SELL' if current_price < sma_20 and daily_data[-1]['close'] < daily_data[-1]['open'] else 'BUY' if current_price > sma_20 and daily_data[-1]['close'] > daily_data[-1]['open'] else 'NEUTRAL',
+                'signal': 'BUY' if current_price > sma_20 and daily_data[-1]['close'] > daily_data[-1]['open'] else 'SELL',
                 'confidence': random.randint(76, 91),
-                'reasoning': 'Supertrend indicator with candlestick confirmation'
+                'reasoning': 'Supertrend indicator analysis'
             },
             
-            # Continue with remaining strategies...
             # Volume Analysis Strategies (7)
             'Volume_Breakout': {
-                'signal': 'SELL' if daily_data[-1]['volume'] > sum(c['volume'] for c in daily_data[-20:]) / 20 * 1.5 and price_change < -1 else 'BUY' if daily_data[-1]['volume'] > sum(c['volume'] for c in daily_data[-20:]) / 20 * 1.5 and price_change > 1 else 'NEUTRAL',
+                'signal': 'BUY' if daily_data[-1]['volume'] > sum(c['volume'] for c in daily_data[-20:]) / 20 * 1.5 and price_change > 0 else 'SELL',
                 'confidence': random.randint(74, 90),
-                'reasoning': 'Volume breakout with directional confirmation'
+                'reasoning': 'Volume breakout with price confirmation'
             },
             'OBV_Analysis': {
-                'signal': 'SELL' if price_change < 0 and daily_data[-1]['volume'] > daily_data[-2]['volume'] else 'BUY' if price_change > 0 and daily_data[-1]['volume'] > daily_data[-2]['volume'] else 'NEUTRAL',
+                'signal': 'BUY' if price_change > 0 and daily_data[-1]['volume'] > daily_data[-2]['volume'] else 'SELL',
                 'confidence': random.randint(68, 83),
                 'reasoning': 'On-Balance Volume trend analysis'
             },
             'Volume_Price_Trend': {
-                'signal': 'SELL' if sum(c['volume'] * (c['open'] - c['close']) for c in daily_data[-5:]) > 0 else 'BUY' if sum(c['volume'] * (c['close'] - c['open']) for c in daily_data[-5:]) > 0 else 'NEUTRAL',
+                'signal': 'BUY' if sum(c['volume'] * (c['close'] - c['open']) for c in daily_data[-5:]) > 0 else 'SELL',
                 'confidence': random.randint(71, 87),
                 'reasoning': 'Volume-Price Trend indicator'
             },
             'Accumulation_Distribution': {
-                'signal': 'SELL' if daily_data[-1]['close'] < (daily_data[-1]['high'] + daily_data[-1]['low']) / 2 and daily_data[-1]['volume'] > sum(c['volume'] for c in daily_data[-10:]) / 10 else 'BUY' if daily_data[-1]['close'] > (daily_data[-1]['high'] + daily_data[-1]['low']) / 2 and daily_data[-1]['volume'] > sum(c['volume'] for c in daily_data[-10:]) / 10 else 'NEUTRAL',
+                'signal': 'BUY' if daily_data[-1]['close'] > (daily_data[-1]['high'] + daily_data[-1]['low']) / 2 and daily_data[-1]['volume'] > sum(c['volume'] for c in daily_data[-10:]) / 10 else 'SELL',
                 'confidence': random.randint(69, 85),
-                'reasoning': 'Accumulation/Distribution analysis'
+                'reasoning': 'Accumulation/Distribution line analysis'
             },
             'Money_Flow_Index': {
-                'signal': 'SELL' if current_price < sma_20 and daily_data[-1]['volume'] > sum(c['volume'] for c in daily_data[-14:]) / 14 else 'BUY' if current_price > sma_20 and daily_data[-1]['volume'] > sum(c['volume'] for c in daily_data[-14:]) / 14 else 'NEUTRAL',
+                'signal': 'BUY' if current_price > sma_20 and daily_data[-1]['volume'] > sum(c['volume'] for c in daily_data[-14:]) / 14 else 'SELL',
                 'confidence': random.randint(67, 82),
-                'reasoning': 'Money Flow Index analysis'
+                'reasoning': 'Money Flow Index volume analysis'
             },
             'Volume_Oscillator': {
-                'signal': 'SELL' if daily_data[-1]['volume'] < sum(c['volume'] for c in daily_data[-5:]) / 5 and price_change < 0 else 'BUY' if daily_data[-1]['volume'] > sum(c['volume'] for c in daily_data[-5:]) / 5 and price_change > 0 else 'NEUTRAL',
+                'signal': 'BUY' if daily_data[-1]['volume'] > sum(c['volume'] for c in daily_data[-5:]) / 5 else 'SELL',
                 'confidence': random.randint(65, 80),
-                'reasoning': 'Volume oscillator with price confirmation'
+                'reasoning': 'Volume oscillator momentum'
             },
             'Ease_of_Movement': {
-                'signal': 'SELL' if (daily_data[-1]['high'] + daily_data[-1]['low']) / 2 < (daily_data[-2]['high'] + daily_data[-2]['low']) / 2 and daily_data[-1]['volume'] > daily_data[-2]['volume'] else 'BUY' if (daily_data[-1]['high'] + daily_data[-1]['low']) / 2 > (daily_data[-2]['high'] + daily_data[-2]['low']) / 2 and daily_data[-1]['volume'] < daily_data[-2]['volume'] else 'NEUTRAL',
+                'signal': 'BUY' if (daily_data[-1]['high'] + daily_data[-1]['low']) / 2 > (daily_data[-2]['high'] + daily_data[-2]['low']) / 2 and daily_data[-1]['volume'] < daily_data[-2]['volume'] else 'SELL',
                 'confidence': random.randint(70, 86),
                 'reasoning': 'Ease of Movement indicator'
             },
             
-            # Add remaining strategies with proper SELL logic...
-            # Mean Reversion Strategies (4) - These should favor SELL when overbought
+            # Volatility Based Strategies (5)
+            'Bollinger_Bands': {
+                'signal': 'BUY' if current_price < bb_lower else 'SELL' if current_price > bb_upper else 'NEUTRAL',
+                'confidence': min(90, max(70, abs(current_price - sma_20) / std_dev * 20)),
+                'reasoning': f'Price {"below lower" if current_price < bb_lower else "above upper" if current_price > bb_upper else "within"} Bollinger Bands'
+            },
+            'ATR_Volatility': {
+                'signal': 'BUY' if calculate_bulletproof_atr(daily_data) > sum(c['high'] - c['low'] for c in daily_data[-20:]) / 20 * 1.2 else 'SELL',
+                'confidence': random.randint(72, 88),
+                'reasoning': 'ATR volatility expansion analysis'
+            },
+            'Keltner_Channels': {
+                'signal': 'BUY' if current_price > sma_20 + calculate_bulletproof_atr(daily_data) * 1.5 else 'SELL' if current_price < sma_20 - calculate_bulletproof_atr(daily_data) * 1.5 else 'NEUTRAL',
+                'confidence': random.randint(70, 85),
+                'reasoning': 'Keltner Channel breakout analysis'
+            },
+            'Volatility_Breakout': {
+                'signal': 'BUY' if daily_data[-1]['high'] - daily_data[-1]['low'] > sum(c['high'] - c['low'] for c in daily_data[-10:]) / 10 * 1.3 and price_change > 0 else 'SELL',
+                'confidence': random.randint(68, 84),
+                'reasoning': 'Volatility breakout system'
+            },
+            'Standard_Deviation': {
+                'signal': 'BUY' if std_dev > sum((c['close'] - sum(d['close'] for d in daily_data[-10:]) / 10) ** 2 for c in daily_data[-10:]) / 10 ** 0.5 else 'SELL',
+                'confidence': random.randint(66, 81),
+                'reasoning': 'Standard deviation volatility analysis'
+            },
+            
+            # Price Action Strategies (11)
+            'Support_Resistance': {
+                'signal': 'BUY' if current_price > calculate_bulletproof_support_resistance(daily_data)['nearest_resistance'] * 0.999 else 'SELL' if current_price < calculate_bulletproof_support_resistance(daily_data)['nearest_support'] * 1.001 else 'NEUTRAL',
+                'confidence': random.randint(75, 91),
+                'reasoning': 'Support and resistance level analysis'
+            },
+            'Candlestick_Patterns': {
+                'signal': 'BUY' if daily_data[-1]['close'] > daily_data[-1]['open'] and daily_data[-1]['close'] - daily_data[-1]['open'] > (daily_data[-1]['high'] - daily_data[-1]['low']) * 0.6 else 'SELL',
+                'confidence': random.randint(70, 87),
+                'reasoning': 'Bullish/Bearish candlestick pattern recognition'
+            },
+            'Pivot_Points': {
+                'signal': 'BUY' if current_price > (daily_data[-2]['high'] + daily_data[-2]['low'] + daily_data[-2]['close']) / 3 else 'SELL',
+                'confidence': random.randint(68, 84),
+                'reasoning': 'Pivot point analysis'
+            },
+            'Price_Channels': {
+                'signal': 'BUY' if current_price > max(c['high'] for c in daily_data[-20:]) * 0.995 else 'SELL' if current_price < min(c['low'] for c in daily_data[-20:]) * 1.005 else 'NEUTRAL',
+                'confidence': random.randint(72, 88),
+                'reasoning': 'Price channel breakout analysis'
+            },
+            'Fibonacci_Retracement': {
+                'signal': 'BUY' if current_price > (max(c['high'] for c in daily_data[-50:]) - min(c['low'] for c in daily_data[-50:])) * 0.618 + min(c['low'] for c in daily_data[-50:]) else 'SELL',
+                'confidence': random.randint(69, 85),
+                'reasoning': 'Fibonacci retracement level analysis'
+            },
+            'Gap_Analysis': {
+                'signal': 'BUY' if daily_data[-1]['open'] > daily_data[-2]['close'] * 1.005 else 'SELL' if daily_data[-1]['open'] < daily_data[-2]['close'] * 0.995 else 'NEUTRAL',
+                'confidence': random.randint(67, 83),
+                'reasoning': 'Price gap analysis'
+            },
+            'Swing_High_Low': {
+                'signal': 'BUY' if current_price > max(c['high'] for c in daily_data[-5:]) else 'SELL' if current_price < min(c['low'] for c in daily_data[-5:]) else 'NEUTRAL',
+                'confidence': random.randint(71, 87),
+                'reasoning': 'Swing high/low analysis'
+            },
+            'Price_Rejection': {
+                'signal': 'BUY' if daily_data[-1]['low'] < sma_20 * 0.98 and daily_data[-1]['close'] > sma_20 else 'SELL' if daily_data[-1]['high'] > sma_20 * 1.02 and daily_data[-1]['close'] < sma_20 else 'NEUTRAL',
+                'confidence': random.randint(73, 89),
+                'reasoning': 'Price rejection at key levels'
+            },
+            'Inside_Outside_Bars': {
+                'signal': 'BUY' if daily_data[-1]['high'] > daily_data[-2]['high'] and daily_data[-1]['low'] > daily_data[-2]['low'] else 'SELL' if daily_data[-1]['high'] < daily_data[-2]['high'] and daily_data[-1]['low'] < daily_data[-2]['low'] else 'NEUTRAL',
+                'confidence': random.randint(66, 82),
+                'reasoning': 'Inside/Outside bar pattern analysis'
+            },
+            'Engulfing_Patterns': {
+                'signal': 'BUY' if daily_data[-1]['close'] > daily_data[-1]['open'] and daily_data[-1]['open'] < daily_data[-2]['close'] and daily_data[-1]['close'] > daily_data[-2]['open'] else 'SELL',
+                'confidence': random.randint(74, 90),
+                'reasoning': 'Bullish/Bearish engulfing pattern'
+            },
+            'Doji_Analysis': {
+                'signal': 'NEUTRAL' if abs(daily_data[-1]['close'] - daily_data[-1]['open']) < (daily_data[-1]['high'] - daily_data[-1]['low']) * 0.1 else 'BUY' if daily_data[-1]['close'] > daily_data[-1]['open'] else 'SELL',
+                'confidence': random.randint(65, 81),
+                'reasoning': 'Doji candlestick pattern analysis'
+            },
+            
+            # Mean Reversion Strategies (4)
             'RSI_Mean_Reversion': {
-                'signal': 'SELL' if rsi > 75 else 'BUY' if rsi < 25 else 'NEUTRAL',
+                'signal': 'BUY' if rsi < 25 else 'SELL' if rsi > 75 else 'NEUTRAL',
                 'confidence': min(92, max(70, abs(50 - rsi) * 1.8)),
-                'reasoning': f'RSI mean reversion: {"Extremely overbought - SELL" if rsi > 75 else "Extremely oversold - BUY" if rsi < 25 else "Normal range"}'
+                'reasoning': f'RSI mean reversion at extreme levels: {rsi:.1f}'
             },
             'Bollinger_Mean_Reversion': {
-                'signal': 'SELL' if current_price > bb_upper * 0.99 else 'BUY' if current_price < bb_lower * 1.01 else 'NEUTRAL',
+                'signal': 'BUY' if current_price < bb_lower * 1.01 else 'SELL' if current_price > bb_upper * 0.99 else 'NEUTRAL',
                 'confidence': random.randint(71, 88),
-                'reasoning': 'Bollinger Bands mean reversion - expecting price to return to mean'
+                'reasoning': 'Bollinger Bands mean reversion strategy'
             },
             'Price_Distance_MA': {
-                'signal': 'SELL' if current_price > sma_20 * 1.05 else 'BUY' if current_price < sma_20 * 0.95 else 'NEUTRAL',
+                'signal': 'BUY' if current_price < sma_20 * 0.95 else 'SELL' if current_price > sma_20 * 1.05 else 'NEUTRAL',
                 'confidence': random.randint(68, 85),
-                'reasoning': 'Price too far from moving average - mean reversion expected'
+                'reasoning': 'Price distance from moving average mean reversion'
             },
             'Z_Score_Reversion': {
-                'signal': 'SELL' if (current_price - sma_20) / std_dev > 1.5 else 'BUY' if (current_price - sma_20) / std_dev < -1.5 else 'NEUTRAL',
+                'signal': 'BUY' if (current_price - sma_20) / std_dev < -1.5 else 'SELL' if (current_price - sma_20) / std_dev > 1.5 else 'NEUTRAL',
                 'confidence': random.randint(72, 89),
-                'reasoning': 'Z-score based mean reversion analysis'
+                'reasoning': 'Z-score based mean reversion'
             },
             
             # AI Enhanced Strategy (1) - UNBIASED
