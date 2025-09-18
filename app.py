@@ -198,6 +198,16 @@ client = openai.OpenAI(
     api_key=OPENROUTER_KEY,
 )
 
+resp = client.chat.completions.create(
+    model="deepseek/deepseek-chat",
+    messages=[
+        {"role": "system", "content": "You are a professional trading analyst."},
+        {"role": "user", "content": "Give me a sample unbiased trading signal for NIFTY."}
+    ],
+)
+
+print(resp.choices[0].message.content)
+
 # --- Google OAuth Settings ---
 GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
 REDIRECT_URI = "https://lakshmi-ai-trades.onrender.com/auth/callback"
