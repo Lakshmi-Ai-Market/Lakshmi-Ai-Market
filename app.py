@@ -177,12 +177,38 @@ instagram = oauth.register(
     api_base_url="https://graph.instagram.com/",
     client_kwargs={"scope": "user_profile"}
 )
-# --- Dummy user for testing ---
+
+# Database setup
+DB_PATH = 'users.db'
+
+def init_db():
+    """Initialize the users database"""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_login TIMESTAMP,
+            is_active BOOLEAN DEFAULT 1
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+# Initialize database on startup
+init_db()
+
+# Hardcoded admin credentials
 VALID_CREDENTIALS = {
     'monjit': {
         'password': hashlib.sha256('love123'.encode()).hexdigest(),
         'biometric_enabled': True,
-        'email': 'monjit@lakshmi-ai.com'
+        'email': 'monjit@lakshmi-ai.com',
+        'user_type': 'admin'
     }
 }
 
@@ -1877,30 +1903,87 @@ def signup_page():
     return render_template("signup.html")
 
 
+
 @app.route("/register", methods=["POST"])
 def register():
-    username = request.form.get("username")
-    email = request.form.get("email")
-    password = request.form.get("password")
-    confirm_password = request.form.get("confirmPassword")
-
-    if not username or not email or not password:
-        return jsonify({"success": False, "message": "All fields are required"}), 400
-
-    if password != confirm_password:
-        return jsonify({"success": False, "message": "Passwords do not match"}), 400
-
+    """
+    Register new users in the database.
+    Accepts both JSON and form data.
+    """
     try:
+        if request.is_json:
+            data = request.get_json()
+            username = data.get("username", "").strip().lower()
+            email = data.get("email", "").strip().lower()
+            password = data.get("password", "")
+            confirm_password = data.get("confirmPassword", "")
+        else:
+            username = request.form.get("username", "").strip().lower()
+            email = request.form.get("email", "").strip().lower()
+            password = request.form.get("password", "")
+            confirm_password = request.form.get("confirmPassword", "")
+
+        # Validation
+        if not username or not email or not password:
+            return jsonify({"success": False, "message": "All fields are required"}), 400
+
+        if len(username) < 3:
+            return jsonify({"success": False, "message": "Username must be at least 3 characters"}), 400
+
+        if len(password) < 6:
+            return jsonify({"success": False, "message": "Password must be at least 6 characters"}), 400
+
+        if password != confirm_password:
+            return jsonify({"success": False, "message": "Passwords do not match"}), 400
+
+        # Check if username is reserved (admin usernames)
+        if username in VALID_CREDENTIALS:
+            return jsonify({"success": False, "message": "Username is not available"}), 400
+
+        # Email validation (basic)
+        if '@' not in email or '.' not in email:
+            return jsonify({"success": False, "message": "Please enter a valid email address"}), 400
+
+        # Database operations
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
-        c.execute("INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
-                  (username, email, generate_password_hash(password)))
+        
+        # Check if username or email already exists
+        c.execute("SELECT username, email FROM users WHERE username = ? OR email = ?", (username, email))
+        existing = c.fetchone()
+        
+        if existing:
+            conn.close()
+            if existing[0] == username:
+                return jsonify({"success": False, "message": "Username already exists"}), 400
+            else:
+                return jsonify({"success": False, "message": "Email already registered"}), 400
+
+        # Insert new user
+        hashed_password = generate_password_hash(password)
+        c.execute("""
+            INSERT INTO users (username, email, password, created_at) 
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+        """, (username, email, hashed_password))
+        
+        user_id = c.lastrowid
         conn.commit()
         conn.close()
-        return jsonify({"success": True, "redirect": "/login"}), 200
-    except sqlite3.IntegrityError:
-        return jsonify({"success": False, "message": "Username already exists"}), 400
-
+        
+        print(f"New user registered: {username} (ID: {user_id}) - {email}")
+        
+        return jsonify({
+            "success": True, 
+            "message": "Account created successfully! Please login.",
+            "redirect": "/login"
+        }), 200
+        
+    except sqlite3.IntegrityError as e:
+        print("Database integrity error:", e)
+        return jsonify({"success": False, "message": "Username or email already exists"}), 400
+    except Exception as e:
+        print("Registration error:", e)
+        return jsonify({"success": False, "message": "Server error occurred"}), 500
 
 # ---------- LOGIN ----------
 @app.route("/login", methods=["GET"])
@@ -1911,6 +1994,7 @@ def login_page():
 def login():
     """
     Accepts either JSON {username,password} (AJAX) or form POST (traditional).
+    Checks both hardcoded admin credentials and database users.
     On success returns JSON {success: True, redirect: "/dashboard"} or performs redirect.
     """
     try:
@@ -1925,24 +2009,240 @@ def login():
         if not username or not password:
             return jsonify({'success': False, 'message': 'Username and password required'}), 400
 
+        # Check hardcoded admin credentials first
         if username in VALID_CREDENTIALS:
             stored = VALID_CREDENTIALS[username]['password']
             if stored == hashlib.sha256(password.encode()).hexdigest():
                 session['user_id'] = username
                 session['user_name'] = username
+                session['user_email'] = VALID_CREDENTIALS[username]['email']
+                session['user_type'] = 'admin'
                 session['auth_method'] = 'password'
                 session['login_time'] = datetime.utcnow().isoformat()
+                
+                # Update last login for admin (optional logging)
+                print(f"Admin login: {username} at {datetime.utcnow()}")
+                
                 if request.is_json:
                     return jsonify({'success': True, 'redirect': '/dashboard'})
                 return redirect('/dashboard')
             else:
                 return jsonify({'success': False, 'message': 'Invalid password'}), 401
+        
+        # Check database users
         else:
-            return jsonify({'success': False, 'message': 'User not found'}), 401
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            c.execute("SELECT id, username, email, password, is_active FROM users WHERE username = ?", (username,))
+            user = c.fetchone()
+            
+            if user:
+                user_id, db_username, email, hashed_password, is_active = user
+                
+                if not is_active:
+                    conn.close()
+                    return jsonify({'success': False, 'message': 'Account is deactivated'}), 401
+                
+                if check_password_hash(hashed_password, password):
+                    # Update last login
+                    c.execute("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?", (user_id,))
+                    conn.commit()
+                    conn.close()
+                    
+                    # Set session
+                    session['user_id'] = str(user_id)
+                    session['user_name'] = db_username
+                    session['user_email'] = email
+                    session['user_type'] = 'user'
+                    session['auth_method'] = 'password'
+                    session['login_time'] = datetime.utcnow().isoformat()
+                    
+                    if request.is_json:
+                        return jsonify({'success': True, 'redirect': '/dashboard'})
+                    return redirect('/dashboard')
+                else:
+                    conn.close()
+                    return jsonify({'success': False, 'message': 'Invalid password'}), 401
+            else:
+                conn.close()
+                return jsonify({'success': False, 'message': 'User not found'}), 401
+                
     except Exception as e:
         print("Login error:", e)
         return jsonify({'success': False, 'message': 'Server error'}), 500
 
+
+# ---------- USER MANAGEMENT (Admin only) ----------
+@app.route("/admin/users", methods=["GET"])
+def list_users():
+    """Admin endpoint to list all users"""
+    if session.get('user_type') != 'admin':
+        return jsonify({'success': False, 'message': 'Admin access required'}), 403
+    
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("""
+            SELECT id, username, email, created_at, last_login, is_active 
+            FROM users 
+            ORDER BY created_at DESC
+        """)
+        users = c.fetchall()
+        conn.close()
+        
+        user_list = []
+        for user in users:
+            user_list.append({
+                'id': user[0],
+                'username': user[1],
+                'email': user[2],
+                'created_at': user[3],
+                'last_login': user[4],
+                'is_active': bool(user[5])
+            })
+        
+        return jsonify({'success': True, 'users': user_list})
+        
+    except Exception as e:
+        print("Error fetching users:", e)
+        return jsonify({'success': False, 'message': 'Server error'}), 500
+
+@app.route("/admin/users/<int:user_id>/toggle", methods=["POST"])
+def toggle_user_status(user_id):
+    """Admin endpoint to activate/deactivate users"""
+    if session.get('user_type') != 'admin':
+        return jsonify({'success': False, 'message': 'Admin access required'}), 403
+    
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT is_active FROM users WHERE id = ?", (user_id,))
+        user = c.fetchone()
+        
+        if not user:
+            conn.close()
+            return jsonify({'success': False, 'message': 'User not found'}), 404
+        
+        new_status = not bool(user[0])
+        c.execute("UPDATE users SET is_active = ? WHERE id = ?", (new_status, user_id))
+        conn.commit()
+        conn.close()
+        
+        status_text = "activated" if new_status else "deactivated"
+        return jsonify({'success': True, 'message': f'User {status_text} successfully'})
+        
+    except Exception as e:
+        print("Error toggling user status:", e)
+        return jsonify({'success': False, 'message': 'Server error'}), 500
+
+# ---------- PROFILE ----------
+@app.route("/profile", methods=["GET"])
+def profile():
+    """User profile page"""
+    if 'user_id' not in session:
+        return redirect('/login')
+    
+    user_data = {
+        'username': session.get('user_name'),
+        'email': session.get('user_email'),
+        'user_type': session.get('user_type'),
+        'login_time': session.get('login_time')
+    }
+    
+    return render_template('profile.html', user=user_data)
+
+@app.route("/auth/change-password", methods=["POST"])
+def change_password():
+    """Change user password"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Not authenticated'}), 401
+    
+    try:
+        if request.is_json:
+            data = request.get_json()
+            current_password = data.get("currentPassword", "")
+            new_password = data.get("newPassword", "")
+            confirm_password = data.get("confirmPassword", "")
+        else:
+            current_password = request.form.get("currentPassword", "")
+            new_password = request.form.get("newPassword", "")
+            confirm_password = request.form.get("confirmPassword", "")
+
+        if not current_password or not new_password:
+            return jsonify({'success': False, 'message': 'All fields are required'}), 400
+
+        if len(new_password) < 6:
+            return jsonify({'success': False, 'message': 'New password must be at least 6 characters'}), 400
+
+        if new_password != confirm_password:
+            return jsonify({'success': False, 'message': 'New passwords do not match'}), 400
+
+        user_id = session.get('user_id')
+        user_type = session.get('user_type')
+        
+        # Handle admin password change
+        if user_type == 'admin':
+            username = session.get('user_name')
+            if username in VALID_CREDENTIALS:
+                stored = VALID_CREDENTIALS[username]['password']
+                if stored == hashlib.sha256(current_password.encode()).hexdigest():
+                    # For admin, you'd need to update the hardcoded credentials or use a different approach
+                    return jsonify({'success': False, 'message': 'Admin password change not implemented'}), 400
+                else:
+                    return jsonify({'success': False, 'message': 'Current password is incorrect'}), 401
+        
+        # Handle regular user password change
+        else:
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            c.execute("SELECT password FROM users WHERE id = ?", (user_id,))
+            user = c.fetchone()
+            
+            if not user:
+                conn.close()
+                return jsonify({'success': False, 'message': 'User not found'}), 404
+            
+            if check_password_hash(user[0], current_password):
+                new_hashed = generate_password_hash(new_password)
+                c.execute("UPDATE users SET password = ? WHERE id = ?", (new_hashed, user_id))
+                conn.commit()
+                conn.close()
+                
+                return jsonify({'success': True, 'message': 'Password changed successfully'})
+            else:
+                conn.close()
+                return jsonify({'success': False, 'message': 'Current password is incorrect'}), 401
+                
+    except Exception as e:
+        print("Password change error:", e)
+        return jsonify({'success': False, 'message': 'Server error'}), 500
+
+# ---------- AUTHENTICATION MIDDLEWARE ----------
+def require_auth(f):
+    """Decorator to require authentication"""
+    from functools import wraps
+    
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            if request.is_json:
+                return jsonify({'success': False, 'message': 'Authentication required'}), 401
+            return redirect('/login')
+        return f(*args, **kwargs)
+    return decorated_function
+
+def require_admin(f):
+    """Decorator to require admin access"""
+    from functools import wraps
+    
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if session.get('user_type') != 'admin':
+            if request.is_json:
+                return jsonify({'success': False, 'message': 'Admin access required'}), 403
+            return redirect('/login')
+        return f(*args, **kwargs)
+    return decorated_function
 
 @app.route("/auth/biometric", methods=["POST"])
 def biometric_auth():
