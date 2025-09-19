@@ -48,4 +48,7 @@ xxhash==3.4.1
 flasgger==0.9.7.1
 Flask-Login==0.6.3
 Flask-WTF==1.2.1
+itsdangerous==2.1.2
+click==8.1.7
+blinker==1.6.3
 
