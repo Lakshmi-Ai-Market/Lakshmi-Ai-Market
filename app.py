@@ -178,29 +178,45 @@ instagram = oauth.register(
     client_kwargs={"scope": "user_profile"}
 )
 
-# Database setup
-DB_PATH = 'users.db'
+
+# Ensure database directory exists
+DB_DIR = os.path.join(os.getcwd(), 'instance')
+os.makedirs(DB_DIR, exist_ok=True)
+DB_PATH = os.path.join(DB_DIR, 'users.db')
 
 def init_db():
-    """Initialize the users database"""
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            last_login TIMESTAMP,
-            is_active BOOLEAN DEFAULT 1
-        )
-    ''')
-    conn.commit()
-    conn.close()
-
-# Initialize database on startup
-init_db()
+    """Initialize the users database with proper error handling"""
+    try:
+        print(f"Initializing database at: {DB_PATH}")
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        
+        # Create users table
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_login TIMESTAMP,
+                is_active BOOLEAN DEFAULT 1
+            )
+        ''')
+        
+        conn.commit()
+        
+        # Test the database
+        c.execute("SELECT COUNT(*) FROM users")
+        count = c.fetchone()[0]
+        print(f"Database initialized successfully. Current user count: {count}")
+        
+        conn.close()
+        return True
+        
+    except Exception as e:
+        print(f"Database initialization error: {e}")
+        return False
 
 # Hardcoded admin credentials
 VALID_CREDENTIALS = {
@@ -1902,8 +1918,6 @@ def cached_view():
 def signup_page():
     return render_template("signup.html")
 
-
-
 @app.route("/register", methods=["POST"])
 def register():
     """
@@ -1911,8 +1925,19 @@ def register():
     Accepts both JSON and form data.
     """
     try:
+        print("=== REGISTRATION ATTEMPT ===")
+        print(f"Request method: {request.method}")
+        print(f"Content type: {request.content_type}")
+        print(f"Is JSON: {request.is_json}")
+        print(f"Form data: {request.form}")
+        print(f"JSON data: {request.get_json() if request.is_json else 'None'}")
+        
         if request.is_json:
             data = request.get_json()
+            if not data:
+                print("ERROR: No JSON data received")
+                return jsonify({"success": False, "message": "No data received"}), 400
+                
             username = data.get("username", "").strip().lower()
             email = data.get("email", "").strip().lower()
             password = data.get("password", "")
@@ -1923,43 +1948,62 @@ def register():
             password = request.form.get("password", "")
             confirm_password = request.form.get("confirmPassword", "")
 
+        print(f"Extracted data - Username: '{username}', Email: '{email}', Password length: {len(password) if password else 0}")
+
         # Validation
         if not username or not email or not password:
+            missing_fields = []
+            if not username: missing_fields.append("username")
+            if not email: missing_fields.append("email")
+            if not password: missing_fields.append("password")
+            
+            error_msg = f"Missing required fields: {', '.join(missing_fields)}"
+            print(f"ERROR: {error_msg}")
             return jsonify({"success": False, "message": "All fields are required"}), 400
 
         if len(username) < 3:
+            print(f"ERROR: Username too short: '{username}'")
             return jsonify({"success": False, "message": "Username must be at least 3 characters"}), 400
 
         if len(password) < 6:
+            print(f"ERROR: Password too short: {len(password)} characters")
             return jsonify({"success": False, "message": "Password must be at least 6 characters"}), 400
 
         if password != confirm_password:
+            print("ERROR: Passwords don't match")
             return jsonify({"success": False, "message": "Passwords do not match"}), 400
 
         # Check if username is reserved (admin usernames)
         if username in VALID_CREDENTIALS:
+            print(f"ERROR: Reserved username attempted: '{username}'")
             return jsonify({"success": False, "message": "Username is not available"}), 400
 
         # Email validation (basic)
         if '@' not in email or '.' not in email:
+            print(f"ERROR: Invalid email format: '{email}'")
             return jsonify({"success": False, "message": "Please enter a valid email address"}), 400
 
         # Database operations
+        print("Connecting to database...")
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         
         # Check if username or email already exists
+        print("Checking for existing users...")
         c.execute("SELECT username, email FROM users WHERE username = ? OR email = ?", (username, email))
         existing = c.fetchone()
         
         if existing:
             conn.close()
             if existing[0] == username:
+                print(f"ERROR: Username already exists: '{username}'")
                 return jsonify({"success": False, "message": "Username already exists"}), 400
             else:
+                print(f"ERROR: Email already registered: '{email}'")
                 return jsonify({"success": False, "message": "Email already registered"}), 400
 
         # Insert new user
+        print("Creating new user...")
         hashed_password = generate_password_hash(password)
         c.execute("""
             INSERT INTO users (username, email, password, created_at) 
@@ -1970,7 +2014,7 @@ def register():
         conn.commit()
         conn.close()
         
-        print(f"New user registered: {username} (ID: {user_id}) - {email}")
+        print(f"SUCCESS: New user registered - Username: '{username}', ID: {user_id}, Email: '{email}'")
         
         return jsonify({
             "success": True, 
@@ -1979,12 +2023,17 @@ def register():
         }), 200
         
     except sqlite3.IntegrityError as e:
-        print("Database integrity error:", e)
+        print(f"DATABASE INTEGRITY ERROR: {e}")
         return jsonify({"success": False, "message": "Username or email already exists"}), 400
+    except sqlite3.Error as e:
+        print(f"DATABASE ERROR: {e}")
+        return jsonify({"success": False, "message": "Database error occurred"}), 500
     except Exception as e:
-        print("Registration error:", e)
+        print(f"GENERAL ERROR: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"success": False, "message": "Server error occurred"}), 500
-
+        
 # ---------- LOGIN ----------
 @app.route("/login", methods=["GET"])
 def login_page():
