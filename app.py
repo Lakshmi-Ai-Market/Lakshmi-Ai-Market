@@ -152,7 +152,7 @@ init_db()
 
 # Initialize OAuth globally
 oauth = OAuth()
-2. Add this configuration function (put this BEFORE your routes):
+
 def configure_google_oauth(app):
     """Configure Google OAuth with proper settings"""
     
