@@ -191,13 +191,17 @@ def init_db():
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         
-        # Create users table
+        # Create users table with additional fields
         c.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
                 email TEXT UNIQUE NOT NULL,
                 password TEXT NOT NULL,
+                first_name TEXT,
+                last_name TEXT,
+                phone TEXT,
+                date_of_birth TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 last_login TIMESTAMP,
                 is_active BOOLEAN DEFAULT 1
@@ -1941,14 +1945,21 @@ def register():
             username = data.get("username", "").strip().lower()
             email = data.get("email", "").strip().lower()
             password = data.get("password", "")
-            confirm_password = data.get("confirmPassword", "")
+            first_name = data.get("firstName", "")
+            last_name = data.get("lastName", "")
+            phone = data.get("phone", "")
+            date_of_birth = data.get("dateOfBirth", "")
         else:
             username = request.form.get("username", "").strip().lower()
             email = request.form.get("email", "").strip().lower()
             password = request.form.get("password", "")
-            confirm_password = request.form.get("confirmPassword", "")
+            first_name = request.form.get("firstName", "")
+            last_name = request.form.get("lastName", "")
+            phone = request.form.get("phone", "")
+            date_of_birth = request.form.get("dateOfBirth", "")
 
         print(f"Extracted data - Username: '{username}', Email: '{email}', Password length: {len(password) if password else 0}")
+        print(f"Additional data - First: '{first_name}', Last: '{last_name}', Phone: '{phone}', DOB: '{date_of_birth}'")
 
         # Validation
         if not username or not email or not password:
@@ -1968,10 +1979,6 @@ def register():
         if len(password) < 6:
             print(f"ERROR: Password too short: {len(password)} characters")
             return jsonify({"success": False, "message": "Password must be at least 6 characters"}), 400
-
-        if password != confirm_password:
-            print("ERROR: Passwords don't match")
-            return jsonify({"success": False, "message": "Passwords do not match"}), 400
 
         # Check if username is reserved (admin usernames)
         if username in VALID_CREDENTIALS:
@@ -2002,13 +2009,13 @@ def register():
                 print(f"ERROR: Email already registered: '{email}'")
                 return jsonify({"success": False, "message": "Email already registered"}), 400
 
-        # Insert new user
+        # Insert new user with additional fields
         print("Creating new user...")
         hashed_password = generate_password_hash(password)
         c.execute("""
-            INSERT INTO users (username, email, password, created_at) 
-            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-        """, (username, email, hashed_password))
+            INSERT INTO users (username, email, password, first_name, last_name, phone, date_of_birth, created_at) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        """, (username, email, hashed_password, first_name, last_name, phone, date_of_birth))
         
         user_id = c.lastrowid
         conn.commit()
@@ -2033,7 +2040,7 @@ def register():
         import traceback
         traceback.print_exc()
         return jsonify({"success": False, "message": "Server error occurred"}), 500
-        
+       
 # ---------- LOGIN ----------
 @app.route("/login", methods=["GET"])
 def login_page():
