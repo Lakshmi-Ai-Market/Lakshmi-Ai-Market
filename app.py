@@ -265,7 +265,7 @@ if not db_init_success:
     print("CRITICAL: Database initialization failed!")
 else:
     print("SUCCESS: Database ready for use")
-Also add this database check function that runs before every database operation:
+
 def ensure_db_exists():
     """Ensure database and table exist before operations"""
     try:
