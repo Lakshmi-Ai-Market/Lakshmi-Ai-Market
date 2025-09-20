@@ -145,18 +145,34 @@ limiter = Limiter(
 limiter.init_app(app)
 
 # Initialize OAuth
-oauth = OAuth(app)
+oauth = OAuth()
 
-# Register Google OAuth client
-google = oauth.register(
-    name="google",
-    client_id=os.getenv("GOOGLE_CLIENT_ID"),
-    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
-    access_token_url="https://oauth2.googleapis.com/token",           # updated endpoint
-    authorize_url="https://accounts.google.com/o/oauth2/auth",
-    api_base_url="https://www.googleapis.com/oauth2/v2/",             # updated base
-    client_kwargs={"scope": "openid email profile"}
-)
+def configure_google_oauth(app):
+    """Configure Google OAuth with proper settings"""
+    
+    # Google OAuth configuration
+    GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
+    GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
+    
+    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+        print("WARNING: Google OAuth credentials not found in environment variables")
+        return False
+    
+    # Configure Google OAuth client
+    oauth.register(
+        name='google',
+        client_id=GOOGLE_CLIENT_ID,
+        client_secret=GOOGLE_CLIENT_SECRET,
+        server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+        client_kwargs={
+            'scope': 'openid email profile',
+            'prompt': 'select_account',  # Always show account selection
+        }
+    )
+    
+    oauth.init_app(app)
+    print("✅ Google OAuth configured successfully")
+    return True
 
 facebook = oauth.register(
     name="facebook",
@@ -2174,12 +2190,11 @@ def debug_db_status():
 def login_page():
     return render_template("login.html")
 
+# Update your login route to handle both regular and Google users
 @app.route("/auth/login", methods=["POST"])
 def login():
     """
-    Accepts either JSON {username,password} (AJAX) or form POST (traditional).
-    Checks both hardcoded admin credentials and database users.
-    On success returns JSON {success: True, redirect: "/dashboard"} or performs redirect.
+    Enhanced login that works with both regular and Google users
     """
     try:
         if request.is_json:
@@ -2204,29 +2219,35 @@ def login():
                 session['auth_method'] = 'password'
                 session['login_time'] = datetime.utcnow().isoformat()
                 
-                # Update last login for admin (optional logging)
-                print(f"Admin login: {username} at {datetime.utcnow()}")
-                
                 if request.is_json:
                     return jsonify({'success': True, 'redirect': '/dashboard'})
                 return redirect('/dashboard')
             else:
                 return jsonify({'success': False, 'message': 'Invalid password'}), 401
         
-        # Check database users
+        # Check database users (including Google users)
         else:
             conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
-            c.execute("SELECT id, username, email, password, is_active FROM users WHERE username = ?", (username,))
+            c.execute("""
+                SELECT id, username, email, password, is_active, google_id, profile_picture 
+                FROM users WHERE username = ? OR email = ?
+            """, (username, username))
             user = c.fetchone()
             
             if user:
-                user_id, db_username, email, hashed_password, is_active = user
+                user_id, db_username, email, hashed_password, is_active, google_id, profile_picture = user
                 
                 if not is_active:
                     conn.close()
                     return jsonify({'success': False, 'message': 'Account is deactivated'}), 401
                 
+                # Check if this is a Google-only user
+                if google_id and hashed_password == generate_password_hash('google_oauth_user'):
+                    conn.close()
+                    return jsonify({'success': False, 'message': 'Please use Google Sign-In for this account'}), 401
+                
+                # Regular password check
                 if check_password_hash(hashed_password, password):
                     # Update last login
                     c.execute("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?", (user_id,))
@@ -2240,6 +2261,8 @@ def login():
                     session['user_type'] = 'user'
                     session['auth_method'] = 'password'
                     session['login_time'] = datetime.utcnow().isoformat()
+                    if profile_picture:
+                        session['profile_picture'] = profile_picture
                     
                     if request.is_json:
                         return jsonify({'success': True, 'redirect': '/dashboard'})
@@ -2254,6 +2277,19 @@ def login():
     except Exception as e:
         print("Login error:", e)
         return jsonify({'success': False, 'message': 'Server error'}), 500
+
+# Add this to your app initialization
+def create_app():
+    app = Flask(__name__)
+    app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
+    
+    # Configure Google OAuth
+    configure_google_oauth(app)
+    
+    # Initialize database
+    init_db()
+    
+    return app
 
 
 # ---------- USER MANAGEMENT (Admin only) ----------
@@ -2460,44 +2496,215 @@ def biometric_auth():
 @app.route("/auth/google")
 def google_login():
     """
-    Start Google OAuth login flow.
+    Start Google OAuth login flow with proper redirect URI
     """
-    # Use env variable if provided, fallback to dynamic URL
-    redirect_uri = os.getenv(
-        "GOOGLE_REDIRECT_URI",
-        url_for("google_callback", _external=True)
-    )
-    return oauth.google.authorize_redirect(redirect_uri)
+    try:
+        # Ensure OAuth is configured
+        if 'google' not in oauth._clients:
+            print("ERROR: Google OAuth not configured")
+            return redirect(url_for("login_page"))
+        
+        # Use environment variable for redirect URI (required for production)
+        redirect_uri = os.getenv(
+            "GOOGLE_REDIRECT_URI", 
+            "https://lakshmi-ai-trades.onrender.com/auth/callback"
+        )
+        
+        print(f"Starting Google OAuth with redirect URI: {redirect_uri}")
+        
+        return oauth.google.authorize_redirect(redirect_uri)
+        
+    except Exception as e:
+        print(f"Google login error: {e}")
+        return redirect(url_for("login_page"))
 
 @app.route("/auth/callback")
 def google_callback():
     """
-    Handle Google's OAuth callback.
+    Handle Google's OAuth callback and create/login user
     """
     try:
+        print("=== GOOGLE OAUTH CALLBACK ===")
+        
+        # Get the authorization token
         token = oauth.google.authorize_access_token()
-        # Try userinfo endpoint
-        try:
-            user_json = oauth.google.userinfo(token=token).json()
-        except Exception:
-            # Fallback for older endpoints
-            user_json = oauth.google.get("userinfo", token=token).json()
-
-        email = user_json.get("email")
-        name = user_json.get("name") or email
-
-        # Store user info in session (adapt to your app's logic)
-        session['user_id'] = email or "google_user"
-        session['user_name'] = name
-        session['user_email'] = email
-        session['auth_method'] = 'google'
-        session['login_time'] = datetime.utcnow().isoformat()
-        session['google_token'] = token
-
-        return redirect(url_for("index"))  # adjust target route if needed
+        print("✅ Token received from Google")
+        
+        # Get user information from Google
+        user_info = token.get('userinfo')
+        if not user_info:
+            # Fallback: fetch user info manually
+            resp = oauth.google.get('userinfo', token=token)
+            user_info = resp.json()
+        
+        print(f"User info received: {user_info}")
+        
+        # Extract user data
+        google_id = user_info.get('sub')  # Google's unique user ID
+        email = user_info.get('email')
+        name = user_info.get('name', '')
+        first_name = user_info.get('given_name', '')
+        last_name = user_info.get('family_name', '')
+        picture = user_info.get('picture', '')
+        
+        if not email:
+            print("ERROR: No email received from Google")
+            return redirect(url_for("login_page"))
+        
+        # Check if user exists in database or create new user
+        user_id = handle_google_user(google_id, email, name, first_name, last_name, picture)
+        
+        if user_id:
+            # Set session for successful login
+            session['user_id'] = str(user_id)
+            session['user_name'] = name or email.split('@')[0]
+            session['user_email'] = email
+            session['user_type'] = 'user'
+            session['auth_method'] = 'google'
+            session['login_time'] = datetime.utcnow().isoformat()
+            session['google_id'] = google_id
+            session['profile_picture'] = picture
+            
+            print(f"✅ Google login successful for: {email}")
+            return redirect('/dashboard')  # Redirect to your dashboard
+        else:
+            print("ERROR: Failed to create/find user")
+            return redirect(url_for("login_page"))
+            
     except Exception as e:
-        print("Google callback error:", e)
+        print(f"Google callback error: {e}")
+        import traceback
+        traceback.print_exc()
         return redirect(url_for("login_page"))
+
+def handle_google_user(google_id, email, name, first_name, last_name, picture):
+    """
+    Handle Google user - create if new, update if existing
+    Returns user_id if successful, None if failed
+    """
+    try:
+        # Ensure database exists
+        if not ensure_db_exists():
+            print("ERROR: Database not available")
+            return None
+        
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        
+        # Check if user exists by email or google_id
+        c.execute("""
+            SELECT id, username, google_id FROM users 
+            WHERE email = ? OR google_id = ?
+        """, (email, google_id))
+        existing_user = c.fetchone()
+        
+        if existing_user:
+            user_id, username, existing_google_id = existing_user
+            
+            # Update Google ID if not set
+            if not existing_google_id:
+                c.execute("""
+                    UPDATE users SET google_id = ?, profile_picture = ?, last_login = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                """, (google_id, picture, user_id))
+            else:
+                # Just update last login and picture
+                c.execute("""
+                    UPDATE users SET profile_picture = ?, last_login = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                """, (picture, user_id))
+            
+            conn.commit()
+            conn.close()
+            
+            print(f"✅ Existing user logged in: {email} (ID: {user_id})")
+            return user_id
+        
+        else:
+            # Create new user
+            username = email.split('@')[0].lower()  # Use email prefix as username
+            
+            # Make sure username is unique
+            base_username = username
+            counter = 1
+            while True:
+                c.execute("SELECT id FROM users WHERE username = ?", (username,))
+                if not c.fetchone():
+                    break
+                username = f"{base_username}{counter}"
+                counter += 1
+            
+            # Insert new Google user
+            c.execute("""
+                INSERT INTO users (
+                    username, email, password, first_name, last_name, 
+                    google_id, profile_picture, created_at, last_login, is_active
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1)
+            """, (
+                username, email, 
+                generate_password_hash('google_oauth_user'),  # Placeholder password
+                first_name, last_name, google_id, picture
+            ))
+            
+            user_id = c.lastrowid
+            conn.commit()
+            conn.close()
+            
+            print(f"✅ New Google user created: {email} (ID: {user_id}, Username: {username})")
+            return user_id
+            
+    except Exception as e:
+        print(f"ERROR handling Google user: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+# Update your database schema to support Google OAuth
+def init_db():
+    """Initialize the users database with Google OAuth support"""
+    try:
+        print(f"Initializing database at: {DB_PATH}")
+        
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        
+        # Create users table with Google OAuth fields
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                first_name TEXT,
+                last_name TEXT,
+                phone TEXT,
+                date_of_birth TEXT,
+                google_id TEXT UNIQUE,
+                profile_picture TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_login TIMESTAMP,
+                is_active BOOLEAN DEFAULT 1
+            )
+        ''')
+        
+        conn.commit()
+        
+        # Verify table creation
+        c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
+        table_exists = c.fetchone()
+        
+        if table_exists:
+            print("✅ Users table with Google OAuth support created successfully")
+        else:
+            print("❌ Failed to create users table")
+            return False
+        
+        conn.close()
+        return True
+        
+    except Exception as e:
+        print(f"❌ Database initialization error: {e}")
+        return False
 
 # ---- OAuth (Facebook) ----
 @app.route("/auth/facebook")
