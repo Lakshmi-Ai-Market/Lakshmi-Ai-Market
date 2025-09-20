@@ -2614,11 +2614,14 @@ def biometric_auth():
         return jsonify({'success': False, 'message': 'Server error'}), 500
 
 # ---- OAuth (Facebook) ----
+@app.route("/")
+def home():
+    return '<a href="/auth/facebook">Login with Facebook</a>'
+
 @app.route("/auth/facebook")
 def facebook_login():
-    redirect_uri = url_for("facebook_callback", _external=True)
+    redirect_uri = os.getenv("FACEBOOK_REDIRECT_URI")
     return oauth.facebook.authorize_redirect(redirect_uri)
-
 
 @app.route("/auth/facebook/callback")
 def facebook_callback():
@@ -2627,17 +2630,19 @@ def facebook_callback():
         user_json = oauth.facebook.get("me?fields=id,name,email", token=token).json()
         email = user_json.get("email")
         name = user_json.get("name") or email
+
+        # Save session
         session['user_id'] = email or "facebook_user"
         session['user_name'] = name
         session['user_email'] = email
         session['auth_method'] = 'facebook'
         session['login_time'] = datetime.utcnow().isoformat()
         session['facebook_token'] = token
-        return redirect('/dashboard')
+
+        return f"✅ Logged in as {name} ({email})"
     except Exception as e:
         print("Facebook callback error:", e)
-        return redirect(url_for("login_page"))
-
+        return redirect(url_for("home"))
 
 # ---- OAuth (Instagram) ----
 @app.route("/auth/instagram")
