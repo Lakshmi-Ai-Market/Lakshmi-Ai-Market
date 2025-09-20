@@ -144,9 +144,15 @@ limiter = Limiter(
 )
 limiter.init_app(app)
 
-# Initialize OAuth
-oauth = OAuth()
+# Configure Google OAuth AFTER creating the app
+configure_google_oauth(app)
 
+# Initialize database
+init_db()
+
+# Initialize OAuth globally
+oauth = OAuth()
+2. Add this configuration function (put this BEFORE your routes):
 def configure_google_oauth(app):
     """Configure Google OAuth with proper settings"""
     
@@ -154,25 +160,35 @@ def configure_google_oauth(app):
     GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
     GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
     
+    print(f"Configuring Google OAuth...")
+    print(f"Client ID present: {'Yes' if GOOGLE_CLIENT_ID else 'No'}")
+    print(f"Client Secret present: {'Yes' if GOOGLE_CLIENT_SECRET else 'No'}")
+    
     if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
         print("WARNING: Google OAuth credentials not found in environment variables")
+        print("Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in Render dashboard")
         return False
     
-    # Configure Google OAuth client
-    oauth.register(
-        name='google',
-        client_id=GOOGLE_CLIENT_ID,
-        client_secret=GOOGLE_CLIENT_SECRET,
-        server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-        client_kwargs={
-            'scope': 'openid email profile',
-            'prompt': 'select_account',  # Always show account selection
-        }
-    )
-    
-    oauth.init_app(app)
-    print("✅ Google OAuth configured successfully")
-    return True
+    try:
+        # Configure Google OAuth client
+        oauth.register(
+            name='google',
+            client_id=GOOGLE_CLIENT_ID,
+            client_secret=GOOGLE_CLIENT_SECRET,
+            server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+            client_kwargs={
+                'scope': 'openid email profile',
+                'prompt': 'select_account',
+            }
+        )
+        
+        oauth.init_app(app)
+        print("✅ Google OAuth configured successfully")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error configuring Google OAuth: {e}")
+        return False
 
 facebook = oauth.register(
     name="facebook",
