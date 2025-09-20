@@ -6,7 +6,7 @@ import os
 import requests
 import json
 import numpy as np
-import time
+import time 
 from datetime import datetime, timedelta
 from tools.strategy_switcher import select_strategy
 import pandas as pd
@@ -202,17 +202,15 @@ def configure_google_oauth(app):
 # --- Configure Google OAuth only if env vars are set ---
 google_enabled = configure_google_oauth(app)
 
-
-
-
+# Register Facebook OAuth
 facebook = oauth.register(
     name="facebook",
-    client_id=os.getenv("FACEBOOK_APP_ID"),
-    client_secret=os.getenv("FACEBOOK_APP_SECRET"),
+    client_id=os.getenv("FACEBOOK_CLIENT_ID"),
+    client_secret=os.getenv("FACEBOOK_CLIENT_SECRET"),
     access_token_url="https://graph.facebook.com/oauth/access_token",
     authorize_url="https://www.facebook.com/dialog/oauth",
     api_base_url="https://graph.facebook.com/",
-    client_kwargs={"scope": "email"}
+    client_kwargs={"scope": "email"},
 )
 
 instagram = oauth.register(
