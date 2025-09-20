@@ -184,16 +184,33 @@ DB_DIR = os.path.join(os.getcwd(), 'instance')
 os.makedirs(DB_DIR, exist_ok=True)
 DB_PATH = os.path.join(DB_DIR, 'users.db')
 
+# Database configuration for Render
+if os.environ.get('RENDER'):
+    # On Render, use /opt/render/project/src as base directory
+    DB_DIR = '/opt/render/project/src/instance'
+else:
+    # Local development
+    DB_DIR = os.path.join(os.getcwd(), 'instance')
+
+os.makedirs(DB_DIR, exist_ok=True)
+DB_PATH = os.path.join(DB_DIR, 'users.db')
+
 def init_db():
     """Initialize the users database with proper error handling"""
     try:
         print(f"Initializing database at: {DB_PATH}")
+        print(f"Database directory exists: {os.path.exists(DB_DIR)}")
+        print(f"Database file exists: {os.path.exists(DB_PATH)}")
+        
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         
+        # Drop table if exists (for fresh start)
+        c.execute('DROP TABLE IF EXISTS users')
+        
         # Create users table with additional fields
         c.execute('''
-            CREATE TABLE IF NOT EXISTS users (
+            CREATE TABLE users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
                 email TEXT UNIQUE NOT NULL,
@@ -210,16 +227,81 @@ def init_db():
         
         conn.commit()
         
-        # Test the database
+        # Verify table creation
+        c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
+        table_exists = c.fetchone()
+        
+        if table_exists:
+            print("✅ Users table created successfully")
+            
+            # Test insert and delete to verify table works
+            c.execute("INSERT INTO users (username, email, password) VALUES (?, ?, ?)", 
+                     ('test_user', 'test@example.com', 'test_password'))
+            c.execute("DELETE FROM users WHERE username = 'test_user'")
+            conn.commit()
+            print("✅ Database write test successful")
+        else:
+            print("❌ Failed to create users table")
+            return False
+        
+        # Get current user count
         c.execute("SELECT COUNT(*) FROM users")
         count = c.fetchone()[0]
-        print(f"Database initialized successfully. Current user count: {count}")
+        print(f"✅ Database initialized successfully. Current user count: {count}")
         
         conn.close()
         return True
         
     except Exception as e:
-        print(f"Database initialization error: {e}")
+        print(f"❌ Database initialization error: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+# Force database initialization
+print("=== INITIALIZING DATABASE ===")
+db_init_success = init_db()
+if not db_init_success:
+    print("CRITICAL: Database initialization failed!")
+else:
+    print("SUCCESS: Database ready for use")
+Also add this database check function that runs before every database operation:
+def ensure_db_exists():
+    """Ensure database and table exist before operations"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        
+        # Check if users table exists
+        c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
+        table_exists = c.fetchone()
+        
+        if not table_exists:
+            print("⚠️ Users table missing, recreating...")
+            # Create the table
+            c.execute('''
+                CREATE TABLE users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
+                    email TEXT UNIQUE NOT NULL,
+                    password TEXT NOT NULL,
+                    first_name TEXT,
+                    last_name TEXT,
+                    phone TEXT,
+                    date_of_birth TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    last_login TIMESTAMP,
+                    is_active BOOLEAN DEFAULT 1
+                )
+            ''')
+            conn.commit()
+            print("✅ Users table recreated")
+        
+        conn.close()
+        return True
+        
+    except Exception as e:
+        print(f"❌ Database check error: {e}")
         return False
 
 # Hardcoded admin credentials
@@ -1934,7 +2016,11 @@ def register():
         print(f"Content type: {request.content_type}")
         print(f"Is JSON: {request.is_json}")
         print(f"Form data: {request.form}")
-        print(f"JSON data: {request.get_json() if request.is_json else 'None'}")
+        
+        # Ensure database exists before proceeding
+        if not ensure_db_exists():
+            print("ERROR: Database check failed")
+            return jsonify({"success": False, "message": "Database error"}), 500
         
         if request.is_json:
             data = request.get_json()
@@ -1959,7 +2045,6 @@ def register():
             date_of_birth = request.form.get("dateOfBirth", "")
 
         print(f"Extracted data - Username: '{username}', Email: '{email}', Password length: {len(password) if password else 0}")
-        print(f"Additional data - First: '{first_name}', Last: '{last_name}', Phone: '{phone}', DOB: '{date_of_birth}'")
 
         # Validation
         if not username or not email or not password:
@@ -1991,9 +2076,16 @@ def register():
             return jsonify({"success": False, "message": "Please enter a valid email address"}), 400
 
         # Database operations
-        print("Connecting to database...")
+        print(f"Connecting to database at: {DB_PATH}")
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
+        
+        # Verify table exists one more time
+        c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
+        if not c.fetchone():
+            conn.close()
+            print("ERROR: Users table still doesn't exist after check")
+            return jsonify({"success": False, "message": "Database configuration error"}), 500
         
         # Check if username or email already exists
         print("Checking for existing users...")
@@ -2009,7 +2101,7 @@ def register():
                 print(f"ERROR: Email already registered: '{email}'")
                 return jsonify({"success": False, "message": "Email already registered"}), 400
 
-        # Insert new user with additional fields
+        # Insert new user
         print("Creating new user...")
         hashed_password = generate_password_hash(password)
         c.execute("""
@@ -2029,9 +2121,6 @@ def register():
             "redirect": "/login"
         }), 200
         
-    except sqlite3.IntegrityError as e:
-        print(f"DATABASE INTEGRITY ERROR: {e}")
-        return jsonify({"success": False, "message": "Username or email already exists"}), 400
     except sqlite3.Error as e:
         print(f"DATABASE ERROR: {e}")
         return jsonify({"success": False, "message": "Database error occurred"}), 500
@@ -2040,7 +2129,46 @@ def register():
         import traceback
         traceback.print_exc()
         return jsonify({"success": False, "message": "Server error occurred"}), 500
-       
+
+@app.route("/debug/db-status", methods=["GET"])
+def debug_db_status():
+    """Debug endpoint to check database status"""
+    try:
+        status = {
+            "db_path": DB_PATH,
+            "db_dir": DB_DIR,
+            "db_dir_exists": os.path.exists(DB_DIR),
+            "db_file_exists": os.path.exists(DB_PATH),
+            "tables": [],
+            "user_count": 0,
+            "error": None
+        }
+        
+        if os.path.exists(DB_PATH):
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            
+            # Get all tables
+            c.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            tables = c.fetchall()
+            status["tables"] = [table[0] for table in tables]
+            
+            # Get user count if users table exists
+            if 'users' in status["tables"]:
+                c.execute("SELECT COUNT(*) FROM users")
+                status["user_count"] = c.fetchone()[0]
+            
+            conn.close()
+        
+        return jsonify(status)
+        
+    except Exception as e:
+        return jsonify({
+            "error": str(e),
+            "db_path": DB_PATH,
+            "db_dir": DB_DIR
+        }), 500
+
 # ---------- LOGIN ----------
 @app.route("/login", methods=["GET"])
 def login_page():
