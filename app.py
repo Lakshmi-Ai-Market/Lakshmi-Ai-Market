@@ -2618,16 +2618,21 @@ def biometric_auth():
 def home():
     return '<a href="/auth/facebook">Login with Facebook</a>'
 
+# Facebook login route
 @app.route("/auth/facebook")
 def facebook_login():
-    redirect_uri = os.getenv("FACEBOOK_REDIRECT_URI")
-    return oauth.facebook.authorize_redirect(redirect_uri)
+    # Ensure redirect_uri matches the one in Facebook Developer settings
+    redirect_uri = url_for("facebook_callback", _external=True)
+    return facebook.authorize_redirect(redirect_uri)
 
+# Facebook callback route
 @app.route("/auth/facebook/callback")
 def facebook_callback():
     try:
-        token = oauth.facebook.authorize_access_token()
-        user_json = oauth.facebook.get("me?fields=id,name,email", token=token).json()
+        # Get access token
+        token = facebook.authorize_access_token()
+        # Fetch user info
+        user_json = facebook.get("me?fields=id,name,email", token=token).json()
         email = user_json.get("email")
         name = user_json.get("name") or email
 
@@ -2643,7 +2648,6 @@ def facebook_callback():
     except Exception as e:
         print("Facebook callback error:", e)
         return redirect(url_for("home"))
-
 # ---- OAuth (Instagram) ----
 @app.route("/auth/instagram")
 def instagram_login():
