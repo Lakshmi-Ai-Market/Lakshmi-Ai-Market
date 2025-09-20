@@ -2612,33 +2612,6 @@ def biometric_auth():
         print("Biometric auth error:", e)
         return jsonify({'success': False, 'message': 'Server error'}), 500
 
-
-# ---- OAuth (Google) ----
-@app.route("/auth/google")
-def google_login():
-    """
-    Start Google OAuth login flow with proper redirect URI
-    """
-    try:
-        # Ensure OAuth is configured
-        if 'google' not in oauth._clients:
-            print("ERROR: Google OAuth not configured")
-            return redirect(url_for("login_page"))
-        
-        # Use environment variable for redirect URI (required for production)
-        redirect_uri = os.getenv(
-            "GOOGLE_REDIRECT_URI", 
-            "https://lakshmi-ai-trades.onrender.com/auth/callback"
-        )
-        
-        print(f"Starting Google OAuth with redirect URI: {redirect_uri}")
-        
-        return oauth.google.authorize_redirect(redirect_uri)
-        
-    except Exception as e:
-        print(f"Google login error: {e}")
-        return redirect(url_for("login_page"))
-
 @app.route("/auth/callback")
 def google_callback():
     """
