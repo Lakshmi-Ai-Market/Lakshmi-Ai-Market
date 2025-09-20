@@ -51,7 +51,7 @@ from services.strategy_engine import StrategyEngine
 from utils.indicators import TechnicalIndicators
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3, os
-
+from functools import wraps
 
 # Add the project root to Python path to import your services
 project_root = os.path.dirname(os.path.abspath(__file__))
@@ -144,19 +144,31 @@ limiter = Limiter(
 )
 limiter.init_app(app)
 
-# Configure Google OAuth AFTER creating the app
-configure_google_oauth(app)
-
-# Initialize database
-init_db()
-
-# Initialize OAuth globally
+# Initialize OAuth
 oauth = OAuth()
+
+# Database configuration
+if os.environ.get('RENDER'):
+    DB_DIR = '/opt/render/project/src/instance'
+else:
+    DB_DIR = os.path.join(os.getcwd(), 'instance')
+
+os.makedirs(DB_DIR, exist_ok=True)
+DB_PATH = os.path.join(DB_DIR, 'users.db')
+
+# Hardcoded admin credentials
+VALID_CREDENTIALS = {
+    'monjit': {
+        'password': hashlib.sha256('love123'.encode()).hexdigest(),
+        'biometric_enabled': True,
+        'email': 'monjit@lakshmi-ai.com',
+        'user_type': 'admin'
+    }
+}
 
 def configure_google_oauth(app):
     """Configure Google OAuth with proper settings"""
     
-    # Google OAuth configuration
     GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
     GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
     
@@ -170,7 +182,6 @@ def configure_google_oauth(app):
         return False
     
     try:
-        # Configure Google OAuth client
         oauth.register(
             name='google',
             client_id=GOOGLE_CLIENT_ID,
@@ -189,6 +200,7 @@ def configure_google_oauth(app):
     except Exception as e:
         print(f"❌ Error configuring Google OAuth: {e}")
         return False
+
 
 facebook = oauth.register(
     name="facebook",
@@ -210,25 +222,8 @@ instagram = oauth.register(
     client_kwargs={"scope": "user_profile"}
 )
 
-
-# Ensure database directory exists
-DB_DIR = os.path.join(os.getcwd(), 'instance')
-os.makedirs(DB_DIR, exist_ok=True)
-DB_PATH = os.path.join(DB_DIR, 'users.db')
-
-# Database configuration for Render
-if os.environ.get('RENDER'):
-    # On Render, use /opt/render/project/src as base directory
-    DB_DIR = '/opt/render/project/src/instance'
-else:
-    # Local development
-    DB_DIR = os.path.join(os.getcwd(), 'instance')
-
-os.makedirs(DB_DIR, exist_ok=True)
-DB_PATH = os.path.join(DB_DIR, 'users.db')
-
 def init_db():
-    """Initialize the users database with proper error handling"""
+    """Initialize the users database with Google OAuth support"""
     try:
         print(f"Initializing database at: {DB_PATH}")
         print(f"Database directory exists: {os.path.exists(DB_DIR)}")
@@ -237,12 +232,9 @@ def init_db():
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         
-        # Drop table if exists (for fresh start)
-        c.execute('DROP TABLE IF EXISTS users')
-        
-        # Create users table with additional fields
+        # Create users table with Google OAuth fields
         c.execute('''
-            CREATE TABLE users (
+            CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
                 email TEXT UNIQUE NOT NULL,
@@ -251,6 +243,8 @@ def init_db():
                 last_name TEXT,
                 phone TEXT,
                 date_of_birth TEXT,
+                google_id TEXT UNIQUE,
+                profile_picture TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 last_login TIMESTAMP,
                 is_active BOOLEAN DEFAULT 1
@@ -264,22 +258,15 @@ def init_db():
         table_exists = c.fetchone()
         
         if table_exists:
-            print("✅ Users table created successfully")
+            print("✅ Users table with Google OAuth support created successfully")
             
-            # Test insert and delete to verify table works
-            c.execute("INSERT INTO users (username, email, password) VALUES (?, ?, ?)", 
-                     ('test_user', 'test@example.com', 'test_password'))
-            c.execute("DELETE FROM users WHERE username = 'test_user'")
-            conn.commit()
-            print("✅ Database write test successful")
+            # Test database functionality
+            c.execute("SELECT COUNT(*) FROM users")
+            count = c.fetchone()[0]
+            print(f"✅ Database initialized successfully. Current user count: {count}")
         else:
             print("❌ Failed to create users table")
             return False
-        
-        # Get current user count
-        c.execute("SELECT COUNT(*) FROM users")
-        count = c.fetchone()[0]
-        print(f"✅ Database initialized successfully. Current user count: {count}")
         
         conn.close()
         return True
@@ -290,27 +277,17 @@ def init_db():
         traceback.print_exc()
         return False
 
-# Force database initialization
-print("=== INITIALIZING DATABASE ===")
-db_init_success = init_db()
-if not db_init_success:
-    print("CRITICAL: Database initialization failed!")
-else:
-    print("SUCCESS: Database ready for use")
-
 def ensure_db_exists():
     """Ensure database and table exist before operations"""
     try:
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         
-        # Check if users table exists
         c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
         table_exists = c.fetchone()
         
         if not table_exists:
             print("⚠️ Users table missing, recreating...")
-            # Create the table
             c.execute('''
                 CREATE TABLE users (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -321,6 +298,8 @@ def ensure_db_exists():
                     last_name TEXT,
                     phone TEXT,
                     date_of_birth TEXT,
+                    google_id TEXT UNIQUE,
+                    profile_picture TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     last_login TIMESTAMP,
                     is_active BOOLEAN DEFAULT 1
@@ -336,15 +315,107 @@ def ensure_db_exists():
         print(f"❌ Database check error: {e}")
         return False
 
-# Hardcoded admin credentials
-VALID_CREDENTIALS = {
-    'monjit': {
-        'password': hashlib.sha256('love123'.encode()).hexdigest(),
-        'biometric_enabled': True,
-        'email': 'monjit@lakshmi-ai.com',
-        'user_type': 'admin'
-    }
-}
+def handle_google_user(google_id, email, name, first_name, last_name, picture):
+    """Handle Google user - create if new, update if existing"""
+    try:
+        if not ensure_db_exists():
+            print("ERROR: Database not available")
+            return None
+        
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        
+        # Check if user exists by email or google_id
+        c.execute("""
+            SELECT id, username, google_id FROM users 
+            WHERE email = ? OR google_id = ?
+        """, (email, google_id))
+        existing_user = c.fetchone()
+        
+        if existing_user:
+            user_id, username, existing_google_id = existing_user
+            
+            # Update Google ID if not set
+            if not existing_google_id:
+                c.execute("""
+                    UPDATE users SET google_id = ?, profile_picture = ?, last_login = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                """, (google_id, picture, user_id))
+            else:
+                # Just update last login and picture
+                c.execute("""
+                    UPDATE users SET profile_picture = ?, last_login = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                """, (picture, user_id))
+            
+            conn.commit()
+            conn.close()
+            
+            print(f"✅ Existing user logged in: {email} (ID: {user_id})")
+            return user_id
+        
+        else:
+            # Create new user
+            username = email.split('@')[0].lower()
+            
+            # Make sure username is unique
+            base_username = username
+            counter = 1
+            while True:
+                c.execute("SELECT id FROM users WHERE username = ?", (username,))
+                if not c.fetchone():
+                    break
+                username = f"{base_username}{counter}"
+                counter += 1
+            
+            # Insert new Google user
+            c.execute("""
+                INSERT INTO users (
+                    username, email, password, first_name, last_name, 
+                    google_id, profile_picture, created_at, last_login, is_active
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1)
+            """, (
+                username, email, 
+                generate_password_hash('google_oauth_user'),
+                first_name, last_name, google_id, picture
+            ))
+            
+            user_id = c.lastrowid
+            conn.commit()
+            conn.close()
+            
+            print(f"✅ New Google user created: {email} (ID: {user_id}, Username: {username})")
+            return user_id
+            
+    except Exception as e:
+        print(f"ERROR handling Google user: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+# Authentication decorators
+def require_auth(f):
+    """Decorator to require authentication"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            if request.is_json:
+                return jsonify({'success': False, 'message': 'Authentication required'}), 401
+            return redirect('/login')
+        return f(*args, **kwargs)
+    return decorated_function
+
+def require_admin(f):
+    """Decorator to require admin access"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if session.get('user_type') != 'admin':
+            if request.is_json:
+                return jsonify({'success': False, 'message': 'Admin access required'}), 403
+            return redirect('/login')
+        return f(*args, **kwargs)
+    return decorated_function
+
 
 # ✅ Load OpenRouter API key from environment
 OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY")
@@ -2032,186 +2103,19 @@ def cached_view():
     return "This is cached for 60s"
 
 # ---------- SIGNUP ----------
-@app.route("/auth/signup", methods=["GET"])
-def signup_page():
-    return render_template("signup.html")
-
-@app.route("/register", methods=["POST"])
-def register():
-    """
-    Register new users in the database.
-    Accepts both JSON and form data.
-    """
-    try:
-        print("=== REGISTRATION ATTEMPT ===")
-        print(f"Request method: {request.method}")
-        print(f"Content type: {request.content_type}")
-        print(f"Is JSON: {request.is_json}")
-        print(f"Form data: {request.form}")
-        
-        # Ensure database exists before proceeding
-        if not ensure_db_exists():
-            print("ERROR: Database check failed")
-            return jsonify({"success": False, "message": "Database error"}), 500
-        
-        if request.is_json:
-            data = request.get_json()
-            if not data:
-                print("ERROR: No JSON data received")
-                return jsonify({"success": False, "message": "No data received"}), 400
-                
-            username = data.get("username", "").strip().lower()
-            email = data.get("email", "").strip().lower()
-            password = data.get("password", "")
-            first_name = data.get("firstName", "")
-            last_name = data.get("lastName", "")
-            phone = data.get("phone", "")
-            date_of_birth = data.get("dateOfBirth", "")
-        else:
-            username = request.form.get("username", "").strip().lower()
-            email = request.form.get("email", "").strip().lower()
-            password = request.form.get("password", "")
-            first_name = request.form.get("firstName", "")
-            last_name = request.form.get("lastName", "")
-            phone = request.form.get("phone", "")
-            date_of_birth = request.form.get("dateOfBirth", "")
-
-        print(f"Extracted data - Username: '{username}', Email: '{email}', Password length: {len(password) if password else 0}")
-
-        # Validation
-        if not username or not email or not password:
-            missing_fields = []
-            if not username: missing_fields.append("username")
-            if not email: missing_fields.append("email")
-            if not password: missing_fields.append("password")
-            
-            error_msg = f"Missing required fields: {', '.join(missing_fields)}"
-            print(f"ERROR: {error_msg}")
-            return jsonify({"success": False, "message": "All fields are required"}), 400
-
-        if len(username) < 3:
-            print(f"ERROR: Username too short: '{username}'")
-            return jsonify({"success": False, "message": "Username must be at least 3 characters"}), 400
-
-        if len(password) < 6:
-            print(f"ERROR: Password too short: {len(password)} characters")
-            return jsonify({"success": False, "message": "Password must be at least 6 characters"}), 400
-
-        # Check if username is reserved (admin usernames)
-        if username in VALID_CREDENTIALS:
-            print(f"ERROR: Reserved username attempted: '{username}'")
-            return jsonify({"success": False, "message": "Username is not available"}), 400
-
-        # Email validation (basic)
-        if '@' not in email or '.' not in email:
-            print(f"ERROR: Invalid email format: '{email}'")
-            return jsonify({"success": False, "message": "Please enter a valid email address"}), 400
-
-        # Database operations
-        print(f"Connecting to database at: {DB_PATH}")
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        
-        # Verify table exists one more time
-        c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
-        if not c.fetchone():
-            conn.close()
-            print("ERROR: Users table still doesn't exist after check")
-            return jsonify({"success": False, "message": "Database configuration error"}), 500
-        
-        # Check if username or email already exists
-        print("Checking for existing users...")
-        c.execute("SELECT username, email FROM users WHERE username = ? OR email = ?", (username, email))
-        existing = c.fetchone()
-        
-        if existing:
-            conn.close()
-            if existing[0] == username:
-                print(f"ERROR: Username already exists: '{username}'")
-                return jsonify({"success": False, "message": "Username already exists"}), 400
-            else:
-                print(f"ERROR: Email already registered: '{email}'")
-                return jsonify({"success": False, "message": "Email already registered"}), 400
-
-        # Insert new user
-        print("Creating new user...")
-        hashed_password = generate_password_hash(password)
-        c.execute("""
-            INSERT INTO users (username, email, password, first_name, last_name, phone, date_of_birth, created_at) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        """, (username, email, hashed_password, first_name, last_name, phone, date_of_birth))
-        
-        user_id = c.lastrowid
-        conn.commit()
-        conn.close()
-        
-        print(f"SUCCESS: New user registered - Username: '{username}', ID: {user_id}, Email: '{email}'")
-        
-        return jsonify({
-            "success": True, 
-            "message": "Account created successfully! Please login.",
-            "redirect": "/login"
-        }), 200
-        
-    except sqlite3.Error as e:
-        print(f"DATABASE ERROR: {e}")
-        return jsonify({"success": False, "message": "Database error occurred"}), 500
-    except Exception as e:
-        print(f"GENERAL ERROR: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({"success": False, "message": "Server error occurred"}), 500
-
-@app.route("/debug/db-status", methods=["GET"])
-def debug_db_status():
-    """Debug endpoint to check database status"""
-    try:
-        status = {
-            "db_path": DB_PATH,
-            "db_dir": DB_DIR,
-            "db_dir_exists": os.path.exists(DB_DIR),
-            "db_file_exists": os.path.exists(DB_PATH),
-            "tables": [],
-            "user_count": 0,
-            "error": None
-        }
-        
-        if os.path.exists(DB_PATH):
-            conn = sqlite3.connect(DB_PATH)
-            c = conn.cursor()
-            
-            # Get all tables
-            c.execute("SELECT name FROM sqlite_master WHERE type='table'")
-            tables = c.fetchall()
-            status["tables"] = [table[0] for table in tables]
-            
-            # Get user count if users table exists
-            if 'users' in status["tables"]:
-                c.execute("SELECT COUNT(*) FROM users")
-                status["user_count"] = c.fetchone()[0]
-            
-            conn.close()
-        
-        return jsonify(status)
-        
-    except Exception as e:
-        return jsonify({
-            "error": str(e),
-            "db_path": DB_PATH,
-            "db_dir": DB_DIR
-        }), 500
-
-# ---------- LOGIN ----------
 @app.route("/login", methods=["GET"])
 def login_page():
+    """Login page"""
     return render_template("login.html")
 
-# Update your login route to handle both regular and Google users
+@app.route("/auth/signup", methods=["GET"])
+def signup_page():
+    """Signup page"""
+    return render_template("signup.html")
+
 @app.route("/auth/login", methods=["POST"])
 def login():
-    """
-    Enhanced login that works with both regular and Google users
-    """
+    """Login endpoint for regular users and admin"""
     try:
         if request.is_json:
             data = request.get_json()
@@ -2235,13 +2139,15 @@ def login():
                 session['auth_method'] = 'password'
                 session['login_time'] = datetime.utcnow().isoformat()
                 
+                print(f"Admin login: {username} at {datetime.utcnow()}")
+                
                 if request.is_json:
                     return jsonify({'success': True, 'redirect': '/dashboard'})
                 return redirect('/dashboard')
             else:
                 return jsonify({'success': False, 'message': 'Invalid password'}), 401
         
-        # Check database users (including Google users)
+        # Check database users
         else:
             conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
@@ -2263,7 +2169,6 @@ def login():
                     conn.close()
                     return jsonify({'success': False, 'message': 'Please use Google Sign-In for this account'}), 401
                 
-                # Regular password check
                 if check_password_hash(hashed_password, password):
                     # Update last login
                     c.execute("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?", (user_id,))
@@ -2294,32 +2199,296 @@ def login():
         print("Login error:", e)
         return jsonify({'success': False, 'message': 'Server error'}), 500
 
-# Add this to your app initialization
-def create_app():
-    app = Flask(__name__)
-    app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
-    
-    # Configure Google OAuth
-    configure_google_oauth(app)
-    
-    # Initialize database
-    init_db()
-    
-    return app
+@app.route("/register", methods=["POST"])
+def register():
+    """Register new users"""
+    try:
+        print("=== REGISTRATION ATTEMPT ===")
+        print(f"Form data: {request.form}")
+        
+        if not ensure_db_exists():
+            print("ERROR: Database check failed")
+            return jsonify({"success": False, "message": "Database error"}), 500
+        
+        if request.is_json:
+            data = request.get_json()
+            username = data.get("username", "").strip().lower()
+            email = data.get("email", "").strip().lower()
+            password = data.get("password", "")
+            first_name = data.get("firstName", "")
+            last_name = data.get("lastName", "")
+            phone = data.get("phone", "")
+            date_of_birth = data.get("dateOfBirth", "")
+        else:
+            username = request.form.get("username", "").strip().lower()
+            email = request.form.get("email", "").strip().lower()
+            password = request.form.get("password", "")
+            first_name = request.form.get("firstName", "")
+            last_name = request.form.get("lastName", "")
+            phone = request.form.get("phone", "")
+            date_of_birth = request.form.get("dateOfBirth", "")
+
+        print(f"Extracted data - Username: '{username}', Email: '{email}', Password length: {len(password) if password else 0}")
+
+        # Validation
+        if not username or not email or not password:
+            return jsonify({"success": False, "message": "All fields are required"}), 400
+
+        if len(username) < 3:
+            return jsonify({"success": False, "message": "Username must be at least 3 characters"}), 400
+
+        if len(password) < 6:
+            return jsonify({"success": False, "message": "Password must be at least 6 characters"}), 400
+
+        # Check if username is reserved
+        if username in VALID_CREDENTIALS:
+            return jsonify({"success": False, "message": "Username is not available"}), 400
+
+        # Email validation
+        if '@' not in email or '.' not in email:
+            return jsonify({"success": False, "message": "Please enter a valid email address"}), 400
+
+        # Database operations
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        
+        # Check if username or email already exists
+        c.execute("SELECT username, email FROM users WHERE username = ? OR email = ?", (username, email))
+        existing = c.fetchone()
+        
+        if existing:
+            conn.close()
+            if existing[0] == username:
+                return jsonify({"success": False, "message": "Username already exists"}), 400
+            else:
+                return jsonify({"success": False, "message": "Email already registered"}), 400
+
+        # Insert new user
+        hashed_password = generate_password_hash(password)
+        c.execute("""
+            INSERT INTO users (username, email, password, first_name, last_name, phone, date_of_birth, created_at) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        """, (username, email, hashed_password, first_name, last_name, phone, date_of_birth))
+        
+        user_id = c.lastrowid
+        conn.commit()
+        conn.close()
+        
+        print(f"SUCCESS: New user registered - Username: '{username}', ID: {user_id}, Email: '{email}'")
+        
+        return jsonify({
+            "success": True, 
+            "message": "Account created successfully! Please login.",
+            "redirect": "/login"
+        }), 200
+        
+    except sqlite3.IntegrityError as e:
+        print(f"DATABASE INTEGRITY ERROR: {e}")
+        return jsonify({"success": False, "message": "Username or email already exists"}), 400
+    except Exception as e:
+        print(f"REGISTRATION ERROR: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "message": "Server error occurred"}), 500
+
+# ---------- GOOGLE OAUTH ROUTES ----------
+
+@app.route("/auth/google")
+def google_login():
+    """Start Google OAuth login flow"""
+    try:
+        print("=== GOOGLE LOGIN ATTEMPT ===")
+        
+        # Check if OAuth is configured
+        if not hasattr(oauth, '_clients') or 'google' not in oauth._clients:
+            print("ERROR: Google OAuth not configured - missing client registration")
+            return redirect(url_for("login_page"))
+        
+        # Check environment variables
+        if not os.getenv('GOOGLE_CLIENT_ID'):
+            print("ERROR: GOOGLE_CLIENT_ID environment variable not set")
+            return redirect(url_for("login_page"))
+            
+        if not os.getenv('GOOGLE_CLIENT_SECRET'):
+            print("ERROR: GOOGLE_CLIENT_SECRET environment variable not set")
+            return redirect(url_for("login_page"))
+        
+        redirect_uri = os.getenv(
+            "GOOGLE_REDIRECT_URI", 
+            "https://lakshmi-ai-trades.onrender.com/auth/callback"
+        )
+        
+        print(f"Starting Google OAuth with redirect URI: {redirect_uri}")
+        
+        return oauth.google.authorize_redirect(redirect_uri)
+        
+    except Exception as e:
+        print(f"Google login error: {e}")
+        import traceback
+        traceback.print_exc()
+        return redirect(url_for("login_page"))
+
+@app.route("/auth/callback")
+def google_callback():
+    """Handle Google's OAuth callback"""
+    try:
+        print("=== GOOGLE OAUTH CALLBACK ===")
+        
+        # Get the authorization token
+        token = oauth.google.authorize_access_token()
+        print("✅ Token received from Google")
+        
+        # Get user information from Google
+        user_info = token.get('userinfo')
+        if not user_info:
+            resp = oauth.google.get('userinfo', token=token)
+            user_info = resp.json()
+        
+        print(f"User info received: {user_info}")
+        
+        # Extract user data
+        google_id = user_info.get('sub')
+        email = user_info.get('email')
+        name = user_info.get('name', '')
+        first_name = user_info.get('given_name', '')
+        last_name = user_info.get('family_name', '')
+        picture = user_info.get('picture', '')
+        
+        if not email:
+            print("ERROR: No email received from Google")
+            return redirect(url_for("login_page"))
+        
+        # Handle Google user
+        user_id = handle_google_user(google_id, email, name, first_name, last_name, picture)
+        
+        if user_id:
+            # Set session for successful login
+            session['user_id'] = str(user_id)
+            session['user_name'] = name or email.split('@')[0]
+            session['user_email'] = email
+            session['user_type'] = 'user'
+            session['auth_method'] = 'google'
+            session['login_time'] = datetime.utcnow().isoformat()
+            session['google_id'] = google_id
+            session['profile_picture'] = picture
+            
+            print(f"✅ Google login successful for: {email}")
+            return redirect('/dashboard')
+        else:
+            print("ERROR: Failed to create/find user")
+            return redirect(url_for("login_page"))
+            
+    except Exception as e:
+        print(f"Google callback error: {e}")
+        import traceback
+        traceback.print_exc()
+        return redirect(url_for("login_page"))
+
+# ---------- API ENDPOINTS ----------
+
+@app.route("/api/check-username", methods=["POST"])
+def check_username():
+    """Check if username is available"""
+    try:
+        if request.is_json:
+            data = request.get_json()
+            username = data.get("username", "").strip().lower()
+        else:
+            username = request.form.get("username", "").strip().lower()
+        
+        if not username:
+            return jsonify({"available": False, "message": "Username is required"}), 400
+        
+        if len(username) < 3:
+            return jsonify({"available": False, "message": "Username must be at least 3 characters"}), 400
+        
+        # Check if username is reserved
+        if username in VALID_CREDENTIALS:
+            return jsonify({"available": False, "message": "Username is not available"}), 200
+        
+        # Check database
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT username FROM users WHERE username = ?", (username,))
+        existing = c.fetchone()
+        conn.close()
+        
+        if existing:
+            return jsonify({"available": False, "message": "Username already taken"}), 200
+        else:
+            return jsonify({"available": True, "message": "Username is available"}), 200
+            
+    except Exception as e:
+        print("Username check error:", e)
+        return jsonify({"available": False, "message": "Server error"}), 500
+
+@app.route("/api/check-email", methods=["POST"])
+def check_email():
+    """Check if email is available"""
+    try:
+        if request.is_json:
+            data = request.get_json()
+            email = data.get("email", "").strip().lower()
+        else:
+            email = request.form.get("email", "").strip().lower()
+        
+        if not email:
+            return jsonify({"available": False, "message": "Email is required"}), 400
+        
+        if '@' not in email or '.' not in email:
+            return jsonify({"available": False, "message": "Please enter a valid email"}), 400
+        
+        # Check if email is reserved
+        for admin_data in VALID_CREDENTIALS.values():
+            if admin_data['email'].lower() == email:
+                return jsonify({"available": False, "message": "Email is not available"}), 200
+        
+        # Check database
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT email FROM users WHERE email = ?", (email,))
+        existing = c.fetchone()
+        conn.close()
+        
+        if existing:
+            return jsonify({"available": False, "message": "Email already registered"}), 200
+        else:
+            return jsonify({"available": True, "message": "Email is available"}), 200
+            
+    except Exception as e:
+        print("Email check error:", e)
+        return jsonify({"available": False, "message": "Server error"}), 500
 
 
-# ---------- USER MANAGEMENT (Admin only) ----------
+@app.route("/profile", methods=["GET"])
+@require_auth
+def profile():
+    """User profile page"""
+    user_data = {
+        'username': session.get('user_name'),
+        'email': session.get('user_email'),
+        'user_type': session.get('user_type'),
+        'login_time': session.get('login_time'),
+        'profile_picture': session.get('profile_picture')
+    }
+    
+    return render_template('profile.html', user=user_data)
+
+@app.route("/admin")
+@require_admin
+def admin_panel():
+    """Admin panel"""
+    return render_template('admin.html')
+
 @app.route("/admin/users", methods=["GET"])
+@require_admin
 def list_users():
     """Admin endpoint to list all users"""
-    if session.get('user_type') != 'admin':
-        return jsonify({'success': False, 'message': 'Admin access required'}), 403
-    
     try:
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute("""
-            SELECT id, username, email, created_at, last_login, is_active 
+            SELECT id, username, email, first_name, last_name, created_at, last_login, is_active, google_id 
             FROM users 
             ORDER BY created_at DESC
         """)
@@ -2332,9 +2501,12 @@ def list_users():
                 'id': user[0],
                 'username': user[1],
                 'email': user[2],
-                'created_at': user[3],
-                'last_login': user[4],
-                'is_active': bool(user[5])
+                'first_name': user[3],
+                'last_name': user[4],
+                'created_at': user[5],
+                'last_login': user[6],
+                'is_active': bool(user[7]),
+                'is_google_user': bool(user[8])
             })
         
         return jsonify({'success': True, 'users': user_list})
@@ -2343,142 +2515,75 @@ def list_users():
         print("Error fetching users:", e)
         return jsonify({'success': False, 'message': 'Server error'}), 500
 
-@app.route("/admin/users/<int:user_id>/toggle", methods=["POST"])
-def toggle_user_status(user_id):
-    """Admin endpoint to activate/deactivate users"""
-    if session.get('user_type') != 'admin':
-        return jsonify({'success': False, 'message': 'Admin access required'}), 403
-    
+# ---------- DEBUG ENDPOINTS ----------
+
+@app.route("/debug/oauth-status")
+def debug_oauth_status():
+    """Debug endpoint to check OAuth configuration"""
     try:
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute("SELECT is_active FROM users WHERE id = ?", (user_id,))
-        user = c.fetchone()
+        status = {
+            "google_client_id_set": bool(os.getenv('GOOGLE_CLIENT_ID')),
+            "google_client_secret_set": bool(os.getenv('GOOGLE_CLIENT_SECRET')),
+            "google_redirect_uri": os.getenv('GOOGLE_REDIRECT_URI', 'Not set'),
+            "oauth_clients": list(oauth._clients.keys()) if hasattr(oauth, '_clients') else [],
+            "google_configured": 'google' in oauth._clients if hasattr(oauth, '_clients') else False
+        }
         
-        if not user:
-            conn.close()
-            return jsonify({'success': False, 'message': 'User not found'}), 404
-        
-        new_status = not bool(user[0])
-        c.execute("UPDATE users SET is_active = ? WHERE id = ?", (new_status, user_id))
-        conn.commit()
-        conn.close()
-        
-        status_text = "activated" if new_status else "deactivated"
-        return jsonify({'success': True, 'message': f'User {status_text} successfully'})
+        return jsonify(status)
         
     except Exception as e:
-        print("Error toggling user status:", e)
-        return jsonify({'success': False, 'message': 'Server error'}), 500
+        return jsonify({"error": str(e)}), 500
 
-# ---------- PROFILE ----------
-@app.route("/profile", methods=["GET"])
-def profile():
-    """User profile page"""
-    if 'user_id' not in session:
-        return redirect('/login')
-    
-    user_data = {
-        'username': session.get('user_name'),
-        'email': session.get('user_email'),
-        'user_type': session.get('user_type'),
-        'login_time': session.get('login_time')
-    }
-    
-    return render_template('profile.html', user=user_data)
-
-@app.route("/auth/change-password", methods=["POST"])
-def change_password():
-    """Change user password"""
-    if 'user_id' not in session:
-        return jsonify({'success': False, 'message': 'Not authenticated'}), 401
-    
+@app.route("/debug/db-status", methods=["GET"])
+def debug_db_status():
+    """Debug endpoint to check database status"""
     try:
-        if request.is_json:
-            data = request.get_json()
-            current_password = data.get("currentPassword", "")
-            new_password = data.get("newPassword", "")
-            confirm_password = data.get("confirmPassword", "")
-        else:
-            current_password = request.form.get("currentPassword", "")
-            new_password = request.form.get("newPassword", "")
-            confirm_password = request.form.get("confirmPassword", "")
-
-        if not current_password or not new_password:
-            return jsonify({'success': False, 'message': 'All fields are required'}), 400
-
-        if len(new_password) < 6:
-            return jsonify({'success': False, 'message': 'New password must be at least 6 characters'}), 400
-
-        if new_password != confirm_password:
-            return jsonify({'success': False, 'message': 'New passwords do not match'}), 400
-
-        user_id = session.get('user_id')
-        user_type = session.get('user_type')
+        status = {
+            "db_path": DB_PATH,
+            "db_dir": DB_DIR,
+            "db_dir_exists": os.path.exists(DB_DIR),
+            "db_file_exists": os.path.exists(DB_PATH),
+            "tables": [],
+            "user_count": 0,
+            "error": None
+        }
         
-        # Handle admin password change
-        if user_type == 'admin':
-            username = session.get('user_name')
-            if username in VALID_CREDENTIALS:
-                stored = VALID_CREDENTIALS[username]['password']
-                if stored == hashlib.sha256(current_password.encode()).hexdigest():
-                    # For admin, you'd need to update the hardcoded credentials or use a different approach
-                    return jsonify({'success': False, 'message': 'Admin password change not implemented'}), 400
-                else:
-                    return jsonify({'success': False, 'message': 'Current password is incorrect'}), 401
-        
-        # Handle regular user password change
-        else:
+        if os.path.exists(DB_PATH):
             conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
-            c.execute("SELECT password FROM users WHERE id = ?", (user_id,))
-            user = c.fetchone()
             
-            if not user:
-                conn.close()
-                return jsonify({'success': False, 'message': 'User not found'}), 404
+            c.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            tables = c.fetchall()
+            status["tables"] = [table[0] for table in tables]
             
-            if check_password_hash(user[0], current_password):
-                new_hashed = generate_password_hash(new_password)
-                c.execute("UPDATE users SET password = ? WHERE id = ?", (new_hashed, user_id))
-                conn.commit()
-                conn.close()
-                
-                return jsonify({'success': True, 'message': 'Password changed successfully'})
-            else:
-                conn.close()
-                return jsonify({'success': False, 'message': 'Current password is incorrect'}), 401
-                
+            if 'users' in status["tables"]:
+                c.execute("SELECT COUNT(*) FROM users")
+                status["user_count"] = c.fetchone()[0]
+            
+            conn.close()
+        
+        return jsonify(status)
+        
     except Exception as e:
-        print("Password change error:", e)
-        return jsonify({'success': False, 'message': 'Server error'}), 500
+        return jsonify({
+            "error": str(e),
+            "db_path": DB_PATH,
+            "db_dir": DB_DIR
+        }), 500
 
-# ---------- AUTHENTICATION MIDDLEWARE ----------
-def require_auth(f):
-    """Decorator to require authentication"""
-    from functools import wraps
-    
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            if request.is_json:
-                return jsonify({'success': False, 'message': 'Authentication required'}), 401
-            return redirect('/login')
-        return f(*args, **kwargs)
-    return decorated_function
+# ---------- INITIALIZATION ----------
 
-def require_admin(f):
-    """Decorator to require admin access"""
-    from functools import wraps
-    
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if session.get('user_type') != 'admin':
-            if request.is_json:
-                return jsonify({'success': False, 'message': 'Admin access required'}), 403
-            return redirect('/login')
-        return f(*args, **kwargs)
-    return decorated_function
+# Configure Google OAuth
+configure_google_oauth(app)
+
+# Initialize database
+print("=== INITIALIZING DATABASE ===")
+db_init_success = init_db()
+if not db_init_success:
+    print("CRITICAL: Database initialization failed!")
+else:
+    print("SUCCESS: Database ready for use")
+
 
 @app.route("/auth/biometric", methods=["POST"])
 def biometric_auth():
