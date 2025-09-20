@@ -168,19 +168,17 @@ VALID_CREDENTIALS = {
 
 def configure_google_oauth(app):
     """Configure Google OAuth with proper settings"""
-    
     GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
     GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
-    
-    print(f"Configuring Google OAuth...")
+
+    print("Configuring Google OAuth...")
     print(f"Client ID present: {'Yes' if GOOGLE_CLIENT_ID else 'No'}")
     print(f"Client Secret present: {'Yes' if GOOGLE_CLIENT_SECRET else 'No'}")
-    
+
     if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
-        print("WARNING: Google OAuth credentials not found in environment variables")
-        print("Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in Render dashboard")
+        print("⚠️ Google OAuth credentials not found. Skipping Google login.")
         return False
-    
+
     try:
         oauth.register(
             name='google',
@@ -192,14 +190,19 @@ def configure_google_oauth(app):
                 'prompt': 'select_account',
             }
         )
-        
         oauth.init_app(app)
         print("✅ Google OAuth configured successfully")
         return True
-        
+
     except Exception as e:
         print(f"❌ Error configuring Google OAuth: {e}")
         return False
+
+
+# --- Configure Google OAuth only if env vars are set ---
+google_enabled = configure_google_oauth(app)
+
+
 
 
 facebook = oauth.register(
