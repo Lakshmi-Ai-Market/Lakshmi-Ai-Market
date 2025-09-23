@@ -5948,7 +5948,7 @@ def ask_ai():
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": question}
                     ],
-                    "max_tokens": 2000,
+                    "max_tokens": 600,
                     "temperature": 0.9,
                     "top_p": 0.95
                 }
