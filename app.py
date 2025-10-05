@@ -10120,10 +10120,6 @@ def analyze_strategy():
         
         return self.strategies[:150]  # Ensure exactly 150 strategies
 
-@app.route("/strategy")
-def strategy_page():
-    return render_template("strategy_engine.html")
-
 @app.route('/api/symbols', methods=['GET'])
 def get_symbols():
     return jsonify(list(INDIAN_SYMBOLS.keys()))
