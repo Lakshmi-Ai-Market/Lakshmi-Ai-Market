@@ -7422,10 +7422,6 @@ class RealStrategyEngine:
                 "RSI 25 in balanced range"
             ))
 
-@app.route("/strategy")
-def strategy_page():
-    return render_template("strategy_engine.html")
-
 @app.route('/analyze-strategy', methods=['POST'])
 def analyze_strategy():
     try:
