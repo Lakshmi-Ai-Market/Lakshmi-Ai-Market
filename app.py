@@ -9613,7 +9613,7 @@ def analyze():
             curr_body > prev_body * 1.5 and L['Close'] > L_prev['Open']):
             self.strategies.append(self._signal(
                 "Bullish Engulfing", "BUY", 87, cp, cp*1.06, L['Low'],
-                "Bullish engulfing pattern - strong reversal signal"uuu
+                "Bullish engulfing pattern - strong reversal signal"
             ))
         elif (L['Close'] < L['Open'] and L_prev['Close'] > L_prev['Open'] and 
               curr_body > prev_body * 1.5 and L['Close'] < L_prev['Open']):
