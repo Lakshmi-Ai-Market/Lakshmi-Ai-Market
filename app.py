@@ -7422,14 +7422,9 @@ class RealStrategyEngine:
                 "RSI 25 in balanced range"
             ))
 
-
-@app.route('/strategy')
+@app.route("/strategy")
 def strategy_page():
-    response = make_response(render_template('strategy_engine.html'))
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
-    return response
+    return render_template("strategy_engine.html")
 
 @app.route('/analyze-strategy', methods=['POST'])
 def analyze_strategy():
