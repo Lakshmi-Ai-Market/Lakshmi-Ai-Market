@@ -10120,13 +10120,9 @@ def analyze_strategy():
         
         return self.strategies[:150]  # Ensure exactly 150 strategies
 
-@app.route('/strategy-engine')
-def strategy_engine_page():
-    response = make_response(render_template('strategy_engine.html'))
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
-    return response
+@app.route("/strategy")
+def strategy_page():
+    return render_template("strategy_engine.html")
 
 @app.route('/api/symbols', methods=['GET'])
 def get_symbols():
