@@ -7431,8 +7431,8 @@ def strategy_page():
     response.headers['Expires'] = '0'
     return response
 
-@app.route('/api/analyze', methods=['POST'])
-def analyze():
+@app.route('/analyze-strategy', methods=['POST'])
+def analyze_strategy():
     try:
         data = request.get_json()
         symbol_name = data.get('symbol', 'NIFTY 50')
