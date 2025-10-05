@@ -2093,11 +2093,10 @@ def get_real_data_aggressive(symbol, period, interval):
 
 
 # --- Routes ---
-@app.route("/")
+@app.route('/')
 def root():
-    # public root -> login page
     return redirect(url_for("login_page"))
-
+    
 @app.route("/cached")
 @cache.cached(timeout=60)
 def cached_view():
