@@ -7423,8 +7423,8 @@ class RealStrategyEngine:
             ))
 
 
-@app.route('/')
-def index():
+@app.route('/strategy')
+def strategy_page():
     response = make_response(render_template('strategy_engine.html'))
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
