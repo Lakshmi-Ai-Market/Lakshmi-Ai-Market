@@ -10120,8 +10120,8 @@ def analyze_strategy():
         
         return self.strategies[:150]  # Ensure exactly 150 strategies
 
-@app.route('/')
-def index():
+@app.route('/strategy-engine')
+def strategy_engine_page():
     response = make_response(render_template('strategy_engine.html'))
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
