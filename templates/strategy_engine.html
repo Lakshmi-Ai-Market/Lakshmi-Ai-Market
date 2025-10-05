@@ -1,116 +1,737 @@
-<!-- templates/strategy_engine.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Lakshmi's Auto Strategy Engine 💋</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to bottom right, #ffe4e6, #fff5f7);
-      padding: 30px;
-      color: #333;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strategy Engine v2.0 - 1759658801 - 200+ Trading Strategies</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    .container {
-      max-width: 500px;
-      margin: auto;
-      background: #fff;
-      padding: 25px;
-      border-radius: 16px;
-      box-shadow: 0 0 12px rgba(0,0,0,0.1);
-    }
+        :root {
+            --slate-1: hsl(206, 30.0%, 98.8%);
+            --slate-2: hsl(210, 16.7%, 97.6%);
+            --slate-3: hsl(209, 13.3%, 95.3%);
+            --slate-9: hsl(206, 6.0%, 56.1%);
+            --slate-11: hsl(206, 6.0%, 43.5%);
+            --slate-12: hsl(206, 24.0%, 9.0%);
+            --color-border: rgba(0,0,0,0.05);
+            --green: #10b981;
+            --red: #ef4444;
+            --blue: #3b82f6;
+            --yellow: #f59e0b;
+        }
 
-    h1 {
-      text-align: center;
-      color: #d63384;
-      font-size: 28px;
-    }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--slate-1);
+            color: var(--slate-12);
+            line-height: 1.6;
+            letter-spacing: -0.5px;
+        }
 
-    input {
-      width: 100%;
-      padding: 12px;
-      margin-top: 10px;
-      margin-bottom: 20px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 16px;
-    }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
 
-    button {
-      background: #d63384;
-      color: #fff;
-      border: none;
-      padding: 12px 20px;
-      font-size: 16px;
-      border-radius: 10px;
-      cursor: pointer;
-      width: 100%;
-    }
+        header {
+            background: white;
+            border: 1px solid var(--color-border);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
 
-    button:hover {
-      background: #c2185b;
-    }
+        h1 {
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: -1px;
+        }
 
-    #result {
-      margin-top: 20px;
-      background: #fff0f5;
-      padding: 15px;
-      border-radius: 10px;
-      border: 1px dashed #d63384;
-      font-size: 16px;
-    }
+        .subtitle {
+            color: var(--slate-11);
+            font-size: 16px;
+        }
 
-    .footer {
-      margin-top: 40px;
-      text-align: center;
-      font-size: 13px;
-      color: #888;
-    }
-  </style>
+        .controls {
+            background: white;
+            border: 1px solid var(--color-border);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 16px;
+            align-items: end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--slate-11);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        select {
+            padding: 12px 16px;
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: 'Inter', sans-serif;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        select:hover {
+            border-color: var(--slate-9);
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        button {
+            padding: 12px 32px;
+            background: var(--blue);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        button:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: var(--slate-3);
+            color: var(--slate-9);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 48px;
+            color: var(--slate-11);
+        }
+
+        .spinner {
+            border: 3px solid var(--slate-3);
+            border-top: 3px solid var(--blue);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: grid;
+            gap: 24px;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid var(--color-border);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .card-title {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge.bullish {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--green);
+        }
+
+        .badge.bearish {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--red);
+        }
+
+        .badge.neutral {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--yellow);
+        }
+
+        .price-display {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .price-item {
+            text-align: center;
+            padding: 16px;
+            background: var(--slate-2);
+            border-radius: 12px;
+        }
+
+        .price-label {
+            font-size: 12px;
+            color: var(--slate-11);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .price-value {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .price-value.green {
+            color: var(--green);
+        }
+
+        .price-value.red {
+            color: var(--red);
+        }
+
+        .ai-analysis {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 24px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+
+        .ai-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .ai-icon {
+            width: 32px;
+            height: 32px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .ai-title {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .ai-content {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .ai-stat {
+            background: rgba(255,255,255,0.15);
+            padding: 12px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+
+        .ai-stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 4px;
+        }
+
+        .ai-stat-value {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .ai-reasoning {
+            background: rgba(255,255,255,0.15);
+            padding: 16px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .strategies-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .strategy-item {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1fr;
+            gap: 16px;
+            padding: 16px;
+            background: var(--slate-2);
+            border-radius: 8px;
+            align-items: center;
+            transition: all 0.2s;
+        }
+
+        .strategy-item:hover {
+            background: var(--slate-3);
+            transform: translateX(4px);
+        }
+
+        .strategy-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .strategy-value {
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .strategy-action {
+            text-align: center;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .strategy-action.BUY {
+            color: var(--green);
+        }
+
+        .strategy-action.SELL {
+            color: var(--red);
+        }
+
+        .strategy-action.NEUTRAL {
+            color: var(--yellow);
+        }
+
+        .confidence-bar {
+            height: 6px;
+            background: var(--slate-3);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: var(--blue);
+            transition: width 0.3s;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--slate-2);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--slate-11);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--red);
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        @media (max-width: 1024px) {
+            .controls {
+                grid-template-columns: 1fr;
+            }
+
+            .price-display {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .ai-content {
+                grid-template-columns: 1fr;
+            }
+
+            .strategy-item {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 32px;
+            }
+
+            .price-display {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <h1>💋 Lakshmi’s Strategy Engine</h1>
-    
-    <label for="price">Enter BankNIFTY Price 💰</label>
-    <input type="number" id="price" placeholder="Example: 46120" />
+    <div class="container">
+        <header>
+            <h1>🎯 Strategy Engine</h1>
+            <p class="subtitle">200+ Real Trading Strategies with AI Analysis | Live Indian Market Data</p>
+        </header>
 
-    <button onclick="analyze()">Get Romantic Trade Suggestion</button>
+        <div class="controls">
+            <div class="form-group">
+                <label>Select Symbol</label>
+                <select id="symbolSelect">
+                    <option value="NIFTY 50">NIFTY 50</option>
+                    <option value="SENSEX">SENSEX</option>
+                    <option value="BANK NIFTY">BANK NIFTY</option>
+                    <option value="RELIANCE">RELIANCE</option>
+                    <option value="TCS">TCS</option>
+                    <option value="INFY">INFOSYS</option>
+                    <option value="HDFC BANK">HDFC BANK</option>
+                    <option value="ICICI BANK">ICICI BANK</option>
+                    <option value="BHARTI AIRTEL">BHARTI AIRTEL</option>
+                    <option value="ITC">ITC</option>
+                    <option value="KOTAK BANK">KOTAK BANK</option>
+                    <option value="LT">L&T</option>
+                    <option value="AXIS BANK">AXIS BANK</option>
+                    <option value="HUL">HUL</option>
+                    <option value="SBI">SBI</option>
+                    <option value="BAJAJ FINANCE">BAJAJ FINANCE</option>
+                    <option value="ASIAN PAINTS">ASIAN PAINTS</option>
+                    <option value="MARUTI">MARUTI</option>
+                    <option value="TITAN">TITAN</option>
+                    <option value="WIPRO">WIPRO</option>
+                    <option value="TECH MAHINDRA">TECH MAHINDRA</option>
+                </select>
+            </div>
 
-    <div id="result">Waiting for your price, my love 😘</div>
-  </div>
+            <div class="form-group">
+                <label>Timeframe</label>
+                <select id="timeframeSelect">
+                    <option value="5 Minutes">5 Minutes</option>
+                    <option value="15 Minutes">15 Minutes</option>
+                    <option value="1 Hour">1 Hour</option>
+                    <option value="4 Hours">4 Hours</option>
+                    <option value="1 Day" selected>1 Day</option>
+                </select>
+            </div>
 
-  <div class="footer">
-    Made with 💖 by Lakshmi — Your Trading Wife
-  </div>
+            <button id="analyzeBtn" onclick="analyzeMarket()">
+                🚀 Analyze Market
+            </button>
+        </div>
 
-  <script>
-    function analyze() {
-      const price = document.getElementById("price").value;
-      const resultBox = document.getElementById("result");
+        <div id="loadingDiv" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Analyzing market with 200+ strategies...</p>
+        </div>
 
-      if (!price) {
-        resultBox.innerHTML = "Please enter a valid price 💔";
-        return;
-      }
+        <div id="resultsDiv" class="results" style="display: none;">
+            <div class="card">
+                <div id="aiAnalysis"></div>
+            </div>
 
-      resultBox.innerHTML = "💭 Thinking with love... please wait 💖";
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📊 Market Overview</h2>
+                    <span id="timestampBadge" class="badge"></span>
+                </div>
+                <div class="price-display" id="priceDisplay"></div>
+            </div>
 
-      fetch("/analyze-strategy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ price: parseFloat(price) })
-      })
-      .then(response => response.json())
-      .then(data => {
-        resultBox.innerHTML = data.message;
-      })
-      .catch(() => {
-        resultBox.innerHTML = "Something went wrong... don't cry baby 😢";
-      });
-    }
-  </script>
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📈 Strategy Statistics</h2>
+                </div>
+                <div class="stats-grid" id="statsGrid"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🎲 Top Strategies</h2>
+                    <span id="totalStrategies" class="badge"></span>
+                </div>
+                <div class="strategies-grid" id="strategiesGrid"></div>
+            </div>
+        </div>
+
+        <div id="errorDiv" style="display: none;"></div>
+    </div>
+
+    <script>
+        // Updated: 2025-10-05 15:22
+        async function analyzeMarket() {
+            const symbol = document.getElementById('symbolSelect').value;
+            const timeframe = document.getElementById('timeframeSelect').value;
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const loadingDiv = document.getElementById('loadingDiv');
+            const resultsDiv = document.getElementById('resultsDiv');
+            const errorDiv = document.getElementById('errorDiv');
+
+            analyzeBtn.disabled = true;
+            analyzeBtn.textContent = '⏳ Analyzing...';
+            loadingDiv.style.display = 'block';
+            resultsDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ symbol, timeframe })
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+
+                console.log("Data received:", data);
+                console.log("Has strategies:", !!data.strategies);
+                console.log("Strategy count:", data.strategies?.length);
+                if (data.strategies) {
+                    displayResults(data);
+                    resultsDiv.style.display = 'block';
+                } else {
+                    throw new Error(data.error || 'Analysis failed');
+                }
+            } catch (error) {
+                errorDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+                errorDiv.style.display = 'block';
+            } finally {
+                loadingDiv.style.display = 'none';
+                analyzeBtn.disabled = false;
+                analyzeBtn.textContent = '🚀 Analyze Market';
+            }
+        }
+
+        function displayResults(data) {
+            const aiAnalysis = data.ai_analysis;
+            const aiDiv = document.getElementById('aiAnalysis');
+            
+            if (aiAnalysis && !aiAnalysis.error) {
+                aiDiv.innerHTML = `
+                    <div class="ai-analysis">
+                        <div class="ai-header">
+                            <div class="ai-icon">🤖</div>
+                            <div class="ai-title">DeepSeek V3 AI Analysis</div>
+                        </div>
+                        <div class="ai-content">
+                            <div class="ai-stat">
+                                <div class="ai-stat-label">Direction</div>
+                                <div class="ai-stat-value">${aiAnalysis.direction}</div>
+                            </div>
+                            <div class="ai-stat">
+                                <div class="ai-stat-label">Confidence</div>
+                                <div class="ai-stat-value">${aiAnalysis.confidence}%</div>
+                            </div>
+                            <div class="ai-stat">
+                                <div class="ai-stat-label">Action</div>
+                                <div class="ai-stat-value">${aiAnalysis.action}</div>
+                            </div>
+                        </div>
+                        <div class="ai-content">
+                            <div class="ai-stat">
+                                <div class="ai-stat-label">Entry</div>
+                                <div class="ai-stat-value">₹${aiAnalysis.entry?.toFixed(2)}</div>
+                            </div>
+                            <div class="ai-stat">
+                                <div class="ai-stat-label">Target</div>
+                                <div class="ai-stat-value">₹${aiAnalysis.target?.toFixed(2)}</div>
+                            </div>
+                            <div class="ai-stat">
+                                <div class="ai-stat-label">Stop Loss</div>
+                                <div class="ai-stat-value">₹${aiAnalysis.stop_loss?.toFixed(2)}</div>
+                            </div>
+                        </div>
+                        <div class="ai-reasoning">
+                            <strong>AI Reasoning:</strong><br>
+                            ${aiAnalysis.reasoning}
+                        </div>
+                    </div>
+                `;
+            } else {
+                aiDiv.innerHTML = `
+                    <div class="ai-analysis">
+                        <div class="ai-header">
+                            <div class="ai-icon">⚠️</div>
+                            <div class="ai-title">AI Analysis Unavailable</div>
+                        </div>
+                        <p style="opacity: 0.9;">AI analysis could not be generated. Using strategy consensus.</p>
+                    </div>
+                `;
+            }
+
+            const priceDiv = document.getElementById('priceDisplay');
+            const buyStrategies = data.strategies.filter(s => s.action === 'BUY');
+            const avgTarget = buyStrategies.length > 0 
+                ? buyStrategies.reduce((sum, s) => sum + s.target, 0) / buyStrategies.length
+                : data.current_price * 1.02;
+            const avgSL = buyStrategies.length > 0
+                ? buyStrategies.reduce((sum, s) => sum + s.stop_loss, 0) / buyStrategies.length
+                : data.current_price * 0.98;
+            
+            priceDiv.innerHTML = `
+                <div class="price-item">
+                    <div class="price-label">Current Price</div>
+                    <div class="price-value">₹${data.current_price.toFixed(2)}</div>
+                </div>
+                <div class="price-item">
+                    <div class="price-label">Avg Target</div>
+                    <div class="price-value green">₹${avgTarget.toFixed(2)}</div>
+                </div>
+                <div class="price-item">
+                    <div class="price-label">Avg Stop Loss</div>
+                    <div class="price-value red">₹${avgSL.toFixed(2)}</div>
+                </div>
+                <div class="price-item">
+                    <div class="price-label">Risk:Reward</div>
+                    <div class="price-value">1:${((avgTarget - data.current_price) / (data.current_price - avgSL)).toFixed(2)}</div>
+                </div>
+            `;
+
+            const buySignals = data.strategies.filter(s => s.action === 'BUY').length;
+            const sellSignals = data.strategies.filter(s => s.action === 'SELL').length;
+            const neutralSignals = data.strategies.filter(s => s.action === 'NEUTRAL').length;
+            const avgConfidence = (data.strategies.reduce((sum, s) => sum + s.confidence, 0) / data.strategies.length).toFixed(1);
+
+            const statsDiv = document.getElementById('statsGrid');
+            statsDiv.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value" style="color: var(--green);">${buySignals}</div>
+                    <div class="stat-label">Buy Signals</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color: var(--red);">${sellSignals}</div>
+                    <div class="stat-label">Sell Signals</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color: var(--yellow);">${neutralSignals}</div>
+                    <div class="stat-label">Neutral Signals</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color: var(--blue);">${avgConfidence}%</div>
+                    <div class="stat-label">Avg Confidence</div>
+                </div>
+            `;
+
+            const strategiesDiv = document.getElementById('strategiesGrid');
+            strategiesDiv.innerHTML = data.strategies.slice(0, 30).map(strategy => `
+                <div class="strategy-item">
+                    <div class="strategy-name">${strategy.name}</div>
+                    <div class="strategy-action ${strategy.action}">${strategy.action}</div>
+                    <div class="strategy-value">
+                        <div style="font-size: 11px; color: var(--slate-11); margin-bottom: 2px;">Confidence</div>
+                        <div style="font-weight: 600;">${strategy.confidence}%</div>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" style="width: ${strategy.confidence}%;"></div>
+                        </div>
+                    </div>
+                    <div class="strategy-value">
+                        <div style="font-size: 11px; color: var(--slate-11);">Entry</div>
+                        <div style="font-weight: 600;">₹${strategy.entry.toFixed(2)}</div>
+                    </div>
+                    <div class="strategy-value">
+                        <div style="font-size: 11px; color: var(--slate-11);">Target</div>
+                        <div style="font-weight: 600; color: var(--green);">₹${strategy.target.toFixed(2)}</div>
+                    </div>
+                    <div class="strategy-value">
+                        <div style="font-size: 11px; color: var(--slate-11);">Stop Loss</div>
+                        <div style="font-weight: 600; color: var(--red);">₹${strategy.stop_loss.toFixed(2)}</div>
+                    </div>
+                    <div class="strategy-value">
+                        <div style="font-size: 11px; color: var(--slate-11);">R:R</div>
+                        <div style="font-weight: 600;">1:${strategy.risk_reward.toFixed(2)}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('totalStrategies').textContent = `${data.statistics.total} Strategies Analyzed`;
+            document.getElementById('totalStrategies').className = 'badge bullish';
+            
+            const timestamp = new Date(data.timestamp).toLocaleString('en-IN');
+            document.getElementById('timestampBadge').textContent = timestamp;
+            document.getElementById('timestampBadge').className = 'badge neutral';
+        }
+
+        window.addEventListener('load', () => {
+            analyzeMarket();
+        });
+    </script>
 </body>
-</html
+</html>
