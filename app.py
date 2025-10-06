@@ -166,6 +166,29 @@ VALID_CREDENTIALS = {
     }
 }
 
+app = Flask(__name__)
+CORS(app)
+
+# INDIAN SYMBOLS
+INDIAN_SYMBOLS = {
+    "NIFTY 50": "^NSEI",
+    "SENSEX": "^BSESN",
+    "BANK NIFTY": "^NSEBANK",
+    "RELIANCE": "RELIANCE.NS",
+    "TCS": "TCS.NS",
+    "INFY": "INFY.NS",
+    "HDFC BANK": "HDFCBANK.NS",
+    "ICICI BANK": "ICICIBANK.NS",
+}
+
+TIMEFRAMES = {
+    "1 Minute": "1m",
+    "5 Minutes": "5m",
+    "15 Minutes": "15m",
+    "1 Hour": "1h",
+    "1 Day": "1d",
+}
+
 def configure_google_oauth(app):
     """Configure Google OAuth with proper settings"""
     GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
@@ -6991,32 +7014,6 @@ def api_select_strategy():
         return jsonify(strategy), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-app = Flask(__name__)
-CORS(app)
-
-# INDIAN SYMBOLS
-INDIAN_SYMBOLS = {
-    "NIFTY 50": "^NSEI",
-    "SENSEX": "^BSESN",
-    "BANK NIFTY": "^NSEBANK",
-    "RELIANCE": "RELIANCE.NS",
-    "TCS": "TCS.NS",
-    "INFY": "INFY.NS",
-    "HDFC BANK": "HDFCBANK.NS",
-    "ICICI BANK": "ICICIBANK.NS",
-}
-
-TIMEFRAMES = {
-    "1 Minute": "1m",
-    "5 Minutes": "5m",
-    "15 Minutes": "15m",
-    "1 Hour": "1h",
-    "1 Day": "1d",
-}
-
-class RealStrategyEngine:
-    """150 REAL, UNIQUE TRADING STRATEGIES - NO DUPLICATES"""
     
     def __init__(self, df, current_price):
         self.df = df
