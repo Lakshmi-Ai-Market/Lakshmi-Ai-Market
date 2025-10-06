@@ -10067,7 +10067,7 @@ def api_select_strategy():
         return self.strategies[:150]  # Ensure exactly 150 strategies
 
 @app.route('/strategy')
-def strategy_page():
+def strategy_engine_page():   # 🔹 renamed so it won't conflict
     if 'username' not in session:   # protect with login
         return redirect(url_for("login_page"))
 
