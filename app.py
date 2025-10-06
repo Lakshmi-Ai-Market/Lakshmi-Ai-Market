@@ -10078,11 +10078,12 @@ def strategy_engine_page():   # 🔹 renamed so it won't conflict
     return response
 
 @app.route('/api/symbols', methods=['GET'])
-def get_symbols():
+def get_symbols_api():   # 🔹 renamed to be unique
     return jsonify(list(INDIAN_SYMBOLS.keys()))
 
+
 @app.route('/api/analyze', methods=['POST'])
-def analyze():
+def analyze_api():   # 🔹 renamed to be unique
     try:
         data = request.get_json()
         symbol_name = data.get('symbol', 'NIFTY 50')
