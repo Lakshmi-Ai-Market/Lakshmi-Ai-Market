@@ -132,6 +132,25 @@ INDIAN_SYMBOLS = {
     'auto': ['TATAMOTORS.NS', 'MARUTI.NS', 'M&M.NS', 'BAJAJ-AUTO.NS', 'HEROMOTOCO.NS'],
     'fmcg': ['HINDUNILVR.NS', 'ITC.NS', 'NESTLEIND.NS', 'BRITANNIA.NS', 'DABUR.NS']
 }
+# INDIAN SYMBOLS
+INDIAN_SYMBOLS = {
+    "NIFTY 50": "^NSEI",
+    "SENSEX": "^BSESN",
+    "BANK NIFTY": "^NSEBANK",
+    "RELIANCE": "RELIANCE.NS",
+    "TCS": "TCS.NS",
+    "INFY": "INFY.NS",
+    "HDFC BANK": "HDFCBANK.NS",
+    "ICICI BANK": "ICICIBANK.NS",
+}
+
+TIMEFRAMES = {
+    "1 Minute": "1m",
+    "5 Minutes": "5m",
+    "15 Minutes": "15m",
+    "1 Hour": "1h",
+    "1 Day": "1d",
+}
 
 app = Flask(__name__)
 app.secret_key = "lakshmi_secret_key"
@@ -164,29 +183,6 @@ VALID_CREDENTIALS = {
         'email': 'monjit@lakshmi-ai.com',
         'user_type': 'admin'
     }
-}
-
-app = Flask(__name__)
-CORS(app)
-
-# INDIAN SYMBOLS
-INDIAN_SYMBOLS = {
-    "NIFTY 50": "^NSEI",
-    "SENSEX": "^BSESN",
-    "BANK NIFTY": "^NSEBANK",
-    "RELIANCE": "RELIANCE.NS",
-    "TCS": "TCS.NS",
-    "INFY": "INFY.NS",
-    "HDFC BANK": "HDFCBANK.NS",
-    "ICICI BANK": "ICICIBANK.NS",
-}
-
-TIMEFRAMES = {
-    "1 Minute": "1m",
-    "5 Minutes": "5m",
-    "15 Minutes": "15m",
-    "1 Hour": "1h",
-    "1 Day": "1d",
 }
 
 def configure_google_oauth(app):
